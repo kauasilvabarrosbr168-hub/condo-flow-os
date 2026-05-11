@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSaunaRouteImport } from './routes/app.sauna'
 import { Route as AppReservationsRouteImport } from './routes/app.reservations'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
+import { Route as AppChecklistRouteImport } from './routes/app.checklist'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -46,11 +47,17 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppChecklistRoute = AppChecklistRouteImport.update({
+  id: '/checklist',
+  path: '/checklist',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/checklist': typeof AppChecklistRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/sauna': typeof AppSaunaRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/checklist': typeof AppChecklistRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/sauna': typeof AppSaunaRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/checklist': typeof AppChecklistRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/sauna': typeof AppSaunaRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/app/checklist'
     | '/app/dashboard'
     | '/app/reservations'
     | '/app/sauna'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/app/checklist'
     | '/app/dashboard'
     | '/app/reservations'
     | '/app/sauna'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/app/checklist'
     | '/app/dashboard'
     | '/app/reservations'
     | '/app/sauna'
@@ -149,16 +161,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/checklist': {
+      id: '/app/checklist'
+      path: '/checklist'
+      fullPath: '/app/checklist'
+      preLoaderRoute: typeof AppChecklistRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppChecklistRoute: typeof AppChecklistRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppReservationsRoute: typeof AppReservationsRoute
   AppSaunaRoute: typeof AppSaunaRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppChecklistRoute: AppChecklistRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppReservationsRoute: AppReservationsRoute,
   AppSaunaRoute: AppSaunaRoute,
