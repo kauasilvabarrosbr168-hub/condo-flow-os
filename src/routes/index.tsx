@@ -292,13 +292,13 @@ function DashboardPreview() {
         <p className="text-sm font-semibold">Atividades</p>
         <ul className="mt-3 space-y-3 text-xs">
           {[
-            { c: "success", t: "Sauna 18h ligada por João" },
-            { c: "primary", t: "Salão reservado · Apto 402" },
-            { c: "warning", t: "Gás da sauna 15%" },
-            { c: "destructive", t: "Elevador social travou" },
+            { c: "bg-success", t: "Sauna 18h ligada por João" },
+            { c: "bg-primary", t: "Salão reservado · Apto 402" },
+            { c: "bg-warning", t: "Gás da sauna 15%" },
+            { c: "bg-destructive", t: "Elevador social travou" },
           ].map((a, i) => (
             <li key={i} className="flex items-start gap-2">
-              <span className={`mt-1 h-2 w-2 rounded-full bg-${a.c}`} />
+              <span className={`mt-1 h-2 w-2 rounded-full ${a.c}`} />
               <span>{a.t}</span>
             </li>
           ))}
