@@ -16,6 +16,7 @@ import { Route as AppStaffRouteImport } from './routes/app.staff'
 import { Route as AppSaunaRouteImport } from './routes/app.sauna'
 import { Route as AppResidentRouteImport } from './routes/app.resident'
 import { Route as AppReservationsRouteImport } from './routes/app.reservations'
+import { Route as AppNotificationsRouteImport } from './routes/app.notifications'
 import { Route as AppIssuesRouteImport } from './routes/app.issues'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppChecklistRouteImport } from './routes/app.checklist'
@@ -55,6 +56,11 @@ const AppReservationsRoute = AppReservationsRouteImport.update({
   path: '/reservations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppIssuesRoute = AppIssuesRouteImport.update({
   id: '/issues',
   path: '/issues',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/app/checklist': typeof AppChecklistRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/issues': typeof AppIssuesRoute
+  '/app/notifications': typeof AppNotificationsRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/resident': typeof AppResidentRoute
   '/app/sauna': typeof AppSaunaRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/app/checklist': typeof AppChecklistRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/issues': typeof AppIssuesRoute
+  '/app/notifications': typeof AppNotificationsRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/resident': typeof AppResidentRoute
   '/app/sauna': typeof AppSaunaRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/app/checklist': typeof AppChecklistRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/issues': typeof AppIssuesRoute
+  '/app/notifications': typeof AppNotificationsRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/resident': typeof AppResidentRoute
   '/app/sauna': typeof AppSaunaRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/app/checklist'
     | '/app/dashboard'
     | '/app/issues'
+    | '/app/notifications'
     | '/app/reservations'
     | '/app/resident'
     | '/app/sauna'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/app/checklist'
     | '/app/dashboard'
     | '/app/issues'
+    | '/app/notifications'
     | '/app/reservations'
     | '/app/resident'
     | '/app/sauna'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/app/checklist'
     | '/app/dashboard'
     | '/app/issues'
+    | '/app/notifications'
     | '/app/reservations'
     | '/app/resident'
     | '/app/sauna'
@@ -204,6 +216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppReservationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/notifications': {
+      id: '/app/notifications'
+      path: '/notifications'
+      fullPath: '/app/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/issues': {
       id: '/app/issues'
       path: '/issues'
@@ -232,6 +251,7 @@ interface AppRouteChildren {
   AppChecklistRoute: typeof AppChecklistRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppIssuesRoute: typeof AppIssuesRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
   AppReservationsRoute: typeof AppReservationsRoute
   AppResidentRoute: typeof AppResidentRoute
   AppSaunaRoute: typeof AppSaunaRoute
@@ -242,6 +262,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppChecklistRoute: AppChecklistRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppIssuesRoute: AppIssuesRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
   AppReservationsRoute: AppReservationsRoute,
   AppResidentRoute: AppResidentRoute,
   AppSaunaRoute: AppSaunaRoute,
