@@ -18,6 +18,19 @@ export const Route = createFileRoute("/app/dashboard")({
   component: Dashboard,
 });
 
+const toneIcon: Record<string, string> = {
+  primary: "bg-primary/10 text-primary",
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/15 text-warning-foreground",
+  destructive: "bg-destructive/10 text-destructive",
+};
+const toneDot: Record<string, string> = {
+  primary: "bg-primary",
+  success: "bg-success",
+  warning: "bg-warning",
+  destructive: "bg-destructive",
+};
+
 const kpis = [
   { label: "Reservas hoje", value: "12", delta: "+3", icon: CalendarDays, tone: "primary" as const },
   { label: "Tarefas pendentes", value: "7", delta: "−2", icon: CheckCircle2, tone: "success" as const },
