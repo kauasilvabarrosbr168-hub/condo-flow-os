@@ -66,7 +66,7 @@ function Dashboard() {
         {kpis.map((k) => (
           <div key={k.label} className="rounded-2xl border border-border bg-card p-5 shadow-card">
             <div className="flex items-center justify-between">
-              <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl bg-${k.tone}/10 text-${k.tone}`}>
+              <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${toneIcon[k.tone]}`}>
                 <k.icon className="h-4 w-4" />
               </span>
               <span className="text-xs text-muted-foreground">{k.delta}</span>
@@ -120,7 +120,7 @@ function Dashboard() {
               { i: AlertTriangle, t: "Limpeza salão atrasada", s: "Reserva às 20h hoje", tone: "warning" as const },
             ].map((a) => (
               <li key={a.t} className="flex items-start gap-3 rounded-xl border border-border p-3">
-                <span className={`inline-flex h-9 w-9 items-center justify-center rounded-lg bg-${a.tone}/10 text-${a.tone}`}>
+                <span className={`inline-flex h-9 w-9 items-center justify-center rounded-lg ${toneIcon[a.tone]}`}>
                   <a.i className="h-4 w-4" />
                 </span>
                 <div>
@@ -177,7 +177,7 @@ function Dashboard() {
               { t: "Limpeza piscina concluída", time: "ontem", c: "success" },
             ].map((a, i) => (
               <li key={i} className="pl-5">
-                <span className={`absolute -left-[7px] mt-1 h-3.5 w-3.5 rounded-full ring-4 ring-card bg-${a.c}`} />
+                <span className={`absolute -left-[7px] mt-1 h-3.5 w-3.5 rounded-full ring-4 ring-card ${toneDot[a.c]}`} />
                 <div className="flex items-center justify-between">
                   <p className="text-sm">{a.t}</p>
                   <span className="text-xs text-muted-foreground">{a.time}</span>
