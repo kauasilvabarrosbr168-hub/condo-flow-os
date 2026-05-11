@@ -9,38 +9,178 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppStaffRouteImport } from './routes/app.staff'
+import { Route as AppSaunaRouteImport } from './routes/app.sauna'
+import { Route as AppResidentRouteImport } from './routes/app.resident'
+import { Route as AppReservationsRouteImport } from './routes/app.reservations'
+import { Route as AppNotificationsRouteImport } from './routes/app.notifications'
+import { Route as AppIssuesRouteImport } from './routes/app.issues'
+import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
+import { Route as AppChecklistRouteImport } from './routes/app.checklist'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppStaffRoute = AppStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSaunaRoute = AppSaunaRouteImport.update({
+  id: '/sauna',
+  path: '/sauna',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppResidentRoute = AppResidentRouteImport.update({
+  id: '/resident',
+  path: '/resident',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReservationsRoute = AppReservationsRouteImport.update({
+  id: '/reservations',
+  path: '/reservations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIssuesRoute = AppIssuesRouteImport.update({
+  id: '/issues',
+  path: '/issues',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChecklistRoute = AppChecklistRouteImport.update({
+  id: '/checklist',
+  path: '/checklist',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/app/checklist': typeof AppChecklistRoute
+  '/app/dashboard': typeof AppDashboardRoute
+  '/app/issues': typeof AppIssuesRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/reservations': typeof AppReservationsRoute
+  '/app/resident': typeof AppResidentRoute
+  '/app/sauna': typeof AppSaunaRoute
+  '/app/staff': typeof AppStaffRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/app/checklist': typeof AppChecklistRoute
+  '/app/dashboard': typeof AppDashboardRoute
+  '/app/issues': typeof AppIssuesRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/reservations': typeof AppReservationsRoute
+  '/app/resident': typeof AppResidentRoute
+  '/app/sauna': typeof AppSaunaRoute
+  '/app/staff': typeof AppStaffRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/app/checklist': typeof AppChecklistRoute
+  '/app/dashboard': typeof AppDashboardRoute
+  '/app/issues': typeof AppIssuesRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/reservations': typeof AppReservationsRoute
+  '/app/resident': typeof AppResidentRoute
+  '/app/sauna': typeof AppSaunaRoute
+  '/app/staff': typeof AppStaffRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/app/checklist'
+    | '/app/dashboard'
+    | '/app/issues'
+    | '/app/notifications'
+    | '/app/reservations'
+    | '/app/resident'
+    | '/app/sauna'
+    | '/app/staff'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/app/checklist'
+    | '/app/dashboard'
+    | '/app/issues'
+    | '/app/notifications'
+    | '/app/reservations'
+    | '/app/resident'
+    | '/app/sauna'
+    | '/app/staff'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/login'
+    | '/app/checklist'
+    | '/app/dashboard'
+    | '/app/issues'
+    | '/app/notifications'
+    | '/app/reservations'
+    | '/app/resident'
+    | '/app/sauna'
+    | '/app/staff'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +188,94 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/staff': {
+      id: '/app/staff'
+      path: '/staff'
+      fullPath: '/app/staff'
+      preLoaderRoute: typeof AppStaffRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/sauna': {
+      id: '/app/sauna'
+      path: '/sauna'
+      fullPath: '/app/sauna'
+      preLoaderRoute: typeof AppSaunaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/resident': {
+      id: '/app/resident'
+      path: '/resident'
+      fullPath: '/app/resident'
+      preLoaderRoute: typeof AppResidentRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/reservations': {
+      id: '/app/reservations'
+      path: '/reservations'
+      fullPath: '/app/reservations'
+      preLoaderRoute: typeof AppReservationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/notifications': {
+      id: '/app/notifications'
+      path: '/notifications'
+      fullPath: '/app/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/issues': {
+      id: '/app/issues'
+      path: '/issues'
+      fullPath: '/app/issues'
+      preLoaderRoute: typeof AppIssuesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/dashboard': {
+      id: '/app/dashboard'
+      path: '/dashboard'
+      fullPath: '/app/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/checklist': {
+      id: '/app/checklist'
+      path: '/checklist'
+      fullPath: '/app/checklist'
+      preLoaderRoute: typeof AppChecklistRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppChecklistRoute: typeof AppChecklistRoute
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppIssuesRoute: typeof AppIssuesRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
+  AppReservationsRoute: typeof AppReservationsRoute
+  AppResidentRoute: typeof AppResidentRoute
+  AppSaunaRoute: typeof AppSaunaRoute
+  AppStaffRoute: typeof AppStaffRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppChecklistRoute: AppChecklistRoute,
+  AppDashboardRoute: AppDashboardRoute,
+  AppIssuesRoute: AppIssuesRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
+  AppReservationsRoute: AppReservationsRoute,
+  AppResidentRoute: AppResidentRoute,
+  AppSaunaRoute: AppSaunaRoute,
+  AppStaffRoute: AppStaffRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
