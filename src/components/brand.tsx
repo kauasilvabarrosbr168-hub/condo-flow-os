@@ -1,6 +1,42 @@
 import { Link } from "@tanstack/react-router";
-import { Building2 } from "lucide-react";
+import { Building2, Construction, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
+
+export function SoonBadge({ children = "em breve" }: { children?: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 text-warning-foreground px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+      <Construction className="h-2.5 w-2.5" />
+      {children}
+    </span>
+  );
+}
+
+export function InDevOverlay({ label = "Em desenvolvimento" }: { label?: string }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 rounded-2xl bg-card/70 backdrop-blur-[2px] flex items-center justify-center">
+      <span className="inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/15 px-3 py-1.5 text-xs font-semibold text-warning-foreground shadow-card">
+        <Construction className="h-3.5 w-3.5" />
+        {label}
+      </span>
+    </div>
+  );
+}
+
+export function MvpBanner() {
+  return (
+    <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 flex flex-wrap items-center gap-3">
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-hero text-primary-foreground shadow-elegant">
+        <Sparkles className="h-4 w-4" />
+      </span>
+      <div className="flex-1 min-w-[240px]">
+        <p className="text-sm font-semibold">MVP CondoFlow · fluxo de reserva ponta a ponta</p>
+        <p className="text-xs text-muted-foreground">
+          Morador reserva → sistema cria fluxo, notifica responsáveis, gera checklist, confirma execução e registra tudo. Outros módulos estão marcados como <span className="font-medium text-warning-foreground">em desenvolvimento</span>.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function Logo({ withText = true, className = "" }: { withText?: boolean; className?: string }) {
   return (
