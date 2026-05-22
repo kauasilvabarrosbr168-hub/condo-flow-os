@@ -206,7 +206,8 @@ function SindicoView() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Financeiro */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <div className="relative rounded-2xl border border-border bg-card p-6 shadow-card">
+          <InDevOverlay label="Financeiro · em desenvolvimento" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Financeiro do mês</h3>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
