@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Badge, MvpBanner, InDevOverlay, SoonBadge } from "@/components/brand";
+import { Badge, MvpBanner, InDevOverlay } from "@/components/brand";
 import {
   CalendarDays,
   CheckCircle2,
