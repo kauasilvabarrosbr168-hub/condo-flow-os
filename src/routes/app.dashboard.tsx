@@ -361,7 +361,8 @@ function MoradorView() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Consumo */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <div className="relative rounded-2xl border border-border bg-card p-6 shadow-card">
+          <InDevOverlay label="Consumo · em desenvolvimento" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Seu consumo</h3>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
