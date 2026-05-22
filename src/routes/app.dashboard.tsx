@@ -112,6 +112,8 @@ function Dashboard() {
         })}
       </div>
 
+      <MvpBanner />
+
       {role === "sindico" && <SindicoView />}
       {role === "morador" && <MoradorView />}
       {role === "colaborador" && <ColaboradorView />}
