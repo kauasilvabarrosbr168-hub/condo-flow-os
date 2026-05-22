@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Badge } from "@/components/brand";
+import { Badge, MvpBanner, InDevOverlay } from "@/components/brand";
 import {
   CalendarDays,
   CheckCircle2,
@@ -112,6 +112,8 @@ function Dashboard() {
         })}
       </div>
 
+      <MvpBanner />
+
       {role === "sindico" && <SindicoView />}
       {role === "morador" && <MoradorView />}
       {role === "colaborador" && <ColaboradorView />}
@@ -204,7 +206,8 @@ function SindicoView() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Financeiro */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <div className="relative rounded-2xl border border-border bg-card p-6 shadow-card">
+          <InDevOverlay label="Financeiro · em desenvolvimento" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Financeiro do mês</h3>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -358,7 +361,8 @@ function MoradorView() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Consumo */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <div className="relative rounded-2xl border border-border bg-card p-6 shadow-card">
+          <InDevOverlay label="Consumo · em desenvolvimento" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Seu consumo</h3>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -386,7 +390,8 @@ function MoradorView() {
         </div>
 
         {/* Mural */}
-        <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-card">
+        <div className="relative lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-card">
+          <InDevOverlay label="Mural · em desenvolvimento" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Mural do condomínio</h3>
             <Megaphone className="h-4 w-4 text-muted-foreground" />

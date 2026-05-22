@@ -13,21 +13,21 @@ import {
   Settings,
   ChevronDown,
 } from "lucide-react";
-import { Logo } from "@/components/brand";
+import { Logo, SoonBadge } from "@/components/brand";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
 });
 
 const nav = [
-  { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/app/reservations", label: "Reservas", icon: CalendarDays },
-  { to: "/app/sauna", label: "Sauna inteligente", icon: Flame },
-  { to: "/app/checklist", label: "Operações", icon: ListChecks },
-  { to: "/app/issues", label: "Problemas", icon: MessageSquareWarning },
-  { to: "/app/staff", label: "Funcionários", icon: HardHat },
-  { to: "/app/resident", label: "App do morador", icon: Smartphone },
-  { to: "/app/notifications", label: "Notificações", icon: Bell },
+  { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, mvp: true },
+  { to: "/app/reservations", label: "Reservas", icon: CalendarDays, mvp: true },
+  { to: "/app/sauna", label: "Fluxo automático", icon: Flame, mvp: true },
+  { to: "/app/checklist", label: "Checklist & operações", icon: ListChecks, mvp: true },
+  { to: "/app/staff", label: "Execução (funcionários)", icon: HardHat, mvp: true },
+  { to: "/app/notifications", label: "Notificações", icon: Bell, mvp: true },
+  { to: "/app/issues", label: "Problemas & votação", icon: MessageSquareWarning, mvp: false },
+  { to: "/app/resident", label: "App do morador", icon: Smartphone, mvp: false },
 ] as const;
 
 function AppLayout() {
@@ -47,9 +47,9 @@ function AppLayout() {
             <kbd className="ml-auto rounded bg-sidebar-accent px-1.5 py-0.5 text-[10px]">⌘K</kbd>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-2 space-y-0.5">
-          <p className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">Operação</p>
-          {nav.map((item) => {
+        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+          <p className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">MVP · Fluxo de reserva</p>
+          {nav.filter((i) => i.mvp).map((item) => {
             const active = pathname === item.to;
             return (
               <Link
@@ -66,6 +66,19 @@ function AppLayout() {
               </Link>
             );
           })}
+          <p className="px-3 pt-5 pb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">Próximas entregas</p>
+          {nav.filter((i) => !i.mvp).map((item) => (
+            <div
+              key={item.to}
+              aria-disabled
+              title="Em desenvolvimento"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/40 cursor-not-allowed select-none"
+            >
+              <item.icon className="h-4 w-4" />
+              <span className="flex-1">{item.label}</span>
+              <SoonBadge />
+            </div>
+          ))}
         </nav>
         <div className="border-t border-sidebar-border p-3">
           <button className="flex w-full items-center gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent/60">
