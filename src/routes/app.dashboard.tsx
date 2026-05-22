@@ -390,7 +390,8 @@ function MoradorView() {
         </div>
 
         {/* Mural */}
-        <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-card">
+        <div className="relative lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-card">
+          <InDevOverlay label="Mural · em desenvolvimento" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Mural do condomínio</h3>
             <Megaphone className="h-4 w-4 text-muted-foreground" />
