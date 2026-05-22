@@ -47,9 +47,9 @@ function AppLayout() {
             <kbd className="ml-auto rounded bg-sidebar-accent px-1.5 py-0.5 text-[10px]">⌘K</kbd>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-2 space-y-0.5">
-          <p className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">Operação</p>
-          {nav.map((item) => {
+        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+          <p className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">MVP · Fluxo de reserva</p>
+          {nav.filter((i) => i.mvp).map((item) => {
             const active = pathname === item.to;
             return (
               <Link
@@ -66,6 +66,19 @@ function AppLayout() {
               </Link>
             );
           })}
+          <p className="px-3 pt-5 pb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">Próximas entregas</p>
+          {nav.filter((i) => !i.mvp).map((item) => (
+            <div
+              key={item.to}
+              aria-disabled
+              title="Em desenvolvimento"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/40 cursor-not-allowed select-none"
+            >
+              <item.icon className="h-4 w-4" />
+              <span className="flex-1">{item.label}</span>
+              <SoonBadge />
+            </div>
+          ))}
         </nav>
         <div className="border-t border-sidebar-border p-3">
           <button className="flex w-full items-center gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent/60">
