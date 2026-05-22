@@ -13,21 +13,21 @@ import {
   Settings,
   ChevronDown,
 } from "lucide-react";
-import { Logo } from "@/components/brand";
+import { Logo, SoonBadge } from "@/components/brand";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
 });
 
 const nav = [
-  { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/app/reservations", label: "Reservas", icon: CalendarDays },
-  { to: "/app/sauna", label: "Sauna inteligente", icon: Flame },
-  { to: "/app/checklist", label: "Operações", icon: ListChecks },
-  { to: "/app/issues", label: "Problemas", icon: MessageSquareWarning },
-  { to: "/app/staff", label: "Funcionários", icon: HardHat },
-  { to: "/app/resident", label: "App do morador", icon: Smartphone },
-  { to: "/app/notifications", label: "Notificações", icon: Bell },
+  { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, mvp: true },
+  { to: "/app/reservations", label: "Reservas", icon: CalendarDays, mvp: true },
+  { to: "/app/sauna", label: "Fluxo automático", icon: Flame, mvp: true },
+  { to: "/app/checklist", label: "Checklist & operações", icon: ListChecks, mvp: true },
+  { to: "/app/staff", label: "Execução (funcionários)", icon: HardHat, mvp: true },
+  { to: "/app/notifications", label: "Notificações", icon: Bell, mvp: true },
+  { to: "/app/issues", label: "Problemas & votação", icon: MessageSquareWarning, mvp: false },
+  { to: "/app/resident", label: "App do morador", icon: Smartphone, mvp: false },
 ] as const;
 
 function AppLayout() {
