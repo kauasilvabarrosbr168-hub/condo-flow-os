@@ -104,6 +104,11 @@ function AdminLoginPage() {
             )}
           </form>
 
+          <div className="px-8 py-3 border-t border-border bg-muted/30 text-[11px] text-muted-foreground space-y-1">
+            <p className="font-semibold text-foreground/80">Acesso padrão do dono da plataforma</p>
+            <p>Email: <code className="text-foreground">admin@condoflow.com</code></p>
+            <p>Senha: <code className="text-foreground">CondoFlow@2026</code></p>
+          </div>
           <div className="px-8 py-4 border-t border-border bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
             <Link to="/login" className="hover:text-foreground transition">← Login de clientes</Link>
             <span>v1.0 · enterprise</span>
