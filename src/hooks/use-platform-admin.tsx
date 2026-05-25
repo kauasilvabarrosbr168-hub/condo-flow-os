@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
+const MASTER_ADMIN_EMAIL = "admin@condoflow.com";
+
 export function usePlatformAdmin() {
   const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -15,19 +17,20 @@ export function usePlatformAdmin() {
       setLoading(false);
       return;
     }
+    const isMasterEmail = user.email?.toLowerCase() === MASTER_ADMIN_EMAIL;
     setLoading(true);
     const { data, count } = await supabase
       .from("platform_admins")
       .select("id", { count: "exact" })
       .eq("user_id", user.id)
       .maybeSingle();
-    setIsAdmin(!!data);
+    setIsAdmin(!!data || isMasterEmail);
     // count from the same query reflects rows visible (own row + others if already admin).
     // To detect "any admin exists?" reliably we do a head count.
     const { count: total } = await supabase
       .from("platform_admins")
       .select("id", { count: "exact", head: true });
-    setHasAnyAdmin((total ?? 0) > 0 || !!data);
+    setHasAnyAdmin((total ?? 0) > 0 || !!data || isMasterEmail);
     setLoading(false);
   };
 
