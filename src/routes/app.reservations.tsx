@@ -1,172 +1,326 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { CalendarPlus, Building, Loader2, X, Trash2, Check, Clock } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/brand";
-import { ChevronLeft, ChevronRight, Users, Sparkles, Wallet, X } from "lucide-react";
-import { useState } from "react";
+import { EmptyState } from "@/components/empty-state";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/reservations")({
-  head: () => ({ meta: [{ title: "Reservas — CondoFlow" }] }),
-  component: Reservations,
+  head: () => ({ meta: [{ title: "Reservas · CondoFlow" }] }),
+  component: ReservationsPage,
 });
 
-const areas = [
-  { id: "salao", name: "Salão de festas", capacity: 40, fee: 180, img: "🎉" },
-  { id: "churrasco", name: "Churrasqueira", capacity: 20, fee: 90, img: "🔥" },
-  { id: "sauna", name: "Sauna", capacity: 6, fee: 40, img: "♨️" },
-  { id: "quadra", name: "Quadra", capacity: 14, fee: 0, img: "🎾" },
-  { id: "piscina", name: "Piscina", capacity: 30, fee: 0, img: "🏊" },
-  { id: "coworking", name: "Coworking", capacity: 8, fee: 25, img: "💻" },
-];
+type Area = { id: string; name: string; description: string | null; min_advance_hours: number };
+type Reservation = {
+  id: string;
+  area_id: string;
+  resident_id: string;
+  starts_at: string;
+  ends_at: string;
+  guests: number | null;
+  notes: string | null;
+  status: string;
+};
 
-function Reservations() {
+function ReservationsPage() {
+  const { profile, condo, user, isAdmin } = useAuth();
+  const qc = useQueryClient();
+  const condoId = condo?.id ?? profile?.condo_id ?? null;
   const [open, setOpen] = useState(false);
-  const [area, setArea] = useState(areas[0]);
+  const [filter, setFilter] = useState<"all" | "mine" | "upcoming">("upcoming");
+
+  const { data: areas } = useQuery({
+    enabled: !!condoId,
+    queryKey: ["areas", condoId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("common_areas")
+        .select("id,name,description,min_advance_hours")
+        .eq("condo_id", condoId!)
+        .eq("active", true);
+      return (data ?? []) as Area[];
+    },
+  });
+
+  const { data: reservations, isLoading } = useQuery({
+    enabled: !!condoId,
+    queryKey: ["reservations", condoId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("reservations")
+        .select("id,area_id,resident_id,starts_at,ends_at,guests,notes,status")
+        .eq("condo_id", condoId!)
+        .order("starts_at", { ascending: true });
+      return (data ?? []) as Reservation[];
+    },
+  });
+
+  useEffect(() => {
+    if (!condoId) return;
+    const ch = supabase
+      .channel("reservations-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "reservations", filter: `condo_id=eq.${condoId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["reservations", condoId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [condoId, qc]);
+
+  if (!condoId) {
+    return (
+      <div className="p-8">
+        <EmptyState icon={Building} title="Sem condomínio vinculado" description="Aguarde um convite para acessar as reservas." />
+      </div>
+    );
+  }
+
+  const now = Date.now();
+  const list = (reservations ?? []).filter((r) => {
+    if (filter === "mine") return r.resident_id === user?.id;
+    if (filter === "upcoming") return new Date(r.starts_at).getTime() >= now - 3600_000;
+    return true;
+  });
+
+  const canReserve = (areas?.length ?? 0) > 0;
 
   return (
-    <div className="p-6 md:p-8 max-w-[1400px] mx-auto space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="bg-gradient-glow">
+      <div className="px-4 lg:px-8 pt-8 pb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Reservas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Áreas comuns, regras e pagamentos integrados.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Reservas</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Reserve áreas comuns e acompanhe a operação automatizada.</p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-1">
-          <button className="px-3 py-1.5 text-sm font-medium rounded-lg bg-muted">Mês</button>
-          <button className="px-3 py-1.5 text-sm font-medium text-muted-foreground">Semana</button>
-          <button className="px-3 py-1.5 text-sm font-medium text-muted-foreground">Lista</button>
-        </div>
+        <button
+          onClick={() => setOpen(true)}
+          disabled={!canReserve}
+          className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 disabled:opacity-50"
+        >
+          <CalendarPlus className="h-4 w-4" /> Nova reserva
+        </button>
       </div>
 
-      <div className="grid lg:grid-cols-4 gap-6">
-        <aside className="space-y-2">
-          {areas.map((a) => (
+      <div className="px-4 lg:px-8 pb-12 space-y-4 animate-slide-up">
+        <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
+          {(["upcoming", "mine", "all"] as const).map((f) => (
             <button
-              key={a.id}
-              onClick={() => { setArea(a); }}
-              className={`w-full text-left rounded-xl border p-4 transition ${
-                area.id === a.id ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-muted"
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+                filter === f ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">{a.img}</span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{a.name}</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3" /> até {a.capacity}</p>
-                </div>
-                {a.fee > 0 ? <Badge tone="primary">R$ {a.fee}</Badge> : <Badge tone="success">grátis</Badge>}
-              </div>
+              {f === "upcoming" ? "Próximas" : f === "mine" ? "Minhas" : "Todas"}
             </button>
           ))}
-        </aside>
+        </div>
 
-        <div className="lg:col-span-3 rounded-2xl border border-border bg-card p-6 shadow-card">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold">{area.name} · Maio 2026</h3>
-            <div className="flex gap-1">
-              <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border"><ChevronLeft className="h-4 w-4" /></button>
-              <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border"><ChevronRight className="h-4 w-4" /></button>
-            </div>
-          </div>
-          <div className="mt-5 grid grid-cols-7 gap-2 text-xs text-muted-foreground">
-            {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map((d) => <div key={d} className="text-center">{d}</div>)}
-          </div>
-          <div className="mt-2 grid grid-cols-7 gap-2">
-            {Array.from({ length: 35 }).map((_, i) => {
-              const day = i - 2;
-              const free = day > 0 && [3, 8, 14, 21, 28].includes(day);
-              const busy = day > 0 && [5, 12, 19, 26].includes(day);
-              const blocked = day > 0 && [9, 16].includes(day);
+        {!canReserve ? (
+          <EmptyState
+            icon={Building}
+            title="Nenhuma área comum cadastrada"
+            description={isAdmin ? "Cadastre áreas (sauna, salão, churrasqueira…) para liberar reservas." : "Aguarde o síndico configurar as áreas disponíveis."}
+            tone="primary"
+            action={isAdmin ? (
+              <Link to="/app/areas" className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
+                Configurar áreas →
+              </Link>
+            ) : undefined}
+          />
+        ) : isLoading ? (
+          <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : list.length === 0 ? (
+          <EmptyState
+            icon={CalendarPlus}
+            title="Nenhuma reserva ainda"
+            description="As reservas aparecem aqui assim que forem criadas. O sistema cuida do fluxo automático."
+          />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {list.map((r) => {
+              const area = areas?.find((a) => a.id === r.area_id);
+              const isMine = r.resident_id === user?.id;
               return (
-                <button
-                  key={i}
-                  onClick={() => setOpen(true)}
-                  disabled={day < 1 || blocked}
-                  className={`relative h-24 rounded-lg border p-2 text-left transition ${
-                    day < 1
-                      ? "border-transparent"
-                      : blocked
-                        ? "border-border bg-muted/30 text-muted-foreground"
-                        : busy
-                          ? "border-primary/40 bg-primary/5 hover:border-primary"
-                          : "border-border bg-card hover:bg-muted"
-                  }`}
-                >
-                  {day > 0 && <span className="text-xs font-medium">{day}</span>}
-                  {free && <div className="mt-1 text-[10px] rounded bg-success/10 text-success px-1.5 py-0.5">3 horários livres</div>}
-                  {busy && <div className="mt-1 text-[10px] rounded bg-primary/10 text-primary px-1.5 py-0.5">Reservado</div>}
-                  {blocked && <div className="mt-1 text-[10px]">Bloqueado</div>}
-                </button>
+                <div key={r.id} className="rounded-2xl border border-border bg-card p-4 shadow-card hover:shadow-elegant transition group">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold truncate">{area?.name ?? "Área"}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {fmt(r.starts_at)} → {fmt(r.ends_at, true)}
+                      </p>
+                    </div>
+                    <StatusBadge status={r.status} />
+                  </div>
+                  {r.notes && <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{r.notes}</p>}
+                  <div className="mt-4 flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-muted-foreground">{r.guests ?? 0} convidados</span>
+                    {(isMine || isAdmin) && r.status !== "cancelada" && (
+                      <div className="flex gap-1">
+                        {isAdmin && r.status === "pendente" && (
+                          <button
+                            onClick={async () => {
+                              const { error } = await supabase.from("reservations").update({ status: "confirmada" }).eq("id", r.id);
+                              if (error) toast.error(error.message); else toast.success("Reserva confirmada");
+                            }}
+                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-success/30 text-success hover:bg-success/10"
+                          >
+                            <Check className="h-3 w-3" /> Confirmar
+                          </button>
+                        )}
+                        <button
+                          onClick={async () => {
+                            if (!confirm("Cancelar esta reserva?")) return;
+                            const { error } = await supabase.from("reservations").update({ status: "cancelada" }).eq("id", r.id);
+                            if (error) toast.error(error.message); else toast.success("Reserva cancelada");
+                          }}
+                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
-          <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-success/50 inline-block" /> Livre</span>
-            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-primary/50 inline-block" /> Ocupado</span>
-            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-muted inline-block" /> Bloqueado</span>
-          </div>
-        </div>
+        )}
       </div>
 
-      {open && <ReservationModal onClose={() => setOpen(false)} area={area} />}
+      {open && canReserve && (
+        <NewReservationDialog
+          areas={areas!}
+          condoId={condoId}
+          userId={user!.id}
+          onClose={() => setOpen(false)}
+          onCreated={() => qc.invalidateQueries({ queryKey: ["reservations", condoId] })}
+        />
+      )}
     </div>
   );
 }
 
-function ReservationModal({ onClose, area }: { onClose: () => void; area: typeof areas[number] }) {
-  const [cleaning, setCleaning] = useState<"self" | "auto">("auto");
+function NewReservationDialog({
+  areas,
+  condoId,
+  userId,
+  onClose,
+  onCreated,
+}: {
+  areas: Area[];
+  condoId: string;
+  userId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [areaId, setAreaId] = useState(areas[0]?.id ?? "");
+  const [date, setDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+  const [startTime, setStartTime] = useState("18:00");
+  const [endTime, setEndTime] = useState("22:00");
+  const [guests, setGuests] = useState(0);
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const starts = new Date(`${date}T${startTime}:00`).toISOString();
+    const ends = new Date(`${date}T${endTime}:00`).toISOString();
+    if (new Date(ends) <= new Date(starts)) {
+      toast.error("Horário inválido");
+      setBusy(false);
+      return;
+    }
+    const { error } = await supabase.from("reservations").insert({
+      condo_id: condoId,
+      area_id: areaId,
+      resident_id: userId,
+      starts_at: starts,
+      ends_at: ends,
+      guests,
+      notes: notes || null,
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Reserva criada! O fluxo automático foi iniciado.");
+    onCreated();
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-lg rounded-2xl bg-card shadow-elegant border border-border overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <form
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-border bg-card shadow-elegant animate-pop"
+      >
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div>
-            <p className="text-xs text-muted-foreground">Nova reserva</p>
-            <h3 className="text-lg font-semibold">{area.name} · 14 maio</h3>
+            <h2 className="text-base font-semibold">Nova reserva</h2>
+            <p className="text-xs text-muted-foreground">O checklist é gerado automaticamente.</p>
           </div>
-          <button onClick={onClose} className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <div className="p-5 space-y-5">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-2">Horários disponíveis</p>
-            <div className="grid grid-cols-3 gap-2">
-              {["14h","16h","18h","20h","22h"].map((t, i) => (
-                <button key={t} className={`h-10 rounded-lg border text-sm font-medium ${i === 2 ? "border-primary bg-primary/5 text-primary" : "border-border hover:bg-muted"}`}>{t}</button>
-              ))}
-              <button disabled className="h-10 rounded-lg border border-border bg-muted text-sm text-muted-foreground line-through">12h</button>
-            </div>
+        <div className="p-5 space-y-3">
+          <Field label="Área">
+            <select value={areaId} onChange={(e) => setAreaId(e.target.value)} className={inputCls}>
+              {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Data">
+            <input type="date" value={date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Início"><input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputCls} /></Field>
+            <Field label="Fim"><input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputCls} /></Field>
           </div>
-
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-2">Limpeza</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setCleaning("self")} className={`rounded-xl border p-3 text-left ${cleaning === "self" ? "border-primary bg-primary/5" : "border-border"}`}>
-                <p className="text-sm font-medium">Eu mesmo limpo</p>
-                <p className="text-xs text-muted-foreground">Sem custos · vistoria após</p>
-              </button>
-              <button onClick={() => setCleaning("auto")} className={`rounded-xl border p-3 text-left ${cleaning === "auto" ? "border-primary bg-primary/5" : "border-border"}`}>
-                <p className="text-sm font-medium">Limpeza automática</p>
-                <p className="text-xs text-muted-foreground">+ R$ 80 · feita pela equipe</p>
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-            <p className="flex items-center gap-1.5 font-medium text-foreground"><Sparkles className="h-3.5 w-3.5 text-primary" /> Regras da casa</p>
-            <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
-              <li>Som até 22h em dias úteis</li>
-              <li>Limite de {area.capacity} pessoas</li>
-              <li>Cancelamento grátis até 24h antes</li>
-            </ul>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-border pt-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Total</p>
-              <p className="text-xl font-semibold flex items-center gap-1"><Wallet className="h-4 w-4 text-muted-foreground" /> R$ {area.fee + (cleaning === "auto" ? 80 : 0)}</p>
-            </div>
-            <button className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground shadow-elegant">
-              Confirmar e pagar
-            </button>
-          </div>
+          <Field label="Convidados">
+            <input type="number" min={0} value={guests} onChange={(e) => setGuests(Number(e.target.value))} className={inputCls} />
+          </Field>
+          <Field label="Observações">
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} rows={3} className={inputCls + " py-2 resize-none"} placeholder="Algo que o síndico ou funcionário deva saber..." />
+          </Field>
         </div>
-      </div>
+        <div className="flex justify-end gap-2 p-5 border-t border-border">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-muted">Cancelar</button>
+          <button type="submit" disabled={busy} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60">
+            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Criar reserva
+          </button>
+        </div>
+      </form>
     </div>
   );
+}
+
+const inputCls = "w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <div className="mt-1">{children}</div>
+    </label>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; tone: "default" | "primary" | "success" | "warning" | "destructive" }> = {
+    pendente: { label: "Pendente", tone: "warning" },
+    confirmada: { label: "Confirmada", tone: "primary" },
+    em_execucao: { label: "Em execução", tone: "primary" },
+    concluida: { label: "Concluída", tone: "success" },
+    cancelada: { label: "Cancelada", tone: "destructive" },
+  };
+  const v = map[status] ?? map.pendente;
+  return <Badge tone={v.tone}>{v.label}</Badge>;
+}
+
+function fmt(iso: string, hourOnly = false) {
+  const d = new Date(iso);
+  if (hourOnly) return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
