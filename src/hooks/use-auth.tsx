@@ -124,29 +124,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await new Promise((r) => setTimeout(r, 350));
 
     if (input.inviteToken) {
-      const { data: inv, error: invErr } = await supabase
-        .from("invitations")
-        .select("*")
-        .eq("token", input.inviteToken)
-        .maybeSingle();
-      if (invErr || !inv) return { error: "Convite inválido ou expirado." };
-      if (inv.accepted_at) return { error: "Este convite já foi usado." };
-      if (new Date(inv.expires_at) < new Date()) return { error: "Convite expirado." };
-
-      await supabase
-        .from("profiles")
-        .update({
-          condo_id: inv.condo_id,
-          full_name: input.fullName,
-          unit_label: inv.unit_label,
-        })
-        .eq("id", userId);
-      await supabase.from("user_roles").insert({
-        user_id: userId,
-        condo_id: inv.condo_id,
-        role: inv.role,
-      });
-      await supabase.from("invitations").update({ accepted_at: new Date().toISOString() }).eq("id", inv.id);
+      const { error: accErr } = await supabase.rpc("accept_invitation", { p_token: input.inviteToken });
+      if (accErr) {
+        const map: Record<string, string> = {
+          invalid_token: "Convite inválido.",
+          already_used: "Este convite já foi usado.",
+          expired: "Convite expirado.",
+          email_mismatch: "O e-mail informado não bate com o do convite.",
+          not_authenticated: "Sessão não inicializada — tente novamente.",
+        };
+        return { error: map[accErr.message] ?? accErr.message };
+      }
     } else if (input.condoName) {
       const { data: condoRow, error: cErr } = await supabase
         .from("condominiums")
