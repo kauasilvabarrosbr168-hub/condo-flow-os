@@ -15,14 +15,16 @@ function InvPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("invitations")
-        .select("id, email, full_name, role, accepted_at, expires_at, created_at, condominiums(name)")
-        .order("created_at", { ascending: false });
+      const [{ data }, { data: condos }] = await Promise.all([
+        supabase.from("invitations").select("id, email, full_name, role, accepted_at, expires_at, created_at, condo_id").order("created_at", { ascending: false }),
+        supabase.from("condominiums").select("id, name"),
+      ]);
+      const cm = new Map((condos ?? []).map((c) => [c.id, c.name]));
       setRows(
-        (data ?? []).map((i: { id: string; email: string; full_name: string; role: string; accepted_at: string | null; expires_at: string; created_at: string; condominiums: { name: string } | null }) => ({
-          ...i,
-          condo_name: i.condominiums?.name ?? "—",
+        (data ?? []).map((i) => ({
+          id: i.id, email: i.email, full_name: i.full_name, role: i.role,
+          accepted_at: i.accepted_at, expires_at: i.expires_at, created_at: i.created_at,
+          condo_name: cm.get(i.condo_id) ?? "—",
         })),
       );
     })();
