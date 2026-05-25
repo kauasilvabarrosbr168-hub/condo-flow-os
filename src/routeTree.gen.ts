@@ -12,8 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppTimelineRouteImport } from './routes/app.timeline'
+import { Route as AppTeamRouteImport } from './routes/app.team'
+import { Route as AppTasksRouteImport } from './routes/app.tasks'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppReservationsRouteImport } from './routes/app.reservations'
+import { Route as AppInvitationsRouteImport } from './routes/app.invitations'
+import { Route as AppExploreRouteImport } from './routes/app.explore'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
+import { Route as AppCommunicationRouteImport } from './routes/app.communication'
+import { Route as AppAreasRouteImport } from './routes/app.areas'
+import { Route as AppAnalyticsRouteImport } from './routes/app.analytics'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -30,9 +39,39 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppTimelineRoute = AppTimelineRouteImport.update({
+  id: '/timeline',
+  path: '/timeline',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTasksRoute = AppTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppReservationsRoute = AppReservationsRouteImport.update({
   id: '/reservations',
   path: '/reservations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInvitationsRoute = AppInvitationsRouteImport.update({
+  id: '/invitations',
+  path: '/invitations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExploreRoute = AppExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -40,41 +79,120 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCommunicationRoute = AppCommunicationRouteImport.update({
+  id: '/communication',
+  path: '/communication',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAreasRoute = AppAreasRouteImport.update({
+  id: '/areas',
+  path: '/areas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/analytics': typeof AppAnalyticsRoute
+  '/app/areas': typeof AppAreasRoute
+  '/app/communication': typeof AppCommunicationRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/explore': typeof AppExploreRoute
+  '/app/invitations': typeof AppInvitationsRoute
   '/app/reservations': typeof AppReservationsRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/tasks': typeof AppTasksRoute
+  '/app/team': typeof AppTeamRoute
+  '/app/timeline': typeof AppTimelineRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/analytics': typeof AppAnalyticsRoute
+  '/app/areas': typeof AppAreasRoute
+  '/app/communication': typeof AppCommunicationRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/explore': typeof AppExploreRoute
+  '/app/invitations': typeof AppInvitationsRoute
   '/app/reservations': typeof AppReservationsRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/tasks': typeof AppTasksRoute
+  '/app/team': typeof AppTeamRoute
+  '/app/timeline': typeof AppTimelineRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/analytics': typeof AppAnalyticsRoute
+  '/app/areas': typeof AppAreasRoute
+  '/app/communication': typeof AppCommunicationRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/explore': typeof AppExploreRoute
+  '/app/invitations': typeof AppInvitationsRoute
   '/app/reservations': typeof AppReservationsRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/tasks': typeof AppTasksRoute
+  '/app/team': typeof AppTeamRoute
+  '/app/timeline': typeof AppTimelineRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/app/dashboard' | '/app/reservations'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/app/analytics'
+    | '/app/areas'
+    | '/app/communication'
+    | '/app/dashboard'
+    | '/app/explore'
+    | '/app/invitations'
+    | '/app/reservations'
+    | '/app/settings'
+    | '/app/tasks'
+    | '/app/team'
+    | '/app/timeline'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/login' | '/app/dashboard' | '/app/reservations'
+  to:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/app/analytics'
+    | '/app/areas'
+    | '/app/communication'
+    | '/app/dashboard'
+    | '/app/explore'
+    | '/app/invitations'
+    | '/app/reservations'
+    | '/app/settings'
+    | '/app/tasks'
+    | '/app/team'
+    | '/app/timeline'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/login'
+    | '/app/analytics'
+    | '/app/areas'
+    | '/app/communication'
     | '/app/dashboard'
+    | '/app/explore'
+    | '/app/invitations'
     | '/app/reservations'
+    | '/app/settings'
+    | '/app/tasks'
+    | '/app/team'
+    | '/app/timeline'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,11 +224,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/timeline': {
+      id: '/app/timeline'
+      path: '/timeline'
+      fullPath: '/app/timeline'
+      preLoaderRoute: typeof AppTimelineRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/team': {
+      id: '/app/team'
+      path: '/team'
+      fullPath: '/app/team'
+      preLoaderRoute: typeof AppTeamRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/tasks': {
+      id: '/app/tasks'
+      path: '/tasks'
+      fullPath: '/app/tasks'
+      preLoaderRoute: typeof AppTasksRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/reservations': {
       id: '/app/reservations'
       path: '/reservations'
       fullPath: '/app/reservations'
       preLoaderRoute: typeof AppReservationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/invitations': {
+      id: '/app/invitations'
+      path: '/invitations'
+      fullPath: '/app/invitations'
+      preLoaderRoute: typeof AppInvitationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/explore': {
+      id: '/app/explore'
+      path: '/explore'
+      fullPath: '/app/explore'
+      preLoaderRoute: typeof AppExploreRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/dashboard': {
@@ -120,17 +280,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/communication': {
+      id: '/app/communication'
+      path: '/communication'
+      fullPath: '/app/communication'
+      preLoaderRoute: typeof AppCommunicationRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/areas': {
+      id: '/app/areas'
+      path: '/areas'
+      fullPath: '/app/areas'
+      preLoaderRoute: typeof AppAreasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/analytics': {
+      id: '/app/analytics'
+      path: '/analytics'
+      fullPath: '/app/analytics'
+      preLoaderRoute: typeof AppAnalyticsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAnalyticsRoute: typeof AppAnalyticsRoute
+  AppAreasRoute: typeof AppAreasRoute
+  AppCommunicationRoute: typeof AppCommunicationRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppExploreRoute: typeof AppExploreRoute
+  AppInvitationsRoute: typeof AppInvitationsRoute
   AppReservationsRoute: typeof AppReservationsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppTasksRoute: typeof AppTasksRoute
+  AppTeamRoute: typeof AppTeamRoute
+  AppTimelineRoute: typeof AppTimelineRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAnalyticsRoute: AppAnalyticsRoute,
+  AppAreasRoute: AppAreasRoute,
+  AppCommunicationRoute: AppCommunicationRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppExploreRoute: AppExploreRoute,
+  AppInvitationsRoute: AppInvitationsRoute,
   AppReservationsRoute: AppReservationsRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppTasksRoute: AppTasksRoute,
+  AppTeamRoute: AppTeamRoute,
+  AppTimelineRoute: AppTimelineRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
