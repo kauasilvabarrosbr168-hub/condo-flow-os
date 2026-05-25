@@ -179,6 +179,105 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          features: Json
+          id: string
+          is_active: boolean
+          monthly_price_cents: number
+          name: string
+          unit_limit: number | null
+          updated_at: string
+          user_limit: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          monthly_price_cents?: number
+          name: string
+          unit_limit?: number | null
+          updated_at?: string
+          user_limit?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          monthly_price_cents?: number
+          name?: string
+          unit_limit?: number | null
+          updated_at?: string
+          user_limit?: number | null
+        }
+        Relationships: []
+      }
+      platform_admins: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      platform_audit_logs: {
+        Row: {
+          action: string
+          admin_user_id: string
+          created_at: string
+          id: string
+          ip: string | null
+          meta: Json
+          target_id: string | null
+          target_kind: string | null
+        }
+        Insert: {
+          action: string
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          meta?: Json
+          target_id?: string | null
+          target_kind?: string | null
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          meta?: Json
+          target_id?: string | null
+          target_kind?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -280,6 +379,122 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          condo_id: string
+          created_at: string
+          current_period_end: string | null
+          discount_pct: number
+          id: string
+          notes: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          condo_id: string
+          created_at?: string
+          current_period_end?: string | null
+          discount_pct?: number
+          id?: string
+          notes?: string | null
+          plan_id: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          condo_id?: string
+          created_at?: string
+          current_period_end?: string | null
+          discount_pct?: number
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_sessions: {
+        Row: {
+          admin_user_id: string
+          condo_id: string | null
+          ended_at: string | null
+          id: string
+          reason: string | null
+          started_at: string
+          target_user_id: string
+        }
+        Insert: {
+          admin_user_id: string
+          condo_id?: string | null
+          ended_at?: string | null
+          id?: string
+          reason?: string | null
+          started_at?: string
+          target_user_id: string
+        }
+        Update: {
+          admin_user_id?: string
+          condo_id?: string | null
+          ended_at?: string | null
+          id?: string
+          reason?: string | null
+          started_at?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          body: string | null
+          condo_id: string
+          created_at: string
+          id: string
+          opened_by: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          body?: string | null
+          condo_id: string
+          created_at?: string
+          id?: string
+          opened_by: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          body?: string | null
+          condo_id?: string
+          created_at?: string
+          id?: string
+          opened_by?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assignee_id: string | null
@@ -377,6 +592,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_first_platform_admin: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _condo_id: string
@@ -393,6 +609,7 @@ export type Database = {
         Args: { _condo_id: string; _user_id: string }
         Returns: boolean
       }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       user_condo_id: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
@@ -403,8 +620,16 @@ export type Database = {
         | "em_execucao"
         | "concluida"
         | "cancelada"
+      subscription_status:
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "suspended"
+        | "cancelled"
       task_kind: "pre_checklist" | "pos_checklist" | "manutencao" | "incidente"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
+      ticket_priority: "low" | "normal" | "high" | "urgent"
+      ticket_status: "open" | "pending" | "resolved" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -540,8 +765,17 @@ export const Constants = {
         "concluida",
         "cancelada",
       ],
+      subscription_status: [
+        "trialing",
+        "active",
+        "past_due",
+        "suspended",
+        "cancelled",
+      ],
       task_kind: ["pre_checklist", "pos_checklist", "manutencao", "incidente"],
       task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
+      ticket_priority: ["low", "normal", "high", "urgent"],
+      ticket_status: ["open", "pending", "resolved", "closed"],
     },
   },
 } as const

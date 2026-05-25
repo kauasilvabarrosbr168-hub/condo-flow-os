@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AppTimelineRouteImport } from './routes/app.timeline'
 import { Route as AppTeamRouteImport } from './routes/app.team'
 import { Route as AppTasksRouteImport } from './routes/app.tasks'
@@ -23,6 +25,19 @@ import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppCommunicationRouteImport } from './routes/app.communication'
 import { Route as AppAreasRouteImport } from './routes/app.areas'
 import { Route as AppAnalyticsRouteImport } from './routes/app.analytics'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminTicketsRouteImport } from './routes/admin.tickets'
+import { Route as AdminSubscriptionsRouteImport } from './routes/admin.subscriptions'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminSecurityRouteImport } from './routes/admin.security'
+import { Route as AdminRevenueRouteImport } from './routes/admin.revenue'
+import { Route as AdminPlansRouteImport } from './routes/admin.plans'
+import { Route as AdminLogsRouteImport } from './routes/admin.logs'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminInvitationsRouteImport } from './routes/admin.invitations'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminCondosRouteImport } from './routes/admin.condos'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -34,10 +49,20 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AppTimelineRoute = AppTimelineRouteImport.update({
   id: '/timeline',
@@ -94,11 +119,90 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTicketsRoute = AdminTicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSubscriptionsRoute = AdminSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSecurityRoute = AdminSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRevenueRoute = AdminRevenueRouteImport.update({
+  id: '/revenue',
+  path: '/revenue',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlansRoute = AdminPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLogsRoute = AdminLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminInvitationsRoute = AdminInvitationsRouteImport.update({
+  id: '/invitations',
+  path: '/invitations',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCondosRoute = AdminCondosRouteImport.update({
+  id: '/condos',
+  path: '/condos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/condos': typeof AdminCondosRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/invitations': typeof AdminInvitationsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/plans': typeof AdminPlansRoute
+  '/admin/revenue': typeof AdminRevenueRoute
+  '/admin/security': typeof AdminSecurityRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
+  '/admin/tickets': typeof AdminTicketsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
   '/app/communication': typeof AppCommunicationRoute
@@ -110,11 +214,25 @@ export interface FileRoutesByFullPath {
   '/app/tasks': typeof AppTasksRoute
   '/app/team': typeof AppTeamRoute
   '/app/timeline': typeof AppTimelineRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/condos': typeof AdminCondosRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/invitations': typeof AdminInvitationsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/plans': typeof AdminPlansRoute
+  '/admin/revenue': typeof AdminRevenueRoute
+  '/admin/security': typeof AdminSecurityRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
+  '/admin/tickets': typeof AdminTicketsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
   '/app/communication': typeof AppCommunicationRoute
@@ -126,12 +244,27 @@ export interface FileRoutesByTo {
   '/app/tasks': typeof AppTasksRoute
   '/app/team': typeof AppTeamRoute
   '/app/timeline': typeof AppTimelineRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/condos': typeof AdminCondosRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/invitations': typeof AdminInvitationsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/plans': typeof AdminPlansRoute
+  '/admin/revenue': typeof AdminRevenueRoute
+  '/admin/security': typeof AdminSecurityRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
+  '/admin/tickets': typeof AdminTicketsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
   '/app/communication': typeof AppCommunicationRoute
@@ -143,13 +276,28 @@ export interface FileRoutesById {
   '/app/tasks': typeof AppTasksRoute
   '/app/team': typeof AppTeamRoute
   '/app/timeline': typeof AppTimelineRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/app'
     | '/login'
+    | '/admin/analytics'
+    | '/admin/condos'
+    | '/admin/dashboard'
+    | '/admin/invitations'
+    | '/admin/login'
+    | '/admin/logs'
+    | '/admin/plans'
+    | '/admin/revenue'
+    | '/admin/security'
+    | '/admin/settings'
+    | '/admin/subscriptions'
+    | '/admin/tickets'
+    | '/admin/users'
     | '/app/analytics'
     | '/app/areas'
     | '/app/communication'
@@ -161,11 +309,25 @@ export interface FileRouteTypes {
     | '/app/tasks'
     | '/app/team'
     | '/app/timeline'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/app'
     | '/login'
+    | '/admin/analytics'
+    | '/admin/condos'
+    | '/admin/dashboard'
+    | '/admin/invitations'
+    | '/admin/login'
+    | '/admin/logs'
+    | '/admin/plans'
+    | '/admin/revenue'
+    | '/admin/security'
+    | '/admin/settings'
+    | '/admin/subscriptions'
+    | '/admin/tickets'
+    | '/admin/users'
     | '/app/analytics'
     | '/app/areas'
     | '/app/communication'
@@ -177,11 +339,26 @@ export interface FileRouteTypes {
     | '/app/tasks'
     | '/app/team'
     | '/app/timeline'
+    | '/admin'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/app'
     | '/login'
+    | '/admin/analytics'
+    | '/admin/condos'
+    | '/admin/dashboard'
+    | '/admin/invitations'
+    | '/admin/login'
+    | '/admin/logs'
+    | '/admin/plans'
+    | '/admin/revenue'
+    | '/admin/security'
+    | '/admin/settings'
+    | '/admin/subscriptions'
+    | '/admin/tickets'
+    | '/admin/users'
     | '/app/analytics'
     | '/app/areas'
     | '/app/communication'
@@ -193,10 +370,12 @@ export interface FileRouteTypes {
     | '/app/tasks'
     | '/app/team'
     | '/app/timeline'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
 }
@@ -217,12 +396,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/app/timeline': {
       id: '/app/timeline'
@@ -301,8 +494,135 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/tickets': {
+      id: '/admin/tickets'
+      path: '/tickets'
+      fullPath: '/admin/tickets'
+      preLoaderRoute: typeof AdminTicketsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/subscriptions': {
+      id: '/admin/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AdminSubscriptionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/security': {
+      id: '/admin/security'
+      path: '/security'
+      fullPath: '/admin/security'
+      preLoaderRoute: typeof AdminSecurityRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/revenue': {
+      id: '/admin/revenue'
+      path: '/revenue'
+      fullPath: '/admin/revenue'
+      preLoaderRoute: typeof AdminRevenueRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/plans': {
+      id: '/admin/plans'
+      path: '/plans'
+      fullPath: '/admin/plans'
+      preLoaderRoute: typeof AdminPlansRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/logs': {
+      id: '/admin/logs'
+      path: '/logs'
+      fullPath: '/admin/logs'
+      preLoaderRoute: typeof AdminLogsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/invitations': {
+      id: '/admin/invitations'
+      path: '/invitations'
+      fullPath: '/admin/invitations'
+      preLoaderRoute: typeof AdminInvitationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/condos': {
+      id: '/admin/condos'
+      path: '/condos'
+      fullPath: '/admin/condos'
+      preLoaderRoute: typeof AdminCondosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
+
+interface AdminRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminCondosRoute: typeof AdminCondosRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminInvitationsRoute: typeof AdminInvitationsRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminLogsRoute: typeof AdminLogsRoute
+  AdminPlansRoute: typeof AdminPlansRoute
+  AdminRevenueRoute: typeof AdminRevenueRoute
+  AdminSecurityRoute: typeof AdminSecurityRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
+  AdminTicketsRoute: typeof AdminTicketsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminCondosRoute: AdminCondosRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminInvitationsRoute: AdminInvitationsRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  AdminLogsRoute: AdminLogsRoute,
+  AdminPlansRoute: AdminPlansRoute,
+  AdminRevenueRoute: AdminRevenueRoute,
+  AdminSecurityRoute: AdminSecurityRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminSubscriptionsRoute: AdminSubscriptionsRoute,
+  AdminTicketsRoute: AdminTicketsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRoute
@@ -336,6 +656,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
 }
