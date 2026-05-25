@@ -64,13 +64,16 @@ function LoginPage() {
     if (!invite) return;
     setMode("signup");
     supabase
-      .from("invitations")
-      .select("full_name,email,role,condo_id")
-      .eq("token", invite)
+      .rpc("get_invitation_by_token", { p_token: invite })
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          setInvitation(data);
+          setInvitation({
+            full_name: data.full_name,
+            email: data.email,
+            role: data.role,
+            condo_id: data.condo_id,
+          });
           setEmail(data.email);
           setFullName(data.full_name);
         }
