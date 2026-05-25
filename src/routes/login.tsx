@@ -49,7 +49,14 @@ function LoginPage() {
 
   useEffect(() => {
     if (session && !loading) {
-      navigate({ to: "/app/dashboard" });
+      (async () => {
+        const { data: pa } = await supabase
+          .from("platform_admins")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        navigate({ to: pa ? "/admin/dashboard" : "/app/dashboard" });
+      })();
     }
   }, [session, loading, navigate]);
 
@@ -98,7 +105,7 @@ function LoginPage() {
         }
         toast.success("Bem-vindo de volta");
         router.invalidate();
-        navigate({ to: "/app/dashboard" });
+        // navigation handled by session effect (platform admins → /admin)
       } else {
         const parsed = signupSchema.safeParse({ fullName, email, password });
         if (!parsed.success) {
