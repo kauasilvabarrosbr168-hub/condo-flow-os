@@ -5,6 +5,9 @@ import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Badge } from "@/components/brand";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { Database } from "@/integrations/supabase/types";
+
+type SubStatus = Database["public"]["Enums"]["subscription_status"];
 
 export const Route = createFileRoute("/admin/subscriptions")({
   head: () => ({ meta: [{ title: "Assinaturas · CondoFlow Admin" }] }),
@@ -18,7 +21,7 @@ type Row = {
   plan_id: string;
   plan_name: string;
   price_cents: number;
-  status: string;
+  status: SubStatus;
   trial_ends_at: string | null;
   current_period_end: string | null;
   discount_pct: number;
@@ -26,38 +29,39 @@ type Row = {
 
 function SubsPage() {
   const [rows, setRows] = useState<Row[] | null>(null);
-  const [plans, setPlans] = useState<{ id: string; name: string }[]>([]);
+  const [plans, setPlans] = useState<{ id: string; name: string; monthly_price_cents: number }[]>([]);
 
   const load = async () => {
-    const [{ data: subs }, { data: ps }] = await Promise.all([
-      supabase.from("subscriptions").select("id, condo_id, plan_id, status, trial_ends_at, current_period_end, discount_pct, condominiums(name), plans(name, monthly_price_cents)"),
-      supabase.from("plans").select("id, name").eq("is_active", true),
+    const [{ data: subs }, { data: ps }, { data: condos }] = await Promise.all([
+      supabase.from("subscriptions").select("id, condo_id, plan_id, status, trial_ends_at, current_period_end, discount_pct"),
+      supabase.from("plans").select("id, name, monthly_price_cents").eq("is_active", true),
+      supabase.from("condominiums").select("id, name"),
     ]);
     setPlans(ps ?? []);
+    const condoMap = new Map((condos ?? []).map((c) => [c.id, c.name]));
+    const planMap = new Map((ps ?? []).map((p) => [p.id, p]));
     setRows(
-      (subs ?? []).map((s: {
-        id: string; condo_id: string; plan_id: string; status: string;
-        trial_ends_at: string | null; current_period_end: string | null; discount_pct: number;
-        condominiums: { name: string } | null;
-        plans: { name: string; monthly_price_cents: number } | null;
-      }) => ({
-        id: s.id,
-        condo_id: s.condo_id,
-        condo_name: s.condominiums?.name ?? "—",
-        plan_id: s.plan_id,
-        plan_name: s.plans?.name ?? "—",
-        price_cents: s.plans?.monthly_price_cents ?? 0,
-        status: s.status,
-        trial_ends_at: s.trial_ends_at,
-        current_period_end: s.current_period_end,
-        discount_pct: s.discount_pct ?? 0,
-      })),
+      (subs ?? []).map((s) => {
+        const p = planMap.get(s.plan_id);
+        return {
+          id: s.id,
+          condo_id: s.condo_id,
+          condo_name: condoMap.get(s.condo_id) ?? "—",
+          plan_id: s.plan_id,
+          plan_name: p?.name ?? "—",
+          price_cents: p?.monthly_price_cents ?? 0,
+          status: s.status,
+          trial_ends_at: s.trial_ends_at,
+          current_period_end: s.current_period_end,
+          discount_pct: s.discount_pct ?? 0,
+        };
+      }),
     );
   };
 
   useEffect(() => { load(); }, []);
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: SubStatus) => {
     const { error } = await supabase.from("subscriptions").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Atualizado");

@@ -5,6 +5,10 @@ import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Badge } from "@/components/brand";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { Database } from "@/integrations/supabase/types";
+
+type TicketStatus = Database["public"]["Enums"]["ticket_status"];
+type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
 
 export const Route = createFileRoute("/admin/tickets")({
   head: () => ({ meta: [{ title: "Suporte · CondoFlow Admin" }] }),
@@ -14,8 +18,8 @@ export const Route = createFileRoute("/admin/tickets")({
 type Row = {
   id: string;
   subject: string;
-  status: string;
-  priority: string;
+  status: TicketStatus;
+  priority: TicketPriority;
   created_at: string;
   condo_name: string;
 };
@@ -24,27 +28,28 @@ function TicketsPage() {
   const [rows, setRows] = useState<Row[] | null>(null);
 
   const load = async () => {
-    const { data } = await supabase
-      .from("support_tickets")
-      .select("id, subject, status, priority, created_at, condominiums(name)")
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: condos }] = await Promise.all([
+      supabase.from("support_tickets").select("id, subject, status, priority, created_at, condo_id").order("created_at", { ascending: false }),
+      supabase.from("condominiums").select("id, name"),
+    ]);
+    const cm = new Map((condos ?? []).map((c) => [c.id, c.name]));
     setRows(
-      (data ?? []).map((t: { id: string; subject: string; status: string; priority: string; created_at: string; condominiums: { name: string } | null }) => ({
+      (data ?? []).map((t) => ({
         id: t.id, subject: t.subject, status: t.status, priority: t.priority, created_at: t.created_at,
-        condo_name: t.condominiums?.name ?? "—",
+        condo_name: cm.get(t.condo_id) ?? "—",
       })),
     );
   };
 
   useEffect(() => { load(); }, []);
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: TicketStatus) => {
     const { error } = await supabase.from("support_tickets").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
     load();
   };
 
-  const tone = (p: string) => p === "urgent" ? "destructive" : p === "high" ? "warning" : p === "low" ? "default" : "primary";
+  const tone = (p: TicketPriority) => p === "urgent" ? "destructive" : p === "high" ? "warning" : p === "low" ? "default" : "primary";
 
   return (
     <div>
@@ -71,9 +76,9 @@ function TicketsPage() {
                 <tr key={r.id} className="hover:bg-muted/30 transition">
                   <td className="px-5 py-3 font-medium">{r.subject}</td>
                   <td className="px-5 py-3">{r.condo_name}</td>
-                  <td className="px-5 py-3"><Badge tone={tone(r.priority) as "default" | "success" | "warning" | "destructive" | "primary"}>{r.priority}</Badge></td>
+                  <td className="px-5 py-3"><Badge tone={tone(r.priority)}>{r.priority}</Badge></td>
                   <td className="px-5 py-3">
-                    <select value={r.status} onChange={(e) => updateStatus(r.id, e.target.value)} className="rounded-md border border-border bg-background px-2 py-1 text-xs">
+                    <select value={r.status} onChange={(e) => updateStatus(r.id, e.target.value as TicketStatus)} className="rounded-md border border-border bg-background px-2 py-1 text-xs">
                       <option value="open">Aberto</option>
                       <option value="pending">Pendente</option>
                       <option value="resolved">Resolvido</option>
