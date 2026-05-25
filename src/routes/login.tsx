@@ -105,7 +105,7 @@ function LoginPage() {
         }
         toast.success("Bem-vindo de volta");
         router.invalidate();
-        navigate({ to: "/app/dashboard" });
+        // navigation handled by session effect (platform admins → /admin)
       } else {
         const parsed = signupSchema.safeParse({ fullName, email, password });
         if (!parsed.success) {
