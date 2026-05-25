@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle } from "lucide-react";
+import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/brand";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/condos")({
@@ -23,8 +25,13 @@ type Row = {
 };
 
 function CondosPage() {
+  const { user } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [q, setQ] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createdInvite, setCreatedInvite] = useState<string | null>(null);
+  const [form, setForm] = useState({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
 
   const load = async () => {
     const [{ data: condos }, { data: profiles }, { data: subs }] = await Promise.all([
@@ -67,18 +74,109 @@ function CondosPage() {
     load();
   };
 
+  const createCondo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return toast.error("Sessão administrativa não encontrada.");
+    setCreating(true);
+    setCreatedInvite(null);
+    try {
+      const { data: condo, error: condoError } = await supabase
+        .from("condominiums")
+        .insert({ name: form.condoName.trim(), address: form.address.trim() || null, created_by: user.id })
+        .select("id")
+        .single();
+      if (condoError || !condo) throw new Error(condoError?.message ?? "Falha ao criar condomínio.");
+
+      const { data: starter } = await supabase.from("plans").select("id").eq("code", "starter").maybeSingle();
+      if (starter?.id) {
+        await supabase.from("subscriptions").insert({ condo_id: condo.id, plan_id: starter.id, status: "trialing" });
+      }
+
+      const { data: invite, error: inviteError } = await supabase
+        .from("invitations")
+        .insert({
+          condo_id: condo.id,
+          email: form.sindicoEmail.trim().toLowerCase(),
+          full_name: form.sindicoName.trim(),
+          role: "sindico",
+          invited_by: user.id,
+        })
+        .select("token")
+        .single();
+      if (inviteError || !invite) throw new Error(inviteError?.message ?? "Falha ao criar convite do síndico.");
+
+      const inviteUrl = `${window.location.origin}/login?mode=signup&invite=${invite.token}`;
+      setCreatedInvite(inviteUrl);
+      setForm({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
+      toast.success("Condomínio criado e convite do síndico gerado.");
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível concluir o cadastro.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div>
       <PageHeader
         title="Condomínios"
-        description="Todos os workspaces da plataforma. Isolados entre si por arquitetura multi-tenant."
+        description="Cadastre clientes, gere o acesso do síndico e controle cada workspace sem entrar no app dos moradores."
         actions={
-          <div className="relative w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome…" className="pl-9" />
-          </div>
+          <>
+            <div className="relative w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome…" className="pl-9" />
+            </div>
+            <Button onClick={() => setShowCreate((v) => !v)}>
+              <Plus className="h-4 w-4" /> Novo condomínio
+            </Button>
+          </>
         }
       />
+
+      {showCreate && (
+        <form onSubmit={createCondo} className="mb-6 rounded-2xl border border-border bg-card shadow-card overflow-hidden animate-fade-in">
+          <div className="border-b border-border px-5 py-4">
+            <p className="text-sm font-semibold">Cadastrar condomínio e síndico</p>
+            <p className="text-xs text-muted-foreground mt-0.5">O síndico recebe um convite exclusivo e entra no app normal do condomínio.</p>
+          </div>
+          <div className="grid gap-4 p-5 md:grid-cols-2">
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Nome do condomínio</span>
+              <Input required value={form.condoName} onChange={(e) => setForm((f) => ({ ...f, condoName: e.target.value }))} placeholder="Residencial Aurora" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Endereço</span>
+              <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="Rua das Palmeiras, 123" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Nome do síndico</span>
+              <Input required value={form.sindicoName} onChange={(e) => setForm((f) => ({ ...f, sindicoName: e.target.value }))} placeholder="Marina Souza" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email do síndico</span>
+              <Input required type="email" value={form.sindicoEmail} onChange={(e) => setForm((f) => ({ ...f, sindicoEmail: e.target.value }))} placeholder="sindico@condominio.com" />
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/20 px-5 py-4">
+            {createdInvite ? (
+              <button
+                type="button"
+                onClick={() => { navigator.clipboard.writeText(createdInvite); toast.success("Link copiado"); }}
+                className="inline-flex min-w-0 items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition"
+              >
+                <Copy className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Convite gerado: {createdInvite}</span>
+              </button>
+            ) : <span className="text-xs text-muted-foreground">Após criar, copie o link e envie ao síndico.</span>}
+            <Button type="submit" disabled={creating}>
+              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              Criar e gerar convite
+            </Button>
+          </div>
+        </form>
+      )}
 
       {!rows ? (
         <div className="flex justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>

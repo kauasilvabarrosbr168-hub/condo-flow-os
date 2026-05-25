@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { acceptInvitation } from "@/lib/invitations.functions";
 
 export type Role = "sindico" | "administradora" | "morador" | "funcionario";
 
@@ -51,6 +53,7 @@ const Ctx = createContext<AuthCtx | null>(null);
 const ROLE_PRIORITY: Role[] = ["sindico", "administradora", "funcionario", "morador"];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const acceptInvitationFn = useServerFn(acceptInvitation);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [condo, setCondo] = useState<Condo | null>(null);
@@ -124,8 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await new Promise((r) => setTimeout(r, 350));
 
     if (input.inviteToken) {
-      const { error: accErr } = await supabase.rpc("accept_invitation", { p_token: input.inviteToken });
-      if (accErr) {
+      try {
+        await acceptInvitationFn({ data: { token: input.inviteToken } });
+      } catch (accErr) {
+        const message = accErr instanceof Error ? accErr.message : String(accErr);
         const map: Record<string, string> = {
           invalid_token: "Convite inválido.",
           already_used: "Este convite já foi usado.",
@@ -133,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email_mismatch: "O e-mail informado não bate com o do convite.",
           not_authenticated: "Sessão não inicializada — tente novamente.",
         };
-        return { error: map[accErr.message] ?? accErr.message };
+        return { error: map[message] ?? message };
       }
     } else if (input.condoName) {
       const { data: condoRow, error: cErr } = await supabase
