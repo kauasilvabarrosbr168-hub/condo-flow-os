@@ -592,6 +592,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_first_platform_admin: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _condo_id: string
