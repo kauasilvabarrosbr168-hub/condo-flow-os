@@ -592,7 +592,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: { Args: { p_token: string }; Returns: string }
       claim_first_platform_admin: { Args: never; Returns: boolean }
+      get_invitation_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          accepted_at: string
+          condo_id: string
+          email: string
+          expires_at: string
+          full_name: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          unit_label: string
+        }[]
+      }
       has_role: {
         Args: {
           _condo_id: string
