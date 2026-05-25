@@ -49,7 +49,14 @@ function LoginPage() {
 
   useEffect(() => {
     if (session && !loading) {
-      navigate({ to: "/app/dashboard" });
+      (async () => {
+        const { data: pa } = await supabase
+          .from("platform_admins")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        navigate({ to: pa ? "/admin/dashboard" : "/app/dashboard" });
+      })();
     }
   }, [session, loading, navigate]);
 
