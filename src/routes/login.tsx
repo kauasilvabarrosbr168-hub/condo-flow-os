@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Logo } from "@/components/brand";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { getInvitationByToken } from "@/lib/invitations.functions";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -36,6 +37,7 @@ function LoginPage() {
   const { invite, mode: modeParam } = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
+  const fetchInvitation = useServerFn(getInvitationByToken);
   const { session, signIn, signUp, loading } = useAuth();
   const [mode, setMode] = useState<Mode>(modeParam ?? (invite ? "signup" : "signin"));
   const [busy, setBusy] = useState(false);
@@ -69,10 +71,8 @@ function LoginPage() {
   useEffect(() => {
     if (!invite) return;
     setMode("signup");
-    supabase
-      .rpc("get_invitation_by_token", { p_token: invite })
-      .maybeSingle()
-      .then(({ data }) => {
+    fetchInvitation({ data: { token: invite } })
+      .then((data) => {
         if (data) {
           setInvitation({
             full_name: data.full_name,
@@ -84,7 +84,7 @@ function LoginPage() {
           setFullName(data.full_name);
         }
       });
-  }, [invite]);
+  }, [invite, fetchInvitation]);
 
   const roleLabel = useMemo(() => {
     if (!invitation) return null;
