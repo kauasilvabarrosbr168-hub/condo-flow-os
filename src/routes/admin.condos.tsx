@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle } from "lucide-react";
+import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/brand";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/condos")({
@@ -23,8 +25,13 @@ type Row = {
 };
 
 function CondosPage() {
+  const { user } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [q, setQ] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createdInvite, setCreatedInvite] = useState<string | null>(null);
+  const [form, setForm] = useState({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
 
   const load = async () => {
     const [{ data: condos }, { data: profiles }, { data: subs }] = await Promise.all([
@@ -65,6 +72,49 @@ function CondosPage() {
     if (error) return toast.error(error.message);
     toast.success(next === "suspended" ? "Condomínio suspenso" : "Condomínio reativado");
     load();
+  };
+
+  const createCondo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return toast.error("Sessão administrativa não encontrada.");
+    setCreating(true);
+    setCreatedInvite(null);
+    try {
+      const { data: condo, error: condoError } = await supabase
+        .from("condominiums")
+        .insert({ name: form.condoName.trim(), address: form.address.trim() || null, created_by: user.id })
+        .select("id")
+        .single();
+      if (condoError || !condo) throw new Error(condoError?.message ?? "Falha ao criar condomínio.");
+
+      const { data: starter } = await supabase.from("plans").select("id").eq("code", "starter").maybeSingle();
+      if (starter?.id) {
+        await supabase.from("subscriptions").insert({ condo_id: condo.id, plan_id: starter.id, status: "trialing" });
+      }
+
+      const { data: invite, error: inviteError } = await supabase
+        .from("invitations")
+        .insert({
+          condo_id: condo.id,
+          email: form.sindicoEmail.trim().toLowerCase(),
+          full_name: form.sindicoName.trim(),
+          role: "sindico",
+          invited_by: user.id,
+        })
+        .select("token")
+        .single();
+      if (inviteError || !invite) throw new Error(inviteError?.message ?? "Falha ao criar convite do síndico.");
+
+      const inviteUrl = `${window.location.origin}/login?mode=signup&invite=${invite.token}`;
+      setCreatedInvite(inviteUrl);
+      setForm({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
+      toast.success("Condomínio criado e convite do síndico gerado.");
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível concluir o cadastro.");
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
