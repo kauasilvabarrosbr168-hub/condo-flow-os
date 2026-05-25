@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 
+const MASTER_ADMIN_EMAIL = "admin@condoflow.com";
+
 type Mode = "signin" | "signup";
 
 export const Route = createFileRoute("/login")({
@@ -50,6 +52,10 @@ function LoginPage() {
   useEffect(() => {
     if (session && !loading) {
       (async () => {
+        if (session.user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
+          navigate({ to: "/admin/dashboard" });
+          return;
+        }
         const { data: pa } = await supabase
           .from("platform_admins")
           .select("id")
