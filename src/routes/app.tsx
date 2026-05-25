@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+const MASTER_ADMIN_EMAIL = "admin@condoflow.com";
+
 export const Route = createFileRoute("/app")({
   component: AppLayout,
 });
@@ -95,6 +97,10 @@ function AppLayout() {
   useEffect(() => {
     if (loading) return;
     if (!session) { navigate({ to: "/login" }); return; }
+    if (session.user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
+      navigate({ to: "/admin/dashboard" });
+      return;
+    }
     // Platform owners belong to the Super Admin area, never to the tenant app.
     (async () => {
       const { supabase } = await import("@/integrations/supabase/client");
