@@ -1,123 +1,336 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Mail, Phone, ArrowRight, ShieldCheck } from "lucide-react";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Building2, Loader2, Mail, ShieldCheck } from "lucide-react";
+import { z } from "zod";
 import { Logo } from "@/components/brand";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { ThemeToggle } from "@/components/theme-toggle";
+
+type Mode = "signin" | "signup";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({
-    meta: [
-      { title: "Entrar — CondoFlow" },
-      { name: "description", content: "Acesse sua operação de condomínio no CondoFlow." },
-    ],
+  validateSearch: (search: Record<string, unknown>) => ({
+    invite: (search.invite as string) || undefined,
+    mode: (search.mode as Mode) || undefined,
   }),
-  component: Login,
+  head: () => ({ meta: [{ title: "Entrar — CondoFlow" }] }),
+  component: LoginPage,
 });
 
-function Login() {
+const signinSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "Senha muito curta"),
+});
+
+const signupSchema = z.object({
+  fullName: z.string().trim().min(2, "Informe seu nome").max(100),
+  email: z.string().email("Email inválido"),
+  password: z.string().min(8, "Mínimo 8 caracteres").max(72),
+});
+
+function LoginPage() {
+  const { invite, mode: modeParam } = Route.useSearch();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const { session, signIn, signUp, loading } = useAuth();
+  const [mode, setMode] = useState<Mode>(modeParam ?? (invite ? "signup" : "signin"));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [invitation, setInvitation] = useState<{ full_name: string; email: string; role: string; condo_id: string } | null>(null);
+
+  // Form state
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [condoName, setCondoName] = useState("");
+  const [condoAddress, setCondoAddress] = useState("");
+
+  useEffect(() => {
+    if (session && !loading) {
+      navigate({ to: "/app/dashboard" });
+    }
+  }, [session, loading, navigate]);
+
+  useEffect(() => {
+    if (!invite) return;
+    setMode("signup");
+    supabase
+      .from("invitations")
+      .select("full_name,email,role,condo_id")
+      .eq("token", invite)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setInvitation(data);
+          setEmail(data.email);
+          setFullName(data.full_name);
+        }
+      });
+  }, [invite]);
+
+  const roleLabel = useMemo(() => {
+    if (!invitation) return null;
+    return {
+      sindico: "Síndico",
+      administradora: "Administradora",
+      morador: "Morador",
+      funcionario: "Funcionário",
+    }[invitation.role as "sindico" | "administradora" | "morador" | "funcionario"];
+  }, [invitation]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      if (mode === "signin") {
+        const parsed = signinSchema.safeParse({ email, password });
+        if (!parsed.success) {
+          setError(parsed.error.issues[0].message);
+          return;
+        }
+        const { error } = await signIn(parsed.data.email, parsed.data.password);
+        if (error) {
+          setError(traduzErro(error));
+          return;
+        }
+        toast.success("Bem-vindo de volta");
+        router.invalidate();
+        navigate({ to: "/app/dashboard" });
+      } else {
+        const parsed = signupSchema.safeParse({ fullName, email, password });
+        if (!parsed.success) {
+          setError(parsed.error.issues[0].message);
+          return;
+        }
+        if (!invite && !condoName.trim()) {
+          setError("Informe o nome do condomínio que você administra.");
+          return;
+        }
+        const { error } = await signUp({
+          fullName: parsed.data.fullName,
+          email: parsed.data.email,
+          password: parsed.data.password,
+          inviteToken: invite,
+          condoName: invite ? undefined : condoName.trim(),
+          condoAddress: invite ? undefined : condoAddress.trim() || undefined,
+        });
+        if (error) {
+          setError(traduzErro(error));
+          return;
+        }
+        toast.success(invite ? "Convite aceito! Bem-vindo." : "Condomínio criado com sucesso.");
+        navigate({ to: "/app/dashboard" });
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Left: form */}
-      <div className="flex flex-col px-6 py-10 lg:px-16">
-        <Logo />
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+      <div className="flex flex-col px-6 py-8 lg:px-16">
+        <div className="flex items-center justify-between">
+          <Logo />
+          <ThemeToggle compact />
+        </div>
+
         <div className="flex-1 flex items-center">
           <div className="w-full max-w-sm mx-auto animate-fade-in">
-            <h1 className="text-3xl font-semibold tracking-tight">Bem-vindo de volta</h1>
+            {invitation && (
+              <div className="mb-5 rounded-xl border border-primary/30 bg-primary/5 p-4">
+                <p className="text-xs font-medium text-primary">Convite recebido</p>
+                <p className="mt-1 text-sm">
+                  Você foi convidado como <strong>{roleLabel}</strong>. Crie sua conta para entrar no condomínio.
+                </p>
+              </div>
+            )}
+
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {mode === "signin" ? "Bem-vindo de volta" : invite ? "Aceitar convite" : "Criar seu CondoFlow"}
+            </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Automatize a operação do seu condomínio.
+              {mode === "signin"
+                ? "Acesse a operação do seu condomínio."
+                : invite
+                ? "Defina uma senha para acessar."
+                : "Cadastre o condomínio que você administra. Você será o síndico."}
             </p>
 
-            <div className="mt-8 space-y-2.5">
-              <button className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl border border-border bg-card text-sm font-medium hover:bg-muted transition">
-                <GoogleIcon /> Entrar com Google
-              </button>
-              <button className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl border border-border bg-card text-sm font-medium hover:bg-muted transition">
-                <Phone className="h-4 w-4" /> Entrar com telefone
-              </button>
-            </div>
+            {!invite && (
+              <div className="mt-6 inline-flex items-center rounded-lg border border-border bg-card p-0.5">
+                {(["signin", "signup"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => { setMode(m); setError(null); }}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+                      mode === m ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {m === "signin" ? "Entrar" : "Criar conta"}
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex-1 h-px bg-border" /> ou com e-mail <span className="flex-1 h-px bg-border" />
-            </div>
+            <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+              {mode === "signup" && (
+                <Field label="Nome completo">
+                  <input
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Marina Souza"
+                    className={inputCls}
+                  />
+                </Field>
+              )}
 
-            <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
-              <label className="block">
-                <span className="text-xs font-medium text-muted-foreground">E-mail</span>
-                <div className="mt-1 relative">
+              {mode === "signup" && !invite && (
+                <>
+                  <Field label="Nome do condomínio">
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        required
+                        value={condoName}
+                        onChange={(e) => setCondoName(e.target.value)}
+                        placeholder="Edifício Aurora"
+                        className={inputCls + " pl-9"}
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Endereço (opcional)">
+                    <input
+                      value={condoAddress}
+                      onChange={(e) => setCondoAddress(e.target.value)}
+                      placeholder="Rua das Palmeiras, 123"
+                      className={inputCls}
+                    />
+                  </Field>
+                </>
+              )}
+
+              <Field label="E-mail">
+                <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     type="email"
+                    required
+                    disabled={!!invitation}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="voce@condominio.com"
-                    className="w-full h-11 rounded-xl border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+                    className={inputCls + " pl-9 disabled:opacity-70"}
                   />
                 </div>
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Senha</span>
-                  <a href="#" className="text-xs text-primary hover:underline">Esqueci a senha</a>
-                </div>
+              </Field>
+
+              <Field label="Senha">
                 <input
                   type="password"
-                  placeholder="••••••••"
-                  className="mt-1 w-full h-11 rounded-xl border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === "signup" ? "Mínimo 8 caracteres" : "••••••••"}
+                  className={inputCls}
                 />
-              </label>
-              <Link
-                to="/app/dashboard"
-                className="mt-2 inline-flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95"
+              </Field>
+
+              {error && (
+                <p className="text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="inline-flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 disabled:opacity-60 transition"
               >
-                Entrar <ArrowRight className="h-4 w-4" />
-              </Link>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                {mode === "signin" ? "Entrar" : invite ? "Aceitar convite" : "Criar condomínio"}
+              </button>
             </form>
 
             <p className="mt-6 text-xs text-center text-muted-foreground">
-              Ainda não tem conta? <a href="#" className="text-primary font-medium">Criar conta</a>
+              {mode === "signin" ? (
+                <>Ainda não tem conta?{" "}
+                  <button onClick={() => setMode("signup")} className="text-primary font-medium hover:underline">
+                    Criar agora
+                  </button>
+                </>
+              ) : (
+                <>Já tem conta?{" "}
+                  <button onClick={() => setMode("signin")} className="text-primary font-medium hover:underline">
+                    Entrar
+                  </button>
+                </>
+              )}
             </p>
           </div>
         </div>
+
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <ShieldCheck className="h-3.5 w-3.5" /> Criptografia ponta a ponta · LGPD
         </p>
       </div>
 
-      {/* Right: visual */}
+      {/* Right visual */}
       <div className="relative hidden lg:block bg-gradient-hero overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-20" />
-        <div className="absolute inset-0 flex flex-col justify-end p-12 text-primary-foreground">
-          <div className="max-w-md">
-            <h2 className="text-4xl font-semibold tracking-tight text-balance">
-              Um centro de comando para o seu condomínio.
-            </h2>
-            <p className="mt-4 text-primary-foreground/80">
-              Reservas, manutenção, comunicação e tarefas — orquestrados com inteligência.
-            </p>
-          </div>
-          <div className="mt-10 grid grid-cols-3 gap-4 text-xs">
-            {[
-              { k: "98%", v: "Tarefas no prazo" },
-              { k: "−72%", v: "Mensagens no grupo" },
-              { k: "4.9★", v: "Satisfação síndicos" },
-            ].map((s) => (
-              <div key={s.k} className="rounded-xl bg-primary-foreground/10 backdrop-blur p-4 border border-primary-foreground/20">
-                <p className="text-2xl font-semibold">{s.k}</p>
-                <p className="text-primary-foreground/70 mt-1">{s.v}</p>
-              </div>
-            ))}
-          </div>
-        </div>
         <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-primary-foreground/10 blur-3xl" />
         <div className="absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-primary-foreground/10 blur-3xl" />
+        <div className="relative h-full flex flex-col justify-between p-12 text-primary-foreground">
+          <Link to="/" className="text-xs text-primary-foreground/70 hover:text-primary-foreground">
+            ← Voltar ao site
+          </Link>
+          <div className="max-w-md">
+            <h2 className="text-4xl font-semibold tracking-tight text-balance">
+              Um centro de comando vivo para o seu condomínio.
+            </h2>
+            <p className="mt-4 text-primary-foreground/80">
+              Reservas, áreas comuns, tarefas e timeline operacional — orquestrados com inteligência.
+            </p>
+            <div className="mt-8 grid grid-cols-3 gap-3 text-xs">
+              {[
+                { k: "Síndico", v: "Operação no controle" },
+                { k: "Morador", v: "Reserva em 1 clique" },
+                { k: "Funcionário", v: "Tarefa clara" },
+              ].map((s) => (
+                <div key={s.k} className="rounded-xl bg-primary-foreground/10 backdrop-blur p-3 border border-primary-foreground/20">
+                  <p className="text-sm font-semibold">{s.k}</p>
+                  <p className="text-primary-foreground/70 mt-1">{s.v}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function GoogleIcon() {
+const inputCls =
+  "w-full h-11 rounded-xl border border-input bg-card px-3 text-sm outline-none transition focus:ring-2 focus:ring-ring/40 focus:border-ring";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.56c2.08-1.92 3.28-4.74 3.28-8.1Z"/>
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.65l-3.56-2.77c-.99.66-2.25 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"/>
-      <path fill="#FBBC05" d="M5.84 14.11A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.11V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84Z"/>
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.07.56 4.21 1.65l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38Z"/>
-    </svg>
+    <label className="block">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <div className="mt-1">{children}</div>
+    </label>
   );
+}
+
+function traduzErro(msg: string) {
+  const m = msg.toLowerCase();
+  if (m.includes("invalid login")) return "Email ou senha incorretos.";
+  if (m.includes("user already registered")) return "Já existe uma conta com este email.";
+  if (m.includes("password")) return "Senha inválida. Use ao menos 8 caracteres.";
+  if (m.includes("rate")) return "Muitas tentativas. Aguarde alguns segundos.";
+  return msg;
 }
