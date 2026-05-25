@@ -93,7 +93,18 @@ function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !session) navigate({ to: "/login" });
+    if (loading) return;
+    if (!session) { navigate({ to: "/login" }); return; }
+    // Platform owners belong to the Super Admin area, never to the tenant app.
+    (async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase
+        .from("platform_admins")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (data) navigate({ to: "/admin/dashboard" });
+    })();
   }, [loading, session, navigate]);
 
   useEffect(() => {
