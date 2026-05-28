@@ -39,13 +39,19 @@ export const assignMemberToCondo = createServerFn({ method: "POST" })
       .eq("id", data.userId);
     if (pErr) throw new Error(pErr.message);
 
-    const { error: rErr } = await supabaseAdmin
+    const { data: existing } = await supabaseAdmin
       .from("user_roles")
-      .upsert(
-        { user_id: data.userId, condo_id: data.condoId, role: data.role },
-        { onConflict: "user_id,condo_id,role" },
-      );
-    if (rErr) throw new Error(rErr.message);
+      .select("id")
+      .eq("user_id", data.userId)
+      .eq("condo_id", data.condoId)
+      .eq("role", data.role)
+      .maybeSingle();
 
-    return { ok: true };
+    if (!existing) {
+      const { error: rErr } = await supabaseAdmin
+        .from("user_roles")
+        .insert({ user_id: data.userId, condo_id: data.condoId, role: data.role });
+      if (rErr) throw new Error(rErr.message);
+    }
+
   });
