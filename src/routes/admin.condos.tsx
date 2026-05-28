@@ -236,13 +236,22 @@ function CondosPage() {
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{new Date(r.created_at).toLocaleDateString("pt-BR")}</td>
                   <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => toggleSuspend(r.id, r.status)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition"
-                    >
-                      {r.status === "suspended" ? <><CheckCircle2 className="h-3.5 w-3.5" /> Reativar</> : <><PauseCircle className="h-3.5 w-3.5" /> Suspender</>}
-                    </button>
+                    <div className="inline-flex items-center gap-2">
+                      <button
+                        onClick={() => setMemberCondo(r)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition"
+                      >
+                        <UserPlus className="h-3.5 w-3.5" /> Membros
+                      </button>
+                      <button
+                        onClick={() => toggleSuspend(r.id, r.status)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition"
+                      >
+                        {r.status === "suspended" ? <><CheckCircle2 className="h-3.5 w-3.5" /> Reativar</> : <><PauseCircle className="h-3.5 w-3.5" /> Suspender</>}
+                      </button>
+                    </div>
                   </td>
+
                 </tr>
               ))}
             </tbody>
