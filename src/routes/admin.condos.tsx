@@ -37,6 +37,9 @@ function CondosPage() {
   const [creating, setCreating] = useState(false);
   const [createdInvite, setCreatedInvite] = useState<string | null>(null);
   const [form, setForm] = useState({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
+  const [memberCondo, setMemberCondo] = useState<Row | null>(null);
+  const assignMemberFn = useServerFn(assignMemberToCondo);
+
 
   const load = async () => {
     const [{ data: condos }, { data: profiles }, { data: subs }] = await Promise.all([
