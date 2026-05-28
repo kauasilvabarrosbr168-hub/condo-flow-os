@@ -18,7 +18,6 @@ export const Route = createFileRoute("/admin/condos")({
   component: CondosPage,
 });
 
-});
 
 type Row = {
   id: string;
