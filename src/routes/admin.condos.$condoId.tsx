@@ -52,7 +52,8 @@ function CondoDetailPage() {
   const [services, setServices] = useState<{ id: string; title: string; notes: string | null; photo_url: string | null; done_at: string; worker_id: string }[] | null>(null);
 
   const load = useCallback(() => {
-    fetchDetail({ data: { condoId } }).then((d) => setData(d as Detail));
+    fetchDetail({ data: { condoId } }).then((d) => setData(d as unknown as Detail));
+
   }, [fetchDetail, condoId]);
 
   useEffect(() => { load(); }, [load]);

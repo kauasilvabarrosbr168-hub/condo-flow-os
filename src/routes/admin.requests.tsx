@@ -34,7 +34,8 @@ function RequestsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    list({}).then((r) => setRows(r as Req[])).catch(() => setRows([]));
+    list({}).then((r) => setRows(r as unknown as Req[])).catch(() => setRows([]));
+
   }, [list]);
 
   useEffect(() => { load(); }, [load]);
