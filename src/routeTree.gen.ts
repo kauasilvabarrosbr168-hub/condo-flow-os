@@ -18,6 +18,7 @@ import { Route as AppTimelineRouteImport } from './routes/app.timeline'
 import { Route as AppTeamRouteImport } from './routes/app.team'
 import { Route as AppTasksRouteImport } from './routes/app.tasks'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
+import { Route as AppServicesRouteImport } from './routes/app.services'
 import { Route as AppReservationsRouteImport } from './routes/app.reservations'
 import { Route as AppInvitationsRouteImport } from './routes/app.invitations'
 import { Route as AppExploreRouteImport } from './routes/app.explore'
@@ -31,6 +32,7 @@ import { Route as AdminSubscriptionsRouteImport } from './routes/admin.subscript
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminSecurityRouteImport } from './routes/admin.security'
 import { Route as AdminRevenueRouteImport } from './routes/admin.revenue'
+import { Route as AdminRequestsRouteImport } from './routes/admin.requests'
 import { Route as AdminPlansRouteImport } from './routes/admin.plans'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
@@ -38,6 +40,7 @@ import { Route as AdminInvitationsRouteImport } from './routes/admin.invitations
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCondosRouteImport } from './routes/admin.condos'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as AdminCondosCondoIdRouteImport } from './routes/admin.condos.$condoId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -82,6 +85,11 @@ const AppTasksRoute = AppTasksRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppServicesRoute = AppServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
   getParentRoute: () => AppRoute,
 } as any)
 const AppReservationsRoute = AppReservationsRouteImport.update({
@@ -149,6 +157,11 @@ const AdminRevenueRoute = AdminRevenueRouteImport.update({
   path: '/revenue',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminRequestsRoute = AdminRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPlansRoute = AdminPlansRouteImport.update({
   id: '/plans',
   path: '/plans',
@@ -184,6 +197,11 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCondosCondoIdRoute = AdminCondosCondoIdRouteImport.update({
+  id: '/$condoId',
+  path: '/$condoId',
+  getParentRoute: () => AdminCondosRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -191,12 +209,13 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
-  '/admin/condos': typeof AdminCondosRoute
+  '/admin/condos': typeof AdminCondosRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/invitations': typeof AdminInvitationsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/plans': typeof AdminPlansRoute
+  '/admin/requests': typeof AdminRequestsRoute
   '/admin/revenue': typeof AdminRevenueRoute
   '/admin/security': typeof AdminSecurityRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -210,23 +229,26 @@ export interface FileRoutesByFullPath {
   '/app/explore': typeof AppExploreRoute
   '/app/invitations': typeof AppInvitationsRoute
   '/app/reservations': typeof AppReservationsRoute
+  '/app/services': typeof AppServicesRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/tasks': typeof AppTasksRoute
   '/app/team': typeof AppTeamRoute
   '/app/timeline': typeof AppTimelineRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/condos/$condoId': typeof AdminCondosCondoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
-  '/admin/condos': typeof AdminCondosRoute
+  '/admin/condos': typeof AdminCondosRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/invitations': typeof AdminInvitationsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/plans': typeof AdminPlansRoute
+  '/admin/requests': typeof AdminRequestsRoute
   '/admin/revenue': typeof AdminRevenueRoute
   '/admin/security': typeof AdminSecurityRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -240,11 +262,13 @@ export interface FileRoutesByTo {
   '/app/explore': typeof AppExploreRoute
   '/app/invitations': typeof AppInvitationsRoute
   '/app/reservations': typeof AppReservationsRoute
+  '/app/services': typeof AppServicesRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/tasks': typeof AppTasksRoute
   '/app/team': typeof AppTeamRoute
   '/app/timeline': typeof AppTimelineRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/condos/$condoId': typeof AdminCondosCondoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -253,12 +277,13 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
-  '/admin/condos': typeof AdminCondosRoute
+  '/admin/condos': typeof AdminCondosRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/invitations': typeof AdminInvitationsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/plans': typeof AdminPlansRoute
+  '/admin/requests': typeof AdminRequestsRoute
   '/admin/revenue': typeof AdminRevenueRoute
   '/admin/security': typeof AdminSecurityRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -272,11 +297,13 @@ export interface FileRoutesById {
   '/app/explore': typeof AppExploreRoute
   '/app/invitations': typeof AppInvitationsRoute
   '/app/reservations': typeof AppReservationsRoute
+  '/app/services': typeof AppServicesRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/tasks': typeof AppTasksRoute
   '/app/team': typeof AppTeamRoute
   '/app/timeline': typeof AppTimelineRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/condos/$condoId': typeof AdminCondosCondoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -292,6 +319,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/logs'
     | '/admin/plans'
+    | '/admin/requests'
     | '/admin/revenue'
     | '/admin/security'
     | '/admin/settings'
@@ -305,11 +333,13 @@ export interface FileRouteTypes {
     | '/app/explore'
     | '/app/invitations'
     | '/app/reservations'
+    | '/app/services'
     | '/app/settings'
     | '/app/tasks'
     | '/app/team'
     | '/app/timeline'
     | '/admin/'
+    | '/admin/condos/$condoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -322,6 +352,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/logs'
     | '/admin/plans'
+    | '/admin/requests'
     | '/admin/revenue'
     | '/admin/security'
     | '/admin/settings'
@@ -335,11 +366,13 @@ export interface FileRouteTypes {
     | '/app/explore'
     | '/app/invitations'
     | '/app/reservations'
+    | '/app/services'
     | '/app/settings'
     | '/app/tasks'
     | '/app/team'
     | '/app/timeline'
     | '/admin'
+    | '/admin/condos/$condoId'
   id:
     | '__root__'
     | '/'
@@ -353,6 +386,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/logs'
     | '/admin/plans'
+    | '/admin/requests'
     | '/admin/revenue'
     | '/admin/security'
     | '/admin/settings'
@@ -366,11 +400,13 @@ export interface FileRouteTypes {
     | '/app/explore'
     | '/app/invitations'
     | '/app/reservations'
+    | '/app/services'
     | '/app/settings'
     | '/app/tasks'
     | '/app/team'
     | '/app/timeline'
     | '/admin/'
+    | '/admin/condos/$condoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -443,6 +479,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/app/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/services': {
+      id: '/app/services'
+      path: '/services'
+      fullPath: '/app/services'
+      preLoaderRoute: typeof AppServicesRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/reservations': {
@@ -536,6 +579,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRevenueRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/requests': {
+      id: '/admin/requests'
+      path: '/requests'
+      fullPath: '/admin/requests'
+      preLoaderRoute: typeof AdminRequestsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/plans': {
       id: '/admin/plans'
       path: '/plans'
@@ -585,17 +635,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/condos/$condoId': {
+      id: '/admin/condos/$condoId'
+      path: '/$condoId'
+      fullPath: '/admin/condos/$condoId'
+      preLoaderRoute: typeof AdminCondosCondoIdRouteImport
+      parentRoute: typeof AdminCondosRoute
+    }
   }
 }
 
+interface AdminCondosRouteChildren {
+  AdminCondosCondoIdRoute: typeof AdminCondosCondoIdRoute
+}
+
+const AdminCondosRouteChildren: AdminCondosRouteChildren = {
+  AdminCondosCondoIdRoute: AdminCondosCondoIdRoute,
+}
+
+const AdminCondosRouteWithChildren = AdminCondosRoute._addFileChildren(
+  AdminCondosRouteChildren,
+)
+
 interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
-  AdminCondosRoute: typeof AdminCondosRoute
+  AdminCondosRoute: typeof AdminCondosRouteWithChildren
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminInvitationsRoute: typeof AdminInvitationsRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminLogsRoute: typeof AdminLogsRoute
   AdminPlansRoute: typeof AdminPlansRoute
+  AdminRequestsRoute: typeof AdminRequestsRoute
   AdminRevenueRoute: typeof AdminRevenueRoute
   AdminSecurityRoute: typeof AdminSecurityRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
@@ -607,12 +677,13 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
-  AdminCondosRoute: AdminCondosRoute,
+  AdminCondosRoute: AdminCondosRouteWithChildren,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminInvitationsRoute: AdminInvitationsRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminLogsRoute: AdminLogsRoute,
   AdminPlansRoute: AdminPlansRoute,
+  AdminRequestsRoute: AdminRequestsRoute,
   AdminRevenueRoute: AdminRevenueRoute,
   AdminSecurityRoute: AdminSecurityRoute,
   AdminSettingsRoute: AdminSettingsRoute,
@@ -632,6 +703,7 @@ interface AppRouteChildren {
   AppExploreRoute: typeof AppExploreRoute
   AppInvitationsRoute: typeof AppInvitationsRoute
   AppReservationsRoute: typeof AppReservationsRoute
+  AppServicesRoute: typeof AppServicesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTasksRoute: typeof AppTasksRoute
   AppTeamRoute: typeof AppTeamRoute
@@ -646,6 +718,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppExploreRoute: AppExploreRoute,
   AppInvitationsRoute: AppInvitationsRoute,
   AppReservationsRoute: AppReservationsRoute,
+  AppServicesRoute: AppServicesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTasksRoute: AppTasksRoute,
   AppTeamRoute: AppTeamRoute,

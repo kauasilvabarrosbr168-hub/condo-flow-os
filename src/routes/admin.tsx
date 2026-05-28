@@ -34,6 +34,8 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; group: str
   { to: "/admin/condos", label: "Condomínios", icon: Building2, group: "Clientes" },
   { to: "/admin/users", label: "Usuários", icon: Users, group: "Clientes" },
   { to: "/admin/invitations", label: "Convites", icon: MailCheck, group: "Clientes" },
+  { to: "/admin/requests", label: "Solicitações", icon: ShieldCheck, group: "Clientes" },
+
 
   { to: "/admin/subscriptions", label: "Assinaturas", icon: CreditCard, group: "Comercial" },
   { to: "/admin/plans", label: "Planos", icon: Package, group: "Comercial" },

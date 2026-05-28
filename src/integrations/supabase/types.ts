@@ -57,39 +57,48 @@ export type Database = {
           active: boolean
           capacity: number | null
           condo_id: string
+          cover_url: string | null
           created_at: string
           description: string | null
+          gallery: string[]
           icon: string | null
           id: string
           min_advance_hours: number
           name: string
           requires_checklist: boolean
+          rules: string | null
           updated_at: string
         }
         Insert: {
           active?: boolean
           capacity?: number | null
           condo_id: string
+          cover_url?: string | null
           created_at?: string
           description?: string | null
+          gallery?: string[]
           icon?: string | null
           id?: string
           min_advance_hours?: number
           name: string
           requires_checklist?: boolean
+          rules?: string | null
           updated_at?: string
         }
         Update: {
           active?: boolean
           capacity?: number | null
           condo_id?: string
+          cover_url?: string | null
           created_at?: string
           description?: string | null
+          gallery?: string[]
           icon?: string | null
           id?: string
           min_advance_hours?: number
           name?: string
           requires_checklist?: boolean
+          rules?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -178,6 +187,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      membership_requests: {
+        Row: {
+          condo_id: string | null
+          created_at: string
+          decided_admin_at: string | null
+          decided_by_admin: string | null
+          decided_by_sindico: string | null
+          decided_sindico_at: string | null
+          id: string
+          note: string | null
+          proposed_condo_address: string | null
+          proposed_condo_name: string | null
+          rejection_reason: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          status: Database["public"]["Enums"]["membership_status"]
+          unit_label: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          condo_id?: string | null
+          created_at?: string
+          decided_admin_at?: string | null
+          decided_by_admin?: string | null
+          decided_by_sindico?: string | null
+          decided_sindico_at?: string | null
+          id?: string
+          note?: string | null
+          proposed_condo_address?: string | null
+          proposed_condo_name?: string | null
+          rejection_reason?: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["membership_status"]
+          unit_label?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          condo_id?: string | null
+          created_at?: string
+          decided_admin_at?: string | null
+          decided_by_admin?: string | null
+          decided_by_sindico?: string | null
+          decided_sindico_at?: string | null
+          id?: string
+          note?: string | null
+          proposed_condo_address?: string | null
+          proposed_condo_name?: string | null
+          rejection_reason?: string | null
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["membership_status"]
+          unit_label?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       plans: {
         Row: {
@@ -378,6 +444,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      service_logs: {
+        Row: {
+          condo_id: string
+          created_at: string
+          done_at: string
+          id: string
+          notes: string | null
+          photo_url: string | null
+          task_id: string | null
+          title: string
+          worker_id: string
+        }
+        Insert: {
+          condo_id: string
+          created_at?: string
+          done_at?: string
+          id?: string
+          notes?: string | null
+          photo_url?: string | null
+          task_id?: string | null
+          title: string
+          worker_id: string
+        }
+        Update: {
+          condo_id?: string
+          created_at?: string
+          done_at?: string
+          id?: string
+          notes?: string | null
+          photo_url?: string | null
+          task_id?: string | null
+          title?: string
+          worker_id?: string
+        }
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -594,6 +696,33 @@ export type Database = {
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: string }
       claim_first_platform_admin: { Args: never; Returns: boolean }
+      decide_membership_request: {
+        Args: { p_decision: string; p_reason?: string; p_request_id: string }
+        Returns: {
+          condo_id: string | null
+          created_at: string
+          decided_admin_at: string | null
+          decided_by_admin: string | null
+          decided_by_sindico: string | null
+          decided_sindico_at: string | null
+          id: string
+          note: string | null
+          proposed_condo_address: string | null
+          proposed_condo_name: string | null
+          rejection_reason: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          status: Database["public"]["Enums"]["membership_status"]
+          unit_label: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "membership_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_invitation_by_token: {
         Args: { p_token: string }
         Returns: {
@@ -624,10 +753,23 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_condos_for_signup: {
+        Args: never
+        Returns: {
+          address: string
+          id: string
+          name: string
+        }[]
+      }
       user_condo_id: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       app_role: "sindico" | "administradora" | "morador" | "funcionario"
+      membership_status:
+        | "pending"
+        | "sindico_approved"
+        | "approved"
+        | "rejected"
       reservation_status:
         | "pendente"
         | "confirmada"
@@ -772,6 +914,12 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["sindico", "administradora", "morador", "funcionario"],
+      membership_status: [
+        "pending",
+        "sindico_approved",
+        "approved",
+        "rejected",
+      ],
       reservation_status: [
         "pendente",
         "confirmada",

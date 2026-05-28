@@ -211,16 +211,17 @@ function CondosPage() {
               {filtered.map((r) => (
                 <tr key={r.id} className="hover:bg-muted/30 transition">
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
+                    <a href={`/admin/condos/${r.id}`} className="flex items-center gap-3 group">
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <Building2 className="h-4 w-4" />
                       </span>
                       <div>
-                        <p className="font-medium">{r.name}</p>
+                        <p className="font-medium group-hover:text-primary transition">{r.name}</p>
                         {r.address && <p className="text-[11px] text-muted-foreground">{r.address}</p>}
                       </div>
-                    </div>
+                    </a>
                   </td>
+
                   <td className="px-5 py-3">{r.plan ?? <span className="text-muted-foreground">—</span>}</td>
                   <td className="px-5 py-3">
                     {r.status === "active" && <Badge tone="success">Ativo</Badge>}
