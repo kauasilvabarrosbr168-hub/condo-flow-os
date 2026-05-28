@@ -75,8 +75,6 @@ export const listPendingRequests = createServerFn({ method: "POST" })
 
     let query = supabaseAdmin
       .from("membership_requests")
-    let query = supabaseAdmin
-      .from("membership_requests")
       .select("*")
       .in("status", ["pending", "sindico_approved"])
       .order("created_at", { ascending: false });
@@ -109,6 +107,9 @@ export const listPendingRequests = createServerFn({ method: "POST" })
       profiles: pmap.get(r.user_id) ?? null,
       condominiums: r.condo_id ? cmap.get(r.condo_id) ?? null : null,
     }));
+  });
+
+export const decideMembership = createServerFn({ method: "POST" })
 
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { requestId: string; decision: "approve" | "reject"; reason?: string }) =>
