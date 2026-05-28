@@ -1,18 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail } from "lucide-react";
+import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail, UserPlus } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/brand";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useServerFn } from "@tanstack/react-start";
+import { assignMemberToCondo } from "@/lib/admin-members.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/condos")({
   head: () => ({ meta: [{ title: "Condomínios · CondoFlow Admin" }] }),
   component: CondosPage,
 });
+
 
 type Row = {
   id: string;
@@ -32,6 +37,9 @@ function CondosPage() {
   const [creating, setCreating] = useState(false);
   const [createdInvite, setCreatedInvite] = useState<string | null>(null);
   const [form, setForm] = useState({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
+  const [memberCondo, setMemberCondo] = useState<Row | null>(null);
+  const assignMemberFn = useServerFn(assignMemberToCondo);
+
 
   const load = async () => {
     const [{ data: condos }, { data: profiles }, { data: subs }] = await Promise.all([
@@ -228,19 +236,160 @@ function CondosPage() {
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{new Date(r.created_at).toLocaleDateString("pt-BR")}</td>
                   <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => toggleSuspend(r.id, r.status)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition"
-                    >
-                      {r.status === "suspended" ? <><CheckCircle2 className="h-3.5 w-3.5" /> Reativar</> : <><PauseCircle className="h-3.5 w-3.5" /> Suspender</>}
-                    </button>
+                    <div className="inline-flex items-center gap-2">
+                      <button
+                        onClick={() => setMemberCondo(r)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition"
+                      >
+                        <UserPlus className="h-3.5 w-3.5" /> Membros
+                      </button>
+                      <button
+                        onClick={() => toggleSuspend(r.id, r.status)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition"
+                      >
+                        {r.status === "suspended" ? <><CheckCircle2 className="h-3.5 w-3.5" /> Reativar</> : <><PauseCircle className="h-3.5 w-3.5" /> Suspender</>}
+                      </button>
+                    </div>
                   </td>
+
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <MembersDialog
+        condo={memberCondo}
+        onClose={() => setMemberCondo(null)}
+        onAssigned={() => { load(); }}
+        assignFn={assignMemberFn}
+      />
     </div>
   );
 }
+
+type Role = "sindico" | "administradora" | "morador" | "funcionario";
+
+type UserOption = {
+  id: string;
+  full_name: string;
+  email: string;
+  condo_id: string | null;
+  condo_name: string | null;
+};
+
+function MembersDialog({
+  condo,
+  onClose,
+  onAssigned,
+  assignFn,
+}: {
+  condo: Row | null;
+  onClose: () => void;
+  onAssigned: () => void;
+  assignFn: (args: { data: { condoId: string; userId: string; role: Role; unitLabel?: string | null } }) => Promise<unknown>;
+}) {
+  const open = !!condo;
+  const [users, setUsers] = useState<UserOption[] | null>(null);
+  const [q, setQ] = useState("");
+  const [role, setRole] = useState<Role>("morador");
+  const [unitLabel, setUnitLabel] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [onlyUnassigned, setOnlyUnassigned] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const [{ data: profs }, { data: condos }] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, email, condo_id"),
+        supabase.from("condominiums").select("id, name"),
+      ]);
+      const cmap = new Map((condos ?? []).map((c: { id: string; name: string }) => [c.id, c.name]));
+      setUsers((profs ?? []).map((p: { id: string; full_name: string; email: string; condo_id: string | null }) => ({
+        ...p,
+        condo_name: p.condo_id ? cmap.get(p.condo_id) ?? null : null,
+      })));
+    })();
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    let list = users ?? [];
+    if (onlyUnassigned) list = list.filter((u) => !u.condo_id || u.condo_id === condo?.id);
+    if (q) {
+      const t = q.toLowerCase();
+      list = list.filter((u) => (u.full_name + u.email).toLowerCase().includes(t));
+    }
+    return list.slice(0, 50);
+  }, [users, q, onlyUnassigned, condo?.id]);
+
+  const assign = async (u: UserOption) => {
+    if (!condo) return;
+    setBusyId(u.id);
+    try {
+      await assignFn({ data: { condoId: condo.id, userId: u.id, role, unitLabel: unitLabel.trim() || null } });
+      toast.success(`${u.full_name} adicionado(a) ao ${condo.name}`);
+      onAssigned();
+      setUsers((prev) => (prev ?? []).map((x) => x.id === u.id ? { ...x, condo_id: condo.id, condo_name: condo.name } : x));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao adicionar membro");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Adicionar membros · {condo?.name}</DialogTitle>
+          <DialogDescription>Selecione usuários já cadastrados na plataforma e associe ao condomínio com o papel desejado.</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3 md:grid-cols-[1fr_180px_140px]">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nome ou email…" className="pl-9" />
+          </div>
+          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sindico">Síndico</SelectItem>
+              <SelectItem value="administradora">Administradora</SelectItem>
+              <SelectItem value="funcionario">Funcionário</SelectItem>
+              <SelectItem value="morador">Morador</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input value={unitLabel} onChange={(e) => setUnitLabel(e.target.value)} placeholder="Unidade (opc.)" />
+        </div>
+
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input type="checkbox" checked={onlyUnassigned} onChange={(e) => setOnlyUnassigned(e.target.checked)} />
+          Mostrar apenas usuários sem condomínio (ou já neste)
+        </label>
+
+        <div className="max-h-80 overflow-auto rounded-lg border border-border divide-y divide-border">
+          {!users ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          ) : filtered.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">Nenhum usuário encontrado.</p>
+          ) : filtered.map((u) => {
+            const already = u.condo_id === condo?.id;
+            return (
+              <div key={u.id} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-muted/30 transition">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{u.full_name}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{u.email}{u.condo_name ? ` · ${u.condo_name}` : ""}</p>
+                </div>
+                <Button size="sm" variant={already ? "secondary" : "default"} disabled={busyId === u.id} onClick={() => assign(u)}>
+                  {busyId === u.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : already ? "Atualizar papel" : "Adicionar"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
