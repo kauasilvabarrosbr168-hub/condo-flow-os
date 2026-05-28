@@ -26,6 +26,7 @@ export const getCondoDetails = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCanManageCondo(context.userId, data.condoId);
     const [{ data: condo }, { data: areas }, { data: members }, { data: sub }] = await Promise.all([
+    const [{ data: condo }, { data: areas }, { data: roleRows }, { data: sub }] = await Promise.all([
       supabaseAdmin.from("condominiums").select("*").eq("id", data.condoId).single(),
       supabaseAdmin
         .from("common_areas")
@@ -34,12 +35,26 @@ export const getCondoDetails = createServerFn({ method: "POST" })
         .order("created_at", { ascending: false }),
       supabaseAdmin
         .from("user_roles")
-        .select("user_id, role, profiles:user_id(full_name, email, unit_label)")
+        .select("user_id, role")
         .eq("condo_id", data.condoId),
       supabaseAdmin
         .from("subscriptions")
         .select("status, plans(name, code)")
         .eq("condo_id", data.condoId)
+        .maybeSingle(),
+    ]);
+    const memberIds = Array.from(new Set((roleRows ?? []).map((r) => r.user_id)));
+    const { data: profs } = memberIds.length
+      ? await supabaseAdmin.from("profiles").select("id, full_name, email, unit_label").in("id", memberIds)
+      : { data: [] as { id: string; full_name: string; email: string; unit_label: string | null }[] };
+    const pmap = new Map((profs ?? []).map((p) => [p.id, p]));
+    const members = (roleRows ?? []).map((r) => ({
+      user_id: r.user_id,
+      role: r.role,
+      profiles: pmap.get(r.user_id) ?? null,
+    }));
+    return { condo, areas: areas ?? [], members, subscription: sub ?? null };
+
         .maybeSingle(),
     ]);
     return { condo, areas: areas ?? [], members: members ?? [], subscription: sub ?? null };

@@ -75,7 +75,9 @@ export const listPendingRequests = createServerFn({ method: "POST" })
 
     let query = supabaseAdmin
       .from("membership_requests")
-      .select("*, profiles:user_id(full_name, email), condominiums:condo_id(name)")
+    let query = supabaseAdmin
+      .from("membership_requests")
+      .select("*")
       .in("status", ["pending", "sindico_approved"])
       .order("created_at", { ascending: false });
 
@@ -91,10 +93,23 @@ export const listPendingRequests = createServerFn({ method: "POST" })
     }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-    return data ?? [];
-  });
+    const rows = data ?? [];
+    if (rows.length === 0) return [];
 
-export const decideMembership = createServerFn({ method: "POST" })
+    const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
+    const condoIds = Array.from(new Set(rows.map((r) => r.condo_id).filter(Boolean) as string[]));
+    const [{ data: profs }, { data: condos }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("id, full_name, email").in("id", userIds),
+      condoIds.length ? supabaseAdmin.from("condominiums").select("id, name").in("id", condoIds) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    ]);
+    const pmap = new Map((profs ?? []).map((p) => [p.id, p]));
+    const cmap = new Map((condos ?? []).map((c) => [c.id, c]));
+    return rows.map((r) => ({
+      ...r,
+      profiles: pmap.get(r.user_id) ?? null,
+      condominiums: r.condo_id ? cmap.get(r.condo_id) ?? null : null,
+    }));
+
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { requestId: string; decision: "approve" | "reject"; reason?: string }) =>
     z
@@ -110,8 +125,9 @@ export const decideMembership = createServerFn({ method: "POST" })
     const { data: row, error } = await supabase.rpc("decide_membership_request", {
       p_request_id: data.requestId,
       p_decision: data.decision,
-      p_reason: data.reason ?? null,
+      p_reason: data.reason ?? undefined,
     });
+
     if (error) throw new Error(error.message);
     return row;
   });
