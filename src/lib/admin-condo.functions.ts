@@ -25,7 +25,6 @@ export const getCondoDetails = createServerFn({ method: "POST" })
   .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertCanManageCondo(context.userId, data.condoId);
-    const [{ data: condo }, { data: areas }, { data: members }, { data: sub }] = await Promise.all([
     const [{ data: condo }, { data: areas }, { data: roleRows }, { data: sub }] = await Promise.all([
       supabaseAdmin.from("condominiums").select("*").eq("id", data.condoId).single(),
       supabaseAdmin
@@ -54,11 +53,8 @@ export const getCondoDetails = createServerFn({ method: "POST" })
       profiles: pmap.get(r.user_id) ?? null,
     }));
     return { condo, areas: areas ?? [], members, subscription: sub ?? null };
-
-        .maybeSingle(),
-    ]);
-    return { condo, areas: areas ?? [], members: members ?? [], subscription: sub ?? null };
   });
+
 
 const areaSchema = z.object({
   id: z.string().uuid().optional(),
