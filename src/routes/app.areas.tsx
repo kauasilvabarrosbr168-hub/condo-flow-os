@@ -55,27 +55,38 @@ function AreasPage() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {areas!.map((a) => (
-            <div key={a.id} className="rounded-2xl border border-border bg-card p-4 shadow-card hover:shadow-elegant transition">
-              <div className="flex items-start justify-between">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Building className="h-5 w-5" /></span>
-                <button
-                  onClick={async () => {
-                    if (!confirm(`Remover "${a.name}"?`)) return;
-                    const { error } = await supabase.from("common_areas").delete().eq("id", a.id);
-                    if (error) toast.error(error.message);
-                    else { toast.success("Área removida"); qc.invalidateQueries({ queryKey: ["areas-admin", condoId] }); }
-                  }}
-                  className="text-muted-foreground hover:text-destructive transition p-1"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <h3 className="mt-3 text-sm font-semibold">{a.name}</h3>
-              {a.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.description}</p>}
-              <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
-                {a.capacity && <span className="rounded-full bg-muted px-2 py-0.5">Capacidade {a.capacity}</span>}
-                <span className="rounded-full bg-muted px-2 py-0.5">{a.min_advance_hours}h antecedência</span>
-                {a.requires_checklist && <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5">Checklist</span>}
+            <div key={a.id} className="rounded-2xl border border-border bg-card shadow-card hover:shadow-elegant transition overflow-hidden">
+              {a.cover_url ? (
+                <div className="h-32 w-full bg-muted overflow-hidden">
+                  <img src={a.cover_url} alt={a.name} className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <div className="h-32 w-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                  <Building className="h-8 w-8 text-primary/40" />
+                </div>
+              )}
+              <div className="p-4">
+                <div className="flex items-start justify-between">
+                  <h3 className="text-sm font-semibold">{a.name}</h3>
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Remover "${a.name}"?`)) return;
+                      const { error } = await supabase.from("common_areas").delete().eq("id", a.id);
+                      if (error) toast.error(error.message);
+                      else { toast.success("Área removida"); qc.invalidateQueries({ queryKey: ["areas-admin", condoId] }); }
+                    }}
+                    className="text-muted-foreground hover:text-destructive transition p-1"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {a.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.description}</p>}
+                {a.rules && <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2 italic">📋 {a.rules}</p>}
+                <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
+                  {a.capacity && <span className="rounded-full bg-muted px-2 py-0.5">Capacidade {a.capacity}</span>}
+                  <span className="rounded-full bg-muted px-2 py-0.5">{a.min_advance_hours}h antecedência</span>
+                  {a.requires_checklist && <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5">Checklist</span>}
+                </div>
               </div>
             </div>
           ))}
