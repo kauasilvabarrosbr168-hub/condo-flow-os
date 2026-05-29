@@ -99,8 +99,16 @@ function visibleFor(role: Role | null, allowed?: Role[]) {
 function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { session, loading, profile, condo, primaryRole, signOut } = useAuth();
+  const { session, loading, profile, condo, primaryRole, roles, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const getStatusFn = useServerFn(getMyMembershipStatus);
+
+  const noRoles = !loading && !!session && roles.length === 0;
+  const { data: membership, isLoading: loadingStatus } = useQuery({
+    enabled: noRoles,
+    queryKey: ["membership-status", session?.user.id],
+    queryFn: () => getStatusFn(),
+  });
 
   useEffect(() => {
     if (loading) return;
@@ -131,6 +139,18 @@ function AppLayout() {
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  // Waiting-for-approval gate
+  if (noRoles) {
+    if (loadingStatus) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+    return <PendingApprovalScreen status={membership?.status ?? null} reason={membership?.rejection_reason ?? null} onSignOut={async () => { await signOut(); navigate({ to: "/login" }); }} />;
   }
 
   const roleLabel: Record<Role, string> = {
