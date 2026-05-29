@@ -1,5 +1,7 @@
 import { Link, Outlet, useRouterState, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -21,10 +23,14 @@ import {
   Loader2,
   Menu,
   X,
+  Clock,
+  ShieldCheck,
+  XCircle,
 } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { useAuth, type Role } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getMyMembershipStatus } from "@/lib/membership.functions";
 import {
   DropdownMenu,
   DropdownMenuContent,
