@@ -351,6 +351,8 @@ function PendingApprovalScreen({ status, reason, onSignOut }: { status: string |
     </div>
   );
 }
+
+function SidebarLink({ item, active, nested = false }: { item: NavItem; active: boolean; nested?: boolean }) {
   return (
     <Link
       to={item.to}
