@@ -309,7 +309,48 @@ function AppLayout() {
   );
 }
 
-function SidebarLink({ item, active, nested = false }: { item: NavItem; active: boolean; nested?: boolean }) {
+function PendingApprovalScreen({ status, reason, onSignOut }: { status: string | null; reason: string | null; onSignOut: () => void }) {
+  const isRejected = status === "rejected";
+  const isPartial = status === "sindico_approved";
+  const noRequest = !status;
+
+  const Icon = isRejected ? XCircle : isPartial ? ShieldCheck : Clock;
+  const tone = isRejected ? "text-destructive" : isPartial ? "text-primary" : "text-warning";
+  const bg = isRejected ? "bg-destructive/10" : isPartial ? "bg-primary/10" : "bg-warning/10";
+
+  const title = isRejected
+    ? "Solicitação recusada"
+    : isPartial
+    ? "Quase lá — aguardando CondoFlow"
+    : noRequest
+    ? "Sem solicitação ativa"
+    : "Aguardando aprovação";
+
+  const description = isRejected
+    ? (reason || "Sua solicitação de acesso foi recusada. Entre em contato com o síndico ou suporte.")
+    : isPartial
+    ? "O síndico já aprovou. Agora estamos aguardando a confirmação final da equipe CondoFlow."
+    : noRequest
+    ? "Sua conta foi criada, mas não há nenhuma solicitação de acesso a um condomínio. Volte ao cadastro para selecionar seu perfil."
+    : "Recebemos sua solicitação e ela está na fila de aprovação. Você receberá acesso assim que for aprovada.";
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-6">
+      <div className="w-full max-w-md text-center">
+        <div className={`mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl ${bg} ${tone}`}>
+          <Icon className="h-7 w-7" />
+        </div>
+        <h1 className="mt-5 text-2xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+        <div className="mt-6 flex flex-col gap-2">
+          <button onClick={onSignOut} className="h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted transition">
+            <LogOut className="inline h-4 w-4 mr-2" /> Sair
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
   return (
     <Link
       to={item.to}
