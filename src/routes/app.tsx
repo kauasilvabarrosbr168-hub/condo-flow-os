@@ -1,5 +1,7 @@
 import { Link, Outlet, useRouterState, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -21,10 +23,14 @@ import {
   Loader2,
   Menu,
   X,
+  Clock,
+  ShieldCheck,
+  XCircle,
 } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { useAuth, type Role } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getMyMembershipStatus } from "@/lib/membership.functions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -93,8 +99,16 @@ function visibleFor(role: Role | null, allowed?: Role[]) {
 function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { session, loading, profile, condo, primaryRole, signOut } = useAuth();
+  const { session, loading, profile, condo, primaryRole, roles, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const getStatusFn = useServerFn(getMyMembershipStatus);
+
+  const noRoles = !loading && !!session && roles.length === 0;
+  const { data: membership, isLoading: loadingStatus } = useQuery({
+    enabled: noRoles,
+    queryKey: ["membership-status", session?.user.id],
+    queryFn: () => getStatusFn(),
+  });
 
   useEffect(() => {
     if (loading) return;
@@ -125,6 +139,18 @@ function AppLayout() {
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  // Waiting-for-approval gate
+  if (noRoles) {
+    if (loadingStatus) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+    return <PendingApprovalScreen status={membership?.status ?? null} reason={membership?.rejection_reason ?? null} onSignOut={async () => { await signOut(); navigate({ to: "/login" }); }} />;
   }
 
   const roleLabel: Record<Role, string> = {
@@ -278,6 +304,49 @@ function AppLayout() {
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
+      </div>
+    </div>
+  );
+}
+
+function PendingApprovalScreen({ status, reason, onSignOut }: { status: string | null; reason: string | null; onSignOut: () => void }) {
+  const isRejected = status === "rejected";
+  const isPartial = status === "sindico_approved";
+  const noRequest = !status;
+
+  const Icon = isRejected ? XCircle : isPartial ? ShieldCheck : Clock;
+  const tone = isRejected ? "text-destructive" : isPartial ? "text-primary" : "text-warning";
+  const bg = isRejected ? "bg-destructive/10" : isPartial ? "bg-primary/10" : "bg-warning/10";
+
+  const title = isRejected
+    ? "Solicitação recusada"
+    : isPartial
+    ? "Quase lá — aguardando CondoFlow"
+    : noRequest
+    ? "Sem solicitação ativa"
+    : "Aguardando aprovação";
+
+  const description = isRejected
+    ? (reason || "Sua solicitação de acesso foi recusada. Entre em contato com o síndico ou suporte.")
+    : isPartial
+    ? "O síndico já aprovou. Agora estamos aguardando a confirmação final da equipe CondoFlow."
+    : noRequest
+    ? "Sua conta foi criada, mas não há nenhuma solicitação de acesso a um condomínio. Volte ao cadastro para selecionar seu perfil."
+    : "Recebemos sua solicitação e ela está na fila de aprovação. Você receberá acesso assim que for aprovada.";
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-6">
+      <div className="w-full max-w-md text-center">
+        <div className={`mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl ${bg} ${tone}`}>
+          <Icon className="h-7 w-7" />
+        </div>
+        <h1 className="mt-5 text-2xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+        <div className="mt-6 flex flex-col gap-2">
+          <button onClick={onSignOut} className="h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted transition">
+            <LogOut className="inline h-4 w-4 mr-2" /> Sair
+          </button>
+        </div>
       </div>
     </div>
   );
