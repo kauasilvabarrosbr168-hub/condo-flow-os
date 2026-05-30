@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail, UserPlus } from "lucide-react";
+import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail, UserPlus, Pencil } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -238,6 +240,13 @@ function CondosPage() {
                   <td className="px-5 py-3 text-muted-foreground">{new Date(r.created_at).toLocaleDateString("pt-BR")}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex items-center gap-2">
+                      <Link
+                        to="/admin/condos/$condoId/edit"
+                        params={{ condoId: r.id }}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition"
+                      >
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </Link>
                       <button
                         onClick={() => setMemberCondo(r)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted transition"
@@ -251,6 +260,7 @@ function CondosPage() {
                         {r.status === "suspended" ? <><CheckCircle2 className="h-3.5 w-3.5" /> Reativar</> : <><PauseCircle className="h-3.5 w-3.5" /> Suspender</>}
                       </button>
                     </div>
+
                   </td>
 
                 </tr>
