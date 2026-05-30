@@ -114,26 +114,50 @@ export type Database = {
       condominiums: {
         Row: {
           address: string | null
+          blocks_count: number | null
+          contacts: Json
+          cover_url: string | null
           created_at: string
           created_by: string
+          description: string | null
+          general_info: string | null
           id: string
+          logo_url: string | null
           name: string
+          rules: string | null
+          towers_count: number | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          blocks_count?: number | null
+          contacts?: Json
+          cover_url?: string | null
           created_at?: string
           created_by: string
+          description?: string | null
+          general_info?: string | null
           id?: string
+          logo_url?: string | null
           name: string
+          rules?: string | null
+          towers_count?: number | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          blocks_count?: number | null
+          contacts?: Json
+          cover_url?: string | null
           created_at?: string
           created_by?: string
+          description?: string | null
+          general_info?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
+          rules?: string | null
+          towers_count?: number | null
           updated_at?: string
         }
         Relationships: []

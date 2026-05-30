@@ -20,6 +20,7 @@ import { Route as AppTasksRouteImport } from './routes/app.tasks'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppServicesRouteImport } from './routes/app.services'
 import { Route as AppReservationsRouteImport } from './routes/app.reservations'
+import { Route as AppMyCondoRouteImport } from './routes/app.my-condo'
 import { Route as AppInvitationsRouteImport } from './routes/app.invitations'
 import { Route as AppExploreRouteImport } from './routes/app.explore'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
@@ -41,6 +42,7 @@ import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCondosRouteImport } from './routes/admin.condos'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminCondosCondoIdRouteImport } from './routes/admin.condos.$condoId'
+import { Route as AdminCondosCondoIdEditRouteImport } from './routes/admin.condos.$condoId.edit'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -95,6 +97,11 @@ const AppServicesRoute = AppServicesRouteImport.update({
 const AppReservationsRoute = AppReservationsRouteImport.update({
   id: '/reservations',
   path: '/reservations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyCondoRoute = AppMyCondoRouteImport.update({
+  id: '/my-condo',
+  path: '/my-condo',
   getParentRoute: () => AppRoute,
 } as any)
 const AppInvitationsRoute = AppInvitationsRouteImport.update({
@@ -202,6 +209,11 @@ const AdminCondosCondoIdRoute = AdminCondosCondoIdRouteImport.update({
   path: '/$condoId',
   getParentRoute: () => AdminCondosRoute,
 } as any)
+const AdminCondosCondoIdEditRoute = AdminCondosCondoIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AdminCondosCondoIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -228,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
   '/app/invitations': typeof AppInvitationsRoute
+  '/app/my-condo': typeof AppMyCondoRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/services': typeof AppServicesRoute
   '/app/settings': typeof AppSettingsRoute
@@ -235,7 +248,8 @@ export interface FileRoutesByFullPath {
   '/app/team': typeof AppTeamRoute
   '/app/timeline': typeof AppTimelineRoute
   '/admin/': typeof AdminIndexRoute
-  '/admin/condos/$condoId': typeof AdminCondosCondoIdRoute
+  '/admin/condos/$condoId': typeof AdminCondosCondoIdRouteWithChildren
+  '/admin/condos/$condoId/edit': typeof AdminCondosCondoIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -261,6 +275,7 @@ export interface FileRoutesByTo {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
   '/app/invitations': typeof AppInvitationsRoute
+  '/app/my-condo': typeof AppMyCondoRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/services': typeof AppServicesRoute
   '/app/settings': typeof AppSettingsRoute
@@ -268,7 +283,8 @@ export interface FileRoutesByTo {
   '/app/team': typeof AppTeamRoute
   '/app/timeline': typeof AppTimelineRoute
   '/admin': typeof AdminIndexRoute
-  '/admin/condos/$condoId': typeof AdminCondosCondoIdRoute
+  '/admin/condos/$condoId': typeof AdminCondosCondoIdRouteWithChildren
+  '/admin/condos/$condoId/edit': typeof AdminCondosCondoIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -296,6 +312,7 @@ export interface FileRoutesById {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
   '/app/invitations': typeof AppInvitationsRoute
+  '/app/my-condo': typeof AppMyCondoRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/services': typeof AppServicesRoute
   '/app/settings': typeof AppSettingsRoute
@@ -303,7 +320,8 @@ export interface FileRoutesById {
   '/app/team': typeof AppTeamRoute
   '/app/timeline': typeof AppTimelineRoute
   '/admin/': typeof AdminIndexRoute
-  '/admin/condos/$condoId': typeof AdminCondosCondoIdRoute
+  '/admin/condos/$condoId': typeof AdminCondosCondoIdRouteWithChildren
+  '/admin/condos/$condoId/edit': typeof AdminCondosCondoIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -332,6 +350,7 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/explore'
     | '/app/invitations'
+    | '/app/my-condo'
     | '/app/reservations'
     | '/app/services'
     | '/app/settings'
@@ -340,6 +359,7 @@ export interface FileRouteTypes {
     | '/app/timeline'
     | '/admin/'
     | '/admin/condos/$condoId'
+    | '/admin/condos/$condoId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -365,6 +385,7 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/explore'
     | '/app/invitations'
+    | '/app/my-condo'
     | '/app/reservations'
     | '/app/services'
     | '/app/settings'
@@ -373,6 +394,7 @@ export interface FileRouteTypes {
     | '/app/timeline'
     | '/admin'
     | '/admin/condos/$condoId'
+    | '/admin/condos/$condoId/edit'
   id:
     | '__root__'
     | '/'
@@ -399,6 +421,7 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/explore'
     | '/app/invitations'
+    | '/app/my-condo'
     | '/app/reservations'
     | '/app/services'
     | '/app/settings'
@@ -407,6 +430,7 @@ export interface FileRouteTypes {
     | '/app/timeline'
     | '/admin/'
     | '/admin/condos/$condoId'
+    | '/admin/condos/$condoId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -493,6 +517,13 @@ declare module '@tanstack/react-router' {
       path: '/reservations'
       fullPath: '/app/reservations'
       preLoaderRoute: typeof AppReservationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/my-condo': {
+      id: '/app/my-condo'
+      path: '/my-condo'
+      fullPath: '/app/my-condo'
+      preLoaderRoute: typeof AppMyCondoRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/invitations': {
@@ -642,15 +673,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCondosCondoIdRouteImport
       parentRoute: typeof AdminCondosRoute
     }
+    '/admin/condos/$condoId/edit': {
+      id: '/admin/condos/$condoId/edit'
+      path: '/edit'
+      fullPath: '/admin/condos/$condoId/edit'
+      preLoaderRoute: typeof AdminCondosCondoIdEditRouteImport
+      parentRoute: typeof AdminCondosCondoIdRoute
+    }
   }
 }
 
+interface AdminCondosCondoIdRouteChildren {
+  AdminCondosCondoIdEditRoute: typeof AdminCondosCondoIdEditRoute
+}
+
+const AdminCondosCondoIdRouteChildren: AdminCondosCondoIdRouteChildren = {
+  AdminCondosCondoIdEditRoute: AdminCondosCondoIdEditRoute,
+}
+
+const AdminCondosCondoIdRouteWithChildren =
+  AdminCondosCondoIdRoute._addFileChildren(AdminCondosCondoIdRouteChildren)
+
 interface AdminCondosRouteChildren {
-  AdminCondosCondoIdRoute: typeof AdminCondosCondoIdRoute
+  AdminCondosCondoIdRoute: typeof AdminCondosCondoIdRouteWithChildren
 }
 
 const AdminCondosRouteChildren: AdminCondosRouteChildren = {
-  AdminCondosCondoIdRoute: AdminCondosCondoIdRoute,
+  AdminCondosCondoIdRoute: AdminCondosCondoIdRouteWithChildren,
 }
 
 const AdminCondosRouteWithChildren = AdminCondosRoute._addFileChildren(
@@ -702,6 +751,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppExploreRoute: typeof AppExploreRoute
   AppInvitationsRoute: typeof AppInvitationsRoute
+  AppMyCondoRoute: typeof AppMyCondoRoute
   AppReservationsRoute: typeof AppReservationsRoute
   AppServicesRoute: typeof AppServicesRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -717,6 +767,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppExploreRoute: AppExploreRoute,
   AppInvitationsRoute: AppInvitationsRoute,
+  AppMyCondoRoute: AppMyCondoRoute,
   AppReservationsRoute: AppReservationsRoute,
   AppServicesRoute: AppServicesRoute,
   AppSettingsRoute: AppSettingsRoute,

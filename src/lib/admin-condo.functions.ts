@@ -122,3 +122,69 @@ export const deleteArea = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const contactSchema = z.object({
+  label: z.string().trim().min(1).max(80),
+  value: z.string().trim().min(1).max(200),
+  kind: z.enum(["phone", "email", "whatsapp", "other"]).optional(),
+});
+
+const condoUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  address: z.string().trim().max(300).optional().nullable(),
+  description: z.string().trim().max(2000).optional().nullable(),
+  logo_url: z.string().url().optional().nullable(),
+  cover_url: z.string().url().optional().nullable(),
+  towers_count: z.number().int().min(0).max(500).optional().nullable(),
+  blocks_count: z.number().int().min(0).max(500).optional().nullable(),
+  rules: z.string().trim().max(10000).optional().nullable(),
+  contacts: z.array(contactSchema).max(30).optional(),
+  general_info: z.string().trim().max(10000).optional().nullable(),
+});
+
+export const updateCondo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoId: string; patch: z.input<typeof condoUpdateSchema> }) =>
+    z.object({ condoId: z.string().uuid(), patch: condoUpdateSchema }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertCanManageCondo(context.userId, data.condoId);
+    const { data: row, error } = await supabaseAdmin
+      .from("condominiums")
+      .update({
+        name: data.patch.name,
+        address: data.patch.address ?? null,
+        description: data.patch.description ?? null,
+        logo_url: data.patch.logo_url ?? null,
+        cover_url: data.patch.cover_url ?? null,
+        towers_count: data.patch.towers_count ?? null,
+        blocks_count: data.patch.blocks_count ?? null,
+        rules: data.patch.rules ?? null,
+        contacts: data.patch.contacts ?? [],
+        general_info: data.patch.general_info ?? null,
+      })
+      .eq("id", data.condoId)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const getMyCondoId = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("condo_id")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (prof?.condo_id) return { condoId: prof.condo_id as string };
+    const { data: role } = await supabaseAdmin
+      .from("user_roles")
+      .select("condo_id")
+      .eq("user_id", context.userId)
+      .in("role", ["sindico", "administradora"])
+      .limit(1)
+      .maybeSingle();
+    return { condoId: (role?.condo_id as string | undefined) ?? null };
+  });

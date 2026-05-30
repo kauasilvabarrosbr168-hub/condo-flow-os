@@ -66,12 +66,14 @@ const NAV: (NavItem | NavGroup)[] = [
   {
     label: "Operações",
     items: [
+      { to: "/app/my-condo", label: "Meu condomínio", icon: Building, roles: ["sindico", "administradora"] },
       { to: "/app/areas", label: "Áreas comuns", icon: Building, roles: ["sindico", "administradora"] },
       { to: "/app/tasks", label: "Tarefas", icon: ListChecks },
       { to: "/app/services", label: "Serviços", icon: ListChecks },
       { to: "/app/timeline", label: "Timeline", icon: Activity },
     ],
   },
+
 
   {
     label: "Pessoas",
