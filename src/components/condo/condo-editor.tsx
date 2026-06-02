@@ -343,6 +343,10 @@ export function CondoEditor({
   );
 }
 
+function ReadOnly({ value }: { value: string }) {
+  return <div className="h-9 px-3 py-1 rounded-md border border-input bg-muted/40 text-sm flex items-center text-muted-foreground">{value || "—"}</div>;
+}
+
 function Field({ label, error, hint, required, children }: { label: string; error?: string; hint?: string; required?: boolean; children: React.ReactNode }) {
   return (
     <label className="space-y-1.5 block">
