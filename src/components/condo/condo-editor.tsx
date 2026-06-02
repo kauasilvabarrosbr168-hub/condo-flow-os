@@ -243,11 +243,13 @@ export function CondoEditor({
 
         {/* AREAS */}
         <TabsContent value="areas" className="mt-5">
-          <div className="flex justify-end mb-4">
-            <Button onClick={() => setEditingArea({ min_advance_hours: 24, requires_checklist: true, gallery: [], active: true })}>
-              <Plus className="h-4 w-4" /> Nova área
-            </Button>
-          </div>
+          {variant === "admin" && (
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setEditingArea({ min_advance_hours: 24, requires_checklist: true, gallery: [], active: true })}>
+                <Plus className="h-4 w-4" /> Nova área
+              </Button>
+            </div>
+          )}
           {areas.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-10">Nenhuma área cadastrada.</p>
           ) : (
@@ -261,18 +263,20 @@ export function CondoEditor({
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{a.name}</p>
                       {a.description && <p className="text-[11px] text-muted-foreground line-clamp-1">{a.description}</p>}
+                      {a.capacity != null && <p className="text-[11px] text-muted-foreground">Capacidade: {a.capacity}</p>}
                     </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button onClick={() => setEditingArea(a)} className="h-7 w-7 rounded-md hover:bg-muted inline-flex items-center justify-center"><Save className="h-3.5 w-3.5 rotate-0 opacity-0" /></button>
-                      <button onClick={() => setEditingArea(a)} className="text-xs text-primary hover:underline px-2">Editar</button>
-                      <button onClick={async () => { if (confirm("Remover esta área?")) { await del({ data: { areaId: a.id } }); toast.success("Removida"); reloadAreas(); } }} className="h-7 w-7 rounded-md hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
+                    {variant === "admin" && (
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => setEditingArea(a)} className="text-xs text-primary hover:underline px-2">Editar</button>
+                        <button onClick={async () => { if (confirm("Remover esta área?")) { await del({ data: { areaId: a.id } }); toast.success("Removida"); reloadAreas(); } }} className="h-7 w-7 rounded-md hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
-          {editingArea && (
+          {editingArea && variant === "admin" && (
             <AreaEditor
               condoId={condoId}
               initial={editingArea}
