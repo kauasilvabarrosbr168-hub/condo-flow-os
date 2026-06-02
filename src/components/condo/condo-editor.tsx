@@ -211,10 +211,14 @@ export function CondoEditor({
             />
           </div>
           <Field label="Nome do condomínio" error={errors.name} required>
-            <Input value={form.name} maxLength={120} onChange={(e) => update("name", e.target.value)} />
+            {variant === "sindico"
+              ? <ReadOnly value={form.name} />
+              : <Input value={form.name} maxLength={120} onChange={(e) => update("name", e.target.value)} />}
           </Field>
           <Field label="Endereço">
-            <Input value={form.address} maxLength={300} onChange={(e) => update("address", e.target.value)} placeholder="Rua, número, bairro, cidade" />
+            {variant === "sindico"
+              ? <ReadOnly value={form.address} />
+              : <Input value={form.address} maxLength={300} onChange={(e) => update("address", e.target.value)} placeholder="Rua, número, bairro, cidade" />}
           </Field>
           <Field label="Descrição" hint="Aparece para moradores e no portal público.">
             <Textarea rows={4} value={form.description} maxLength={2000} onChange={(e) => update("description", e.target.value)} />
@@ -225,21 +229,27 @@ export function CondoEditor({
         <TabsContent value="structure" className="mt-5 space-y-5">
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="Quantidade de torres" error={errors.towers_count}>
-              <Input type="number" min={0} max={500} value={form.towers_count ?? ""} onChange={(e) => update("towers_count", e.target.value === "" ? null : Number(e.target.value))} />
+              {variant === "sindico"
+                ? <ReadOnly value={form.towers_count != null ? String(form.towers_count) : ""} />
+                : <Input type="number" min={0} max={500} value={form.towers_count ?? ""} onChange={(e) => update("towers_count", e.target.value === "" ? null : Number(e.target.value))} />}
             </Field>
             <Field label="Quantidade de blocos" error={errors.blocks_count}>
-              <Input type="number" min={0} max={500} value={form.blocks_count ?? ""} onChange={(e) => update("blocks_count", e.target.value === "" ? null : Number(e.target.value))} />
+              {variant === "sindico"
+                ? <ReadOnly value={form.blocks_count != null ? String(form.blocks_count) : ""} />
+                : <Input type="number" min={0} max={500} value={form.blocks_count ?? ""} onChange={(e) => update("blocks_count", e.target.value === "" ? null : Number(e.target.value))} />}
             </Field>
           </div>
         </TabsContent>
 
         {/* AREAS */}
         <TabsContent value="areas" className="mt-5">
-          <div className="flex justify-end mb-4">
-            <Button onClick={() => setEditingArea({ min_advance_hours: 24, requires_checklist: true, gallery: [], active: true })}>
-              <Plus className="h-4 w-4" /> Nova área
-            </Button>
-          </div>
+          {variant === "admin" && (
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setEditingArea({ min_advance_hours: 24, requires_checklist: true, gallery: [], active: true })}>
+                <Plus className="h-4 w-4" /> Nova área
+              </Button>
+            </div>
+          )}
           {areas.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-10">Nenhuma área cadastrada.</p>
           ) : (
@@ -253,18 +263,20 @@ export function CondoEditor({
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{a.name}</p>
                       {a.description && <p className="text-[11px] text-muted-foreground line-clamp-1">{a.description}</p>}
+                      {a.capacity != null && <p className="text-[11px] text-muted-foreground">Capacidade: {a.capacity}</p>}
                     </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button onClick={() => setEditingArea(a)} className="h-7 w-7 rounded-md hover:bg-muted inline-flex items-center justify-center"><Save className="h-3.5 w-3.5 rotate-0 opacity-0" /></button>
-                      <button onClick={() => setEditingArea(a)} className="text-xs text-primary hover:underline px-2">Editar</button>
-                      <button onClick={async () => { if (confirm("Remover esta área?")) { await del({ data: { areaId: a.id } }); toast.success("Removida"); reloadAreas(); } }} className="h-7 w-7 rounded-md hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
+                    {variant === "admin" && (
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => setEditingArea(a)} className="text-xs text-primary hover:underline px-2">Editar</button>
+                        <button onClick={async () => { if (confirm("Remover esta área?")) { await del({ data: { areaId: a.id } }); toast.success("Removida"); reloadAreas(); } }} className="h-7 w-7 rounded-md hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
-          {editingArea && (
+          {editingArea && variant === "admin" && (
             <AreaEditor
               condoId={condoId}
               initial={editingArea}
@@ -329,6 +341,10 @@ export function CondoEditor({
       {variant === "sindico" && null}
     </div>
   );
+}
+
+function ReadOnly({ value }: { value: string }) {
+  return <div className="h-9 px-3 py-1 rounded-md border border-input bg-muted/40 text-sm flex items-center text-muted-foreground">{value || "—"}</div>;
 }
 
 function Field({ label, error, hint, required, children }: { label: string; error?: string; hint?: string; required?: boolean; children: React.ReactNode }) {
