@@ -211,10 +211,14 @@ export function CondoEditor({
             />
           </div>
           <Field label="Nome do condomínio" error={errors.name} required>
-            <Input value={form.name} maxLength={120} onChange={(e) => update("name", e.target.value)} />
+            {variant === "sindico"
+              ? <ReadOnly value={form.name} />
+              : <Input value={form.name} maxLength={120} onChange={(e) => update("name", e.target.value)} />}
           </Field>
           <Field label="Endereço">
-            <Input value={form.address} maxLength={300} onChange={(e) => update("address", e.target.value)} placeholder="Rua, número, bairro, cidade" />
+            {variant === "sindico"
+              ? <ReadOnly value={form.address} />
+              : <Input value={form.address} maxLength={300} onChange={(e) => update("address", e.target.value)} placeholder="Rua, número, bairro, cidade" />}
           </Field>
           <Field label="Descrição" hint="Aparece para moradores e no portal público.">
             <Textarea rows={4} value={form.description} maxLength={2000} onChange={(e) => update("description", e.target.value)} />
@@ -225,10 +229,14 @@ export function CondoEditor({
         <TabsContent value="structure" className="mt-5 space-y-5">
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="Quantidade de torres" error={errors.towers_count}>
-              <Input type="number" min={0} max={500} value={form.towers_count ?? ""} onChange={(e) => update("towers_count", e.target.value === "" ? null : Number(e.target.value))} />
+              {variant === "sindico"
+                ? <ReadOnly value={form.towers_count != null ? String(form.towers_count) : ""} />
+                : <Input type="number" min={0} max={500} value={form.towers_count ?? ""} onChange={(e) => update("towers_count", e.target.value === "" ? null : Number(e.target.value))} />}
             </Field>
             <Field label="Quantidade de blocos" error={errors.blocks_count}>
-              <Input type="number" min={0} max={500} value={form.blocks_count ?? ""} onChange={(e) => update("blocks_count", e.target.value === "" ? null : Number(e.target.value))} />
+              {variant === "sindico"
+                ? <ReadOnly value={form.blocks_count != null ? String(form.blocks_count) : ""} />
+                : <Input type="number" min={0} max={500} value={form.blocks_count ?? ""} onChange={(e) => update("blocks_count", e.target.value === "" ? null : Number(e.target.value))} />}
             </Field>
           </div>
         </TabsContent>
