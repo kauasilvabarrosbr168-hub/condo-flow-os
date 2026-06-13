@@ -56,6 +56,12 @@ export const getCondoDetails = createServerFn({ method: "POST" })
   });
 
 
+const daySlotSchema = z.object({ from: z.string(), to: z.string() }).nullable();
+const weekScheduleSchema = z.object({
+  seg: daySlotSchema, ter: daySlotSchema, qua: daySlotSchema,
+  qui: daySlotSchema, sex: daySlotSchema, sab: daySlotSchema, dom: daySlotSchema,
+}).nullable().optional();
+
 const areaSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(80),
@@ -67,6 +73,7 @@ const areaSchema = z.object({
   cover_url: z.string().url().optional().nullable(),
   gallery: z.array(z.string().url()).max(20).optional(),
   active: z.boolean().optional(),
+  available_slots: weekScheduleSchema,
 });
 
 export const upsertArea = createServerFn({ method: "POST" })
@@ -87,6 +94,7 @@ export const upsertArea = createServerFn({ method: "POST" })
       cover_url: data.area.cover_url ?? null,
       gallery: data.area.gallery ?? [],
       active: data.area.active ?? true,
+      available_slots: data.area.available_slots ?? null,
     };
     if (data.area.id) {
       const { data: row, error } = await supabaseAdmin

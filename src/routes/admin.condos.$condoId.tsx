@@ -1,8 +1,9 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ArrowLeft, Building, Plus, Loader2, Trash2, ImagePlus, Upload, X, Save, Pencil, Users as UsersIcon, ShieldCheck,
+  ArrowLeft, Building, Plus, Loader2, Trash2, ImagePlus, Upload, X, Save, Pencil,
+  Users as UsersIcon, ShieldCheck, CalendarDays,
 } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/brand";
 import { supabase } from "@/integrations/supabase/client";
 import { getCondoDetails, upsertArea, deleteArea } from "@/lib/admin-condo.functions";
+import { AreaCalendarView } from "@/components/condo/area-calendar-view";
+import { AreaSchedulePicker, EMPTY_SCHEDULE, type WeekSchedule } from "@/components/condo/area-schedule-picker";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/condos/$condoId")({
@@ -31,6 +34,7 @@ type Area = {
   cover_url: string | null;
   gallery: string[];
   active: boolean;
+  available_slots: WeekSchedule | null;
 };
 
 type Detail = {
@@ -49,6 +53,7 @@ function CondoDetailPage() {
 
   const [data, setData] = useState<Detail | null>(null);
   const [editing, setEditing] = useState<Partial<Area> | null>(null);
+  const [calendarArea, setCalendarArea] = useState<Area | null>(null);
   const [services, setServices] = useState<{ id: string; title: string; notes: string | null; photo_url: string | null; done_at: string; worker_id: string }[] | null>(null);
 
   const load = useCallback(() => {
@@ -117,6 +122,9 @@ function CondoDetailPage() {
           <TabsTrigger value="areas"><Building className="h-3.5 w-3.5 mr-1.5" />Áreas comuns</TabsTrigger>
           <TabsTrigger value="members"><UsersIcon className="h-3.5 w-3.5 mr-1.5" />Membros</TabsTrigger>
           <TabsTrigger value="services"><ShieldCheck className="h-3.5 w-3.5 mr-1.5" />Serviços</TabsTrigger>
+          {calendarArea && (
+            <TabsTrigger value="calendar"><CalendarDays className="h-3.5 w-3.5 mr-1.5" />Calendário — {calendarArea.name}</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="areas" className="mt-5">
@@ -144,8 +152,9 @@ function CondoDetailPage() {
                       </div>
                     )}
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                      <button onClick={() => setEditing(a)} className="h-7 w-7 inline-flex items-center justify-center rounded-lg bg-background/90 backdrop-blur hover:bg-background"><Pencil className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => onDelete(a.id)} className="h-7 w-7 inline-flex items-center justify-center rounded-lg bg-background/90 backdrop-blur hover:bg-destructive hover:text-destructive-foreground"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => setCalendarArea(a)} className="h-7 w-7 inline-flex items-center justify-center rounded-lg bg-background/90 backdrop-blur hover:bg-background" title="Ver calendário"><CalendarDays className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => setEditing(a)} className="h-7 w-7 inline-flex items-center justify-center rounded-lg bg-background/90 backdrop-blur hover:bg-background" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => onDelete(a.id)} className="h-7 w-7 inline-flex items-center justify-center rounded-lg bg-background/90 backdrop-blur hover:bg-destructive hover:text-destructive-foreground" title="Remover"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </div>
                   <div className="p-4">
@@ -181,6 +190,16 @@ function CondoDetailPage() {
             </div>
           )}
         </TabsContent>
+
+        {calendarArea && (
+          <TabsContent value="calendar" className="mt-5">
+            <AreaCalendarView
+              area={calendarArea}
+              condoId={condoId}
+              onClose={() => setCalendarArea(null)}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="services" className="mt-5">
           {!services ? (
@@ -224,7 +243,12 @@ export function AreaEditor({
   onClose: () => void;
   onSave: (a: Partial<Area>) => Promise<void> | void;
 }) {
-  const [a, setA] = useState<Partial<Area>>({ ...initial, gallery: initial.gallery ?? [] });
+  const [a, setA] = useState<Partial<Area>>({
+    ...initial,
+    gallery: initial.gallery ?? [],
+    available_slots: initial.available_slots ?? null,
+  });
+  const [scheduleEnabled, setScheduleEnabled] = useState(!!initial.available_slots);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState<"cover" | "gallery" | null>(null);
 
@@ -316,6 +340,30 @@ export function AreaEditor({
               <input type="checkbox" checked={a.requires_checklist ?? true} onChange={(e) => setA((p) => ({ ...p, requires_checklist: e.target.checked }))} className="h-4 w-4 rounded border-border" />
               <span className="text-sm">Gerar checklist pré/pós uso</span>
             </label>
+          </div>
+
+          <div className="space-y-3 pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Horários disponíveis</span>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={scheduleEnabled}
+                  onChange={(e) => {
+                    setScheduleEnabled(e.target.checked);
+                    setA((p) => ({ ...p, available_slots: e.target.checked ? EMPTY_SCHEDULE : null }));
+                  }}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <span className="text-sm">Definir horários</span>
+              </label>
+            </div>
+            {scheduleEnabled && (
+              <AreaSchedulePicker
+                value={a.available_slots ?? EMPTY_SCHEDULE}
+                onChange={(v) => setA((p) => ({ ...p, available_slots: v }))}
+              />
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
