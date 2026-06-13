@@ -11,8 +11,6 @@ import { requestMembership } from "@/lib/membership.functions";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const MASTER_ADMIN_EMAIL = "admin@condoflow.com";
-
 type Mode = "signin" | "signup";
 type ProfileType = "morador" | "sindico" | "funcionario";
 
@@ -61,26 +59,24 @@ function LoginPage() {
 
   useEffect(() => {
     if (mode !== "signup" || invite) return;
-    supabase.rpc("list_condos_for_signup").then(({ data }) => {
+    supabase.rpc("list_condos_for_signup").then(({ data, error }) => {
+      if (error) { console.error("Falha ao carregar condomínios:", error.message); return; }
       if (data) setPublicCondos(data as { id: string; name: string; address: string | null }[]);
     });
   }, [mode, invite]);
 
   useEffect(() => {
-    if (session && !loading) {
-      (async () => {
-        if (session.user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
-          navigate({ to: "/admin/dashboard" });
-          return;
-        }
-        const { data: pa } = await supabase
-          .from("platform_admins")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-        navigate({ to: pa ? "/admin/dashboard" : "/app/dashboard" });
-      })();
-    }
+    if (!session || loading) return;
+    let ignore = false;
+    (async () => {
+      const { data: pa } = await supabase
+        .from("platform_admins")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (!ignore) navigate({ to: pa ? "/admin/dashboard" : "/app/dashboard" });
+    })();
+    return () => { ignore = true; };
   }, [session, loading, navigate]);
 
   useEffect(() => {

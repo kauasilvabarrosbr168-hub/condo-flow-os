@@ -122,8 +122,21 @@ export const decideMembership = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: row, error } = await supabase.rpc("decide_membership_request", {
+    const userId = context.userId;
+    const { data: isAdmin } = await supabaseAdmin
+      .from("platform_admins")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const { data: isSindico } = await supabaseAdmin
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", userId)
+      .in("role", ["sindico", "administradora"])
+      .maybeSingle();
+    if (!isAdmin && !isSindico) throw new Error("Sem permissão para aprovar solicitações.");
+
+    const { data: row, error } = await supabaseAdmin.rpc("decide_membership_request", {
       p_request_id: data.requestId,
       p_decision: data.decision,
       p_reason: data.reason ?? undefined,

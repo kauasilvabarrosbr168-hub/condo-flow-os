@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadContext = async (uid: string) => {
     const [{ data: prof }, { data: rs }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
+      supabase.from("profiles").select("id,condo_id,full_name,email,phone,unit_label,avatar_url").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role,condo_id").eq("user_id", uid),
     ]);
     setProfile((prof as Profile) ?? null);
@@ -78,25 +78,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let initialized = false;
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       if (s?.user) {
-        // Defer to avoid recursive locks
-        setTimeout(() => loadContext(s.user.id), 0);
+        setTimeout(() => {
+          loadContext(s.user.id).finally(() => {
+            if (!initialized) {
+              initialized = true;
+              setLoading(false);
+            }
+          });
+        }, 0);
       } else {
         setProfile(null);
         setRoles([]);
         setCondo(null);
+        if (!initialized) {
+          initialized = true;
+          setLoading(false);
+        }
       }
     });
+
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session?.user) {
-        loadContext(data.session.user.id).finally(() => setLoading(false));
-      } else {
+        loadContext(data.session.user.id).finally(() => {
+          if (!initialized) {
+            initialized = true;
+            setLoading(false);
+          }
+        });
+      } else if (!initialized) {
+        initialized = true;
         setLoading(false);
       }
     });
+
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -124,7 +144,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!userId) return { error: "Conta criada — confirme o email para continuar." };
 
     // Wait briefly for the auth trigger to create the profile row
-    await new Promise((r) => setTimeout(r, 350));
+    // Wait for auth trigger to create profile row — retry up to 2s
+    for (let i = 0; i < 8; i++) {
+      await new Promise((r) => setTimeout(r, 250));
+      const { data: p } = await supabase.from("profiles").select("id").eq("id", userId).maybeSingle();
+      if (p) break;
+    }
 
     if (input.inviteToken) {
       try {

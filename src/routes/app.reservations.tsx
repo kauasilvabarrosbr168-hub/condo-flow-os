@@ -61,7 +61,7 @@ function ReservationsPage() {
   useEffect(() => {
     if (!condoId) return;
     const ch = supabase
-      .channel("reservations-rt")
+      .channel(`reservations-rt-${condoId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "reservations", filter: `condo_id=eq.${condoId}` }, () => {
         qc.invalidateQueries({ queryKey: ["reservations", condoId] });
       })
@@ -216,7 +216,7 @@ function NewReservationDialog({
   onCreated: () => void;
 }) {
   const [areaId, setAreaId] = useState(areas[0]?.id ?? "");
-  const [date, setDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => new Date(Date.now() + 86400000).toLocaleDateString("sv"));
   const [startTime, setStartTime] = useState("18:00");
   const [endTime, setEndTime] = useState("22:00");
   const [guests, setGuests] = useState(0);
@@ -226,8 +226,12 @@ function NewReservationDialog({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const starts = new Date(`${date}T${startTime}:00`).toISOString();
-    const ends = new Date(`${date}T${endTime}:00`).toISOString();
+    const tzOffset = new Date().getTimezoneOffset();
+    const sign = tzOffset <= 0 ? "+" : "-";
+    const pad = (n: number) => String(Math.abs(n)).padStart(2, "0");
+    const tz = `${sign}${pad(Math.floor(Math.abs(tzOffset) / 60))}:${pad(Math.abs(tzOffset) % 60)}`;
+    const starts = new Date(`${date}T${startTime}:00${tz}`).toISOString();
+    const ends = new Date(`${date}T${endTime}:00${tz}`).toISOString();
     if (new Date(ends) <= new Date(starts)) {
       toast.error("Horário inválido");
       setBusy(false);

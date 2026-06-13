@@ -19,7 +19,7 @@ function AreasPage() {
   const [open, setOpen] = useState(false);
 
   const { data: areas, isLoading } = useQuery({
-    enabled: !!condoId,
+    enabled: !!condoId && isAdmin,
     queryKey: ["areas-admin", condoId],
     queryFn: async () => {
       const { data } = await supabase.from("common_areas").select("*").eq("condo_id", condoId!).order("created_at", { ascending: false });
@@ -71,6 +71,15 @@ function AreasPage() {
                   <button
                     onClick={async () => {
                       if (!confirm(`Remover "${a.name}"?`)) return;
+                      const { count } = await supabase
+                        .from("reservations")
+                        .select("id", { count: "exact", head: true })
+                        .eq("area_id", a.id)
+                        .gte("ends_at", new Date().toISOString());
+                      if ((count ?? 0) > 0) {
+                        toast.error(`Esta área tem ${count} reserva(s) ativa(s). Cancele-as antes de remover.`);
+                        return;
+                      }
                       const { error } = await supabase.from("common_areas").delete().eq("id", a.id);
                       if (error) toast.error(error.message);
                       else { toast.success("Área removida"); qc.invalidateQueries({ queryKey: ["areas-admin", condoId] }); }
@@ -81,7 +90,7 @@ function AreasPage() {
                   </button>
                 </div>
                 {a.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.description}</p>}
-                {a.rules && <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2 italic">📋 {a.rules}</p>}
+                {a.rules && <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2 italic">{a.rules}</p>}
                 <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
                   {a.capacity && <span className="rounded-full bg-muted px-2 py-0.5">Capacidade {a.capacity}</span>}
                   <span className="rounded-full bg-muted px-2 py-0.5">{a.min_advance_hours}h antecedência</span>
