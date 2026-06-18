@@ -196,3 +196,29 @@ export const getMyCondoId = createServerFn({ method: "POST" })
       .maybeSingle();
     return { condoId: (role?.condo_id as string | undefined) ?? null };
   });
+
+export const getCondoJoinCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanManageCondo(context.userId, data.condoId);
+    const { data: condo, error } = await supabaseAdmin
+      .from("condominiums")
+      .select("join_code")
+      .eq("id", data.condoId)
+      .single();
+    if (error) throw new Error(error.message);
+    return { joinCode: condo.join_code as string };
+  });
+
+export const regenerateCondoJoinCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanManageCondo(context.userId, data.condoId);
+    const { data: newCode, error } = await supabaseAdmin.rpc("regenerate_condo_join_code", {
+      p_condo_id: data.condoId,
+    });
+    if (error) throw new Error(error.message);
+    return { joinCode: newCode as string };
+  });

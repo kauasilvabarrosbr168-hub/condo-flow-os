@@ -57,13 +57,14 @@ function LoginPage() {
   const [unitLabel, setUnitLabel] = useState("");
   const [publicCondos, setPublicCondos] = useState<{ id: string; name: string; address: string | null }[]>([]);
 
+  // Only load condo list for funcionario (moradores now join via code after signup)
   useEffect(() => {
-    if (mode !== "signup" || invite) return;
+    if (mode !== "signup" || invite || profileType !== "funcionario") return;
     supabase.rpc("list_condos_for_signup").then(({ data, error }) => {
       if (error) { console.error("Falha ao carregar condomínios:", error.message); return; }
       if (data) setPublicCondos(data as { id: string; name: string; address: string | null }[]);
     });
-  }, [mode, invite]);
+  }, [mode, invite, profileType]);
 
   useEffect(() => {
     if (!session || loading) return;
@@ -144,7 +145,7 @@ function LoginPage() {
         setError("Informe o nome do condomínio que você administra.");
         return;
       }
-      if ((profileType === "morador" || profileType === "funcionario") && !selectedCondoId) {
+      if (profileType === "funcionario" && !selectedCondoId) {
         setError("Selecione o seu condomínio na lista.");
         return;
       }
@@ -156,22 +157,24 @@ function LoginPage() {
       });
       if (suErr) { setError(traduzErro(suErr)); return; }
 
-      try {
-        await requestMembershipFn({
-          data: {
-            requestedRole: profileType,
-            condoId: profileType === "sindico" ? undefined : selectedCondoId,
-            proposedCondoName: profileType === "sindico" ? condoName.trim() : undefined,
-            proposedCondoAddress: profileType === "sindico" ? (condoAddress.trim() || undefined) : undefined,
-            unitLabel: profileType === "morador" ? (unitLabel.trim() || undefined) : undefined,
-          },
-        });
-      } catch (reqErr) {
-        const msg = reqErr instanceof Error ? reqErr.message : String(reqErr);
-        toast.error("Cadastro criado, mas falhou ao enviar solicitação: " + msg);
+      // Morador: skip condo selection here — they'll enter via code after login
+      if (profileType !== "morador") {
+        try {
+          await requestMembershipFn({
+            data: {
+              requestedRole: profileType,
+              condoId: profileType === "sindico" ? undefined : selectedCondoId,
+              proposedCondoName: profileType === "sindico" ? condoName.trim() : undefined,
+              proposedCondoAddress: profileType === "sindico" ? (condoAddress.trim() || undefined) : undefined,
+            },
+          });
+        } catch (reqErr) {
+          const msg = reqErr instanceof Error ? reqErr.message : String(reqErr);
+          toast.error("Cadastro criado, mas falhou ao enviar solicitação: " + msg);
+        }
       }
 
-      toast.success("Cadastro enviado para aprovação.");
+      toast.success(profileType === "morador" ? "Conta criada! Agora entre no seu condomínio pelo código." : "Cadastro enviado para aprovação.");
       navigate({ to: "/app/dashboard" });
     } finally {
       setBusy(false);
@@ -278,22 +281,22 @@ function LoginPage() {
                 </>
               )}
 
-              {mode === "signup" && !invite && (profileType === "morador" || profileType === "funcionario") && (
-                <>
-                  <Field label="Condomínio">
-                    <select required value={selectedCondoId} onChange={(e) => setSelectedCondoId(e.target.value)} className={inputCls}>
-                      <option value="">Selecione…</option>
-                      {publicCondos.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}{c.address ? ` — ${c.address}` : ""}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  {profileType === "morador" && (
-                    <Field label="Unidade (opcional)">
-                      <input value={unitLabel} onChange={(e) => setUnitLabel(e.target.value)} placeholder="Bloco A · Apto 302" className={inputCls} />
-                    </Field>
-                  )}
-                </>
+              {mode === "signup" && !invite && profileType === "morador" && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+                  <p className="text-xs text-primary font-medium">Você vai entrar no condomínio por código</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Após criar sua conta, você receberá o código do seu síndico e poderá acessar o app.</p>
+                </div>
+              )}
+
+              {mode === "signup" && !invite && profileType === "funcionario" && (
+                <Field label="Condomínio">
+                  <select required value={selectedCondoId} onChange={(e) => setSelectedCondoId(e.target.value)} className={inputCls}>
+                    <option value="">Selecione…</option>
+                    {publicCondos.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}{c.address ? ` — ${c.address}` : ""}</option>
+                    ))}
+                  </select>
+                </Field>
               )}
 
               <Field label="E-mail">

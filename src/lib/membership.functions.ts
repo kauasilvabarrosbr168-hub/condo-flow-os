@@ -50,6 +50,47 @@ export const requestMembership = createServerFn({ method: "POST" })
     return row;
   });
 
+export const joinCondoByCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { code: string; unitLabel?: string }) =>
+    z.object({ code: z.string().min(1).max(20), unitLabel: z.string().trim().max(40).optional() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const userId = context.userId;
+
+    // Check for existing pending request
+    const { data: existing } = await supabaseAdmin
+      .from("membership_requests")
+      .select("id, status, condo_id")
+      .eq("user_id", userId)
+      .in("status", ["pending", "sindico_approved"])
+      .maybeSingle();
+    if (existing) return { condoId: existing.condo_id, alreadyPending: true };
+
+    // Find condo by join code (case-insensitive)
+    const { data: condo, error: condoErr } = await supabaseAdmin
+      .from("condominiums")
+      .select("id, name")
+      .eq("join_code", data.code.toUpperCase().trim())
+      .maybeSingle();
+
+    if (condoErr || !condo) throw new Error("Código inválido ou condomínio não encontrado.");
+
+    const { data: row, error } = await supabaseAdmin
+      .from("membership_requests")
+      .insert({
+        user_id: userId,
+        condo_id: condo.id,
+        requested_role: "morador",
+        unit_label: data.unitLabel?.trim() || null,
+        status: "pending",
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return { condoId: condo.id, condoName: condo.name, requestId: row.id, alreadyPending: false };
+  });
+
 export const getMyMembershipStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

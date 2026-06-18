@@ -147,7 +147,15 @@ function AppLayout() {
         </div>
       );
     }
-    return <PendingApprovalScreen status={membership?.status ?? null} reason={membership?.rejection_reason ?? null} onSignOut={async () => { await signOut(); navigate({ to: "/login" }); }} />;
+    // No pending request: send morador to enter by code
+    const noRequest = !membership?.status;
+    if (noRequest && pathname !== "/app/join-condo") {
+      navigate({ to: "/app/join-condo" });
+      return null;
+    }
+    if (!noRequest) {
+      return <PendingApprovalScreen status={membership?.status ?? null} reason={membership?.rejection_reason ?? null} onSignOut={async () => { await signOut(); navigate({ to: "/login" }); }} />;
+    }
   }
 
   const roleLabel: Record<Role, string> = {
