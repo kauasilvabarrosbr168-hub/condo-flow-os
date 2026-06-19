@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail, UserPlus, Pencil } from "lucide-react";
+import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail, UserPlus, Pencil, Hash } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
@@ -26,6 +26,7 @@ type Row = {
   name: string;
   address: string | null;
   created_at: string;
+  join_code: string | null;
   users: number;
   plan: string | null;
   status: string | null;
@@ -38,6 +39,7 @@ function CondosPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createdInvite, setCreatedInvite] = useState<string | null>(null);
+  const [createdJoinCode, setCreatedJoinCode] = useState<string | null>(null);
   const [form, setForm] = useState({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
   const [memberCondo, setMemberCondo] = useState<Row | null>(null);
   const assignMemberFn = useServerFn(assignMemberToCondo);
@@ -45,7 +47,7 @@ function CondosPage() {
 
   const load = async () => {
     const [{ data: condos }, { data: profiles }, { data: subs }] = await Promise.all([
-      supabase.from("condominiums").select("id, name, address, created_at").order("created_at", { ascending: false }),
+      supabase.from("condominiums").select("id, name, address, created_at, join_code").order("created_at", { ascending: false }),
       supabase.from("profiles").select("condo_id"),
       supabase.from("subscriptions").select("condo_id, status, plans(name)"),
     ]);
@@ -60,7 +62,7 @@ function CondosPage() {
     });
 
     setRows(
-      (condos ?? []).map((c: { id: string; name: string; address: string | null; created_at: string }) => ({
+      (condos ?? []).map((c: { id: string; name: string; address: string | null; created_at: string; join_code: string | null }) => ({
         ...c,
         users: userCounts.get(c.id) ?? 0,
         plan: subMap.get(c.id)?.plan ?? null,
@@ -93,7 +95,7 @@ function CondosPage() {
       const { data: condo, error: condoError } = await supabase
         .from("condominiums")
         .insert({ name: form.condoName.trim(), address: form.address.trim() || null, created_by: user.id })
-        .select("id")
+        .select("id, join_code")
         .single();
       if (condoError || !condo) throw new Error(condoError?.message ?? "Falha ao criar condomínio.");
 
@@ -117,6 +119,7 @@ function CondosPage() {
 
       const inviteUrl = `${window.location.origin}/login?mode=signup&invite=${invite.token}`;
       setCreatedInvite(inviteUrl);
+      setCreatedJoinCode((condo as { id: string; join_code?: string }).join_code ?? null);
       setForm({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
       toast.success("Condomínio criado e convite do síndico gerado.");
       load();
@@ -169,21 +172,38 @@ function CondosPage() {
               <Input required type="email" value={form.sindicoEmail} onChange={(e) => setForm((f) => ({ ...f, sindicoEmail: e.target.value }))} placeholder="sindico@condominio.com" />
             </label>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/20 px-5 py-4">
-            {createdInvite ? (
-              <button
-                type="button"
-                onClick={() => { navigator.clipboard.writeText(createdInvite); toast.success("Link copiado"); }}
-                className="inline-flex min-w-0 items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition"
-              >
-                <Copy className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">Convite gerado: {createdInvite}</span>
-              </button>
-            ) : <span className="text-xs text-muted-foreground">Após criar, copie o link e envie ao síndico.</span>}
-            <Button type="submit" disabled={creating}>
-              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-              Criar e gerar convite
-            </Button>
+          <div className="border-t border-border bg-muted/20 px-5 py-4 space-y-2">
+            {createdJoinCode && (
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2">
+                <Hash className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Código do condomínio:</span>
+                <span className="font-mono font-bold tracking-widest text-sm text-emerald-800 dark:text-emerald-300">{createdJoinCode}</span>
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard.writeText(createdJoinCode); toast.success("Código copiado"); }}
+                  className="ml-auto text-emerald-600 hover:text-emerald-800 transition"
+                  title="Copiar código"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {createdInvite ? (
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard.writeText(createdInvite); toast.success("Link copiado"); }}
+                  className="inline-flex min-w-0 items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition"
+                >
+                  <Copy className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Convite: {createdInvite}</span>
+                </button>
+              ) : <span className="text-xs text-muted-foreground">Após criar, copie o link e envie ao síndico.</span>}
+              <Button type="submit" disabled={creating}>
+                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Criar e gerar convite
+              </Button>
+            </div>
           </div>
         </form>
       )}
@@ -202,6 +222,7 @@ function CondosPage() {
             <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="text-left px-5 py-3 font-medium">Workspace</th>
+                <th className="text-left px-5 py-3 font-medium">Código</th>
                 <th className="text-left px-5 py-3 font-medium">Plano</th>
                 <th className="text-left px-5 py-3 font-medium">Status</th>
                 <th className="text-left px-5 py-3 font-medium">Usuários</th>
@@ -224,6 +245,18 @@ function CondosPage() {
                     </a>
                   </td>
 
+                  <td className="px-5 py-3">
+                    {r.join_code ? (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(r.join_code!); toast.success("Código copiado"); }}
+                        className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold tracking-widest rounded-lg bg-muted px-2 py-1 hover:bg-primary/10 hover:text-primary transition"
+                        title="Copiar código"
+                      >
+                        {r.join_code}
+                        <Copy className="h-3 w-3 opacity-60" />
+                      </button>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
                   <td className="px-5 py-3">{r.plan ?? <span className="text-muted-foreground">—</span>}</td>
                   <td className="px-5 py-3">
                     {r.status === "active" && <Badge tone="success">Ativo</Badge>}
