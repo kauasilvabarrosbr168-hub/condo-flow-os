@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { notifyMembershipApproved, notifyMembershipRejected, notifyNewMembershipRequest } from "@/lib/notify.server";
 
 const requestSchema = z.object({
   requestedRole: z.enum(["sindico", "funcionario", "morador"]),
@@ -47,6 +48,39 @@ export const requestMembership = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
+
+    // Notify síndico of new request (if condo already exists)
+    if (data.condoId) {
+      Promise.all([
+        supabaseAdmin.from("profiles").select("full_name, email, phone").eq("id", userId).maybeSingle(),
+        supabaseAdmin.from("condominiums").select("name").eq("id", data.condoId).maybeSingle(),
+        supabaseAdmin
+          .from("user_roles")
+          .select("user_id")
+          .eq("condo_id", data.condoId)
+          .in("role", ["sindico", "administradora"]),
+      ]).then(async ([{ data: requester }, { data: condo }, { data: sindicos }]) => {
+        if (!requester || !condo || !sindicos?.length) return;
+        for (const s of sindicos) {
+          const { data: sindicoProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("full_name, email, phone")
+            .eq("id", s.user_id)
+            .maybeSingle();
+          if (!sindicoProfile) continue;
+          notifyNewMembershipRequest({
+            toEmail: sindicoProfile.email,
+            toPhone: sindicoProfile.phone,
+            sindicoName: sindicoProfile.full_name,
+            requesterName: requester.full_name,
+            requesterRole: data.requestedRole,
+            condoName: condo.name,
+            requestId: row.id,
+          }).catch(console.error);
+        }
+      }).catch(console.error);
+    }
+
     return row;
   });
 
@@ -177,6 +211,13 @@ export const decideMembership = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!isAdmin && !isSindico) throw new Error("Sem permissão para aprovar solicitações.");
 
+    // Fetch request details before deciding (needed for notifications)
+    const { data: req } = await supabaseAdmin
+      .from("membership_requests")
+      .select("user_id, condo_id, proposed_condo_name, requested_role")
+      .eq("id", data.requestId)
+      .maybeSingle();
+
     const { data: row, error } = await supabaseAdmin.rpc("decide_membership_request", {
       p_request_id: data.requestId,
       p_decision: data.decision,
@@ -184,5 +225,35 @@ export const decideMembership = createServerFn({ method: "POST" })
     });
 
     if (error) throw new Error(error.message);
+
+    // Fire notifications asynchronously (never block the response)
+    if (req) {
+      const [{ data: profile }, { data: condo }] = await Promise.all([
+        supabaseAdmin.from("profiles").select("full_name, email, phone").eq("id", req.user_id).maybeSingle(),
+        req.condo_id
+          ? supabaseAdmin.from("condominiums").select("name").eq("id", req.condo_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      const condoName = condo?.name ?? req.proposed_condo_name ?? "seu condomínio";
+      if (profile) {
+        if (data.decision === "approve") {
+          notifyMembershipApproved({
+            toEmail: profile.email,
+            toPhone: profile.phone,
+            fullName: profile.full_name,
+            condoName,
+          }).catch(console.error);
+        } else {
+          notifyMembershipRejected({
+            toEmail: profile.email,
+            toPhone: profile.phone,
+            fullName: profile.full_name,
+            condoName,
+            reason: data.reason,
+          }).catch(console.error);
+        }
+      }
+    }
+
     return row;
   });

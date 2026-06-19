@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, MessageSquare, Mail, Bell, Phone, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -67,6 +67,45 @@ function SettingsPage() {
           {condo.address && <p className="text-xs text-muted-foreground mt-1">{condo.address}</p>}
         </section>
       )}
+
+      <section className="rounded-2xl border border-border bg-card shadow-card p-6">
+        <h2 className="text-sm font-semibold mb-1">Notificações</h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Configure seu celular no perfil acima para receber SMS e WhatsApp.
+        </p>
+        <div className="space-y-3">
+          {[
+            { icon: Mail, title: "E-mail", desc: "Aprovações, reservas e tarefas", active: !!profile?.email },
+            { icon: MessageSquare, title: "WhatsApp / SMS", desc: "Alertas no celular cadastrado", active: !!profile?.phone },
+            { icon: Bell, title: "Push (em breve)", desc: "Notificações no navegador", active: false },
+          ].map((n) => (
+            <div key={n.title} className="flex items-center justify-between py-3 border-b border-border/60 last:border-0">
+              <div className="flex items-center gap-3">
+                <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${n.active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                  <n.icon className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-sm font-medium">{n.title}</p>
+                  <p className="text-xs text-muted-foreground">{n.desc}</p>
+                </div>
+              </div>
+              {n.active
+                ? <span className="inline-flex items-center gap-1 text-xs text-success font-medium"><CheckCircle2 className="h-3.5 w-3.5" /> Ativo</span>
+                : <span className="text-xs text-muted-foreground">{n.title.includes("breve") ? "Em breve" : "Cadastre seu celular"}</span>
+              }
+            </div>
+          ))}
+        </div>
+
+        {!profile?.phone && (
+          <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 flex items-start gap-2">
+            <Phone className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-xs text-primary">
+              Adicione seu celular no perfil acima para receber notificações via SMS e WhatsApp sobre aprovações, reservas e muito mais.
+            </p>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
