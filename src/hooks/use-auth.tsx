@@ -27,6 +27,7 @@ type SignUpInput = {
   password: string;
   fullName: string;
   inviteToken?: string;
+  phoneNumber?: string;
 };
 
 type AuthCtx = {
@@ -161,6 +162,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         return { error: map[message] ?? message };
       }
+    }
+
+    if (input.phoneNumber?.trim()) {
+      await supabase.from("profiles").update({ phone: input.phoneNumber.trim() }).eq("id", userId);
     }
 
     await loadContext(userId);
