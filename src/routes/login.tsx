@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, Building2, Loader2, Mail, ShieldCheck, Users, HardHat, Home,
   Phone, ChevronLeft, KeyRound, MessageSquare, Send, CheckCircle2, RotateCcw,
+  Eye, EyeOff,
 } from "lucide-react";
 import { z } from "zod";
 import { Logo } from "@/components/brand";
@@ -70,6 +71,7 @@ function LoginPage() {
   // Signin form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
 
   // Signup form
@@ -681,15 +683,24 @@ function LoginPage() {
           {/* Password */}
           <label className="block">
             <span className="text-xs font-medium text-muted-foreground">Senha</span>
-            <div className="mt-1">
+            <div className="relative mt-1">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(null); }}
                 placeholder={mode === "signup" ? "Mínimo 8 caracteres" : "••••••••"}
-                className={inputCls}
+                className={inputCls + " pr-10"}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </label>
 
