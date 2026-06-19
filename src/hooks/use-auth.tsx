@@ -26,10 +26,6 @@ type SignUpInput = {
   email: string;
   password: string;
   fullName: string;
-  // either create a new condo (become síndico) ...
-  condoName?: string;
-  condoAddress?: string;
-  // ... or accept an invitation
   inviteToken?: string;
 };
 
@@ -165,19 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         return { error: map[message] ?? message };
       }
-    } else if (input.condoName) {
-      const { data: condoRow, error: cErr } = await supabase
-        .from("condominiums")
-        .insert({
-          name: input.condoName,
-          address: input.condoAddress ?? null,
-          created_by: userId,
-        })
-        .select()
-        .single();
-      if (cErr || !condoRow) return { error: cErr?.message ?? "Falha ao criar condomínio." };
-      await supabase.from("profiles").update({ condo_id: condoRow.id }).eq("id", userId);
-      await supabase.from("user_roles").insert({ user_id: userId, condo_id: condoRow.id, role: "sindico" });
     }
 
     await loadContext(userId);

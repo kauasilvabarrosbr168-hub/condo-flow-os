@@ -16,10 +16,10 @@ dist-ssr
 .nitro
 *.local
 
-# Environment variables — never commit secrets
-.env
-.env.*
-!.env.example
+# Environment variables — .env.local contains secrets and is never committed
+# .env (public vars only — anon key + URLs) is safe to commit
+.env.local
+.env.*.local
 
 # Wrangler / Cloudflare
 .wrangler/
