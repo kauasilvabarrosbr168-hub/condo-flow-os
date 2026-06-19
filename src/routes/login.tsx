@@ -878,6 +878,6 @@ function traduzErro(msg: string) {
   if (m.includes("user already registered") || m.includes("already registered")) return "Já existe uma conta com este email.";
   if (m.includes("password")) return "Senha inválida. Use ao menos 8 caracteres.";
   if (m.includes("rate")) return "Muitas tentativas. Aguarde alguns segundos.";
-  if (m.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar.";
+  if (m.includes("email not confirmed")) return "Email ou senha incorretos.";
   return msg;
 }

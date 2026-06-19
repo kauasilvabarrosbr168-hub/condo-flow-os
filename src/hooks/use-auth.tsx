@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (error) return { error: error.message };
     const userId = data.user?.id;
-    if (!userId) return { error: "Conta criada — confirme o email para continuar." };
+    if (!userId) return { error: "Erro ao criar conta. Tente novamente." };
 
     // Wait briefly for the auth trigger to create the profile row
     // Wait for auth trigger to create profile row — retry up to 2s
