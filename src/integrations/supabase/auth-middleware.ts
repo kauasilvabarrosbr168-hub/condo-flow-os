@@ -8,7 +8,7 @@ import type { Database } from './types'
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
-    
+
     // VITE_ vars take priority so the server validates tokens against the same
     // Supabase project the client authenticated against (Lovable may override VITE_
     // vars in its deployment environment while our committed .env provides the fallback).
@@ -24,7 +24,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       console.error(`[Supabase] ${message}`);
       throw new Error(message);
     }
-    
+
     const request = getRequest();
 
     if (!request?.headers) {
@@ -46,6 +46,30 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       throw new Error('Unauthorized: No token provided');
     }
 
+    // Validate the token via a direct HTTP request to the Supabase Auth API.
+    // This bypasses any Supabase JS client quirks and works regardless of
+    // which client library version is in use.
+    let userData: { id: string; email?: string; [key: string]: unknown };
+    try {
+      const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+        },
+      });
+      if (!authRes.ok) {
+        const body = await authRes.text().catch(() => '');
+        console.error(`[Supabase Auth] getUser failed ${authRes.status}: ${body}`);
+        throw new Error('Unauthorized: Invalid token');
+      }
+      userData = await authRes.json();
+      if (!userData?.id) throw new Error('Unauthorized: Invalid token');
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('Unauthorized')) throw err;
+      console.error('[Supabase Auth] Token validation error:', err);
+      throw new Error('Unauthorized: Invalid token');
+    }
+
     const supabase = createClient<Database>(
       SUPABASE_URL!,
       SUPABASE_PUBLISHABLE_KEY!,
@@ -63,20 +87,11 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       }
     );
 
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user) {
-      throw new Error('Unauthorized: Invalid token');
-    }
-
-    if (!data.user.id) {
-      throw new Error('Unauthorized: No user ID found in token');
-    }
-
     return next({
       context: {
         supabase,
-        userId: data.user.id,
-        claims: data.user,
+        userId: userData.id,
+        claims: userData,
       },
     });
   },
