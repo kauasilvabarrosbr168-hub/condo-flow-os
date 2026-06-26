@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail, UserPlus, Pencil, Hash } from "lucide-react";
+import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail, UserPlus, Pencil, Hash, Trash2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
@@ -42,6 +42,8 @@ function CondosPage() {
   const [createdJoinCode, setCreatedJoinCode] = useState<string | null>(null);
   const [form, setForm] = useState({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
   const [memberCondo, setMemberCondo] = useState<Row | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const assignMemberFn = useServerFn(assignMemberToCondo);
 
 
@@ -77,6 +79,30 @@ function CondosPage() {
     () => (rows ?? []).filter((r) => r.name.toLowerCase().includes(q.toLowerCase())),
     [rows, q],
   );
+
+  const deleteCondo = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const id = deleteTarget.id;
+      // Clear condo_id from profiles (don't delete users)
+      await supabase.from("profiles").update({ condo_id: null }).eq("condo_id", id);
+      // Delete related records in order
+      await supabase.from("membership_requests").delete().eq("condo_id", id);
+      await supabase.from("user_roles").delete().eq("condo_id", id);
+      await supabase.from("invitations").delete().eq("condo_id", id);
+      await supabase.from("subscriptions").delete().eq("condo_id", id);
+      const { error } = await supabase.from("condominiums").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      toast.success(`"${deleteTarget.name}" excluído com sucesso.`);
+      setDeleteTarget(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao excluir condomínio.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const toggleSuspend = async (id: string, current: string | null) => {
     const next = current === "suspended" ? "active" : "suspended";
@@ -292,6 +318,12 @@ function CondosPage() {
                       >
                         {r.status === "suspended" ? <><CheckCircle2 className="h-3.5 w-3.5" /> Reativar</> : <><PauseCircle className="h-3.5 w-3.5" /> Suspender</>}
                       </button>
+                      <button
+                        onClick={() => setDeleteTarget(r)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 transition"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Excluir
+                      </button>
                     </div>
 
                   </td>
@@ -302,6 +334,24 @@ function CondosPage() {
           </table>
         </div>
       )}
+
+      <Dialog open={!!deleteTarget} onOpenChange={(v) => { if (!v && !deleting) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir condomínio</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir <strong>"{deleteTarget?.name}"</strong>? Todos os membros, funções e dados associados serão removidos permanentemente. Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
+            <Button variant="destructive" onClick={deleteCondo} disabled={deleting}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Excluir definitivamente
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <MembersDialog
         condo={memberCondo}
