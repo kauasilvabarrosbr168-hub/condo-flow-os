@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -21,6 +22,7 @@ import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppServicesRouteImport } from './routes/app.services'
 import { Route as AppReservationsRouteImport } from './routes/app.reservations'
 import { Route as AppMyCondoRouteImport } from './routes/app.my-condo'
+import { Route as AppJoinCondoRouteImport } from './routes/app.join-condo'
 import { Route as AppInvitationsRouteImport } from './routes/app.invitations'
 import { Route as AppExploreRouteImport } from './routes/app.explore'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
@@ -44,6 +46,11 @@ import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminCondosCondoIdRouteImport } from './routes/admin.condos.$condoId'
 import { Route as AdminCondosCondoIdEditRouteImport } from './routes/admin.condos.$condoId.edit'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -102,6 +109,11 @@ const AppReservationsRoute = AppReservationsRouteImport.update({
 const AppMyCondoRoute = AppMyCondoRouteImport.update({
   id: '/my-condo',
   path: '/my-condo',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppJoinCondoRoute = AppJoinCondoRouteImport.update({
+  id: '/join-condo',
+  path: '/join-condo',
   getParentRoute: () => AppRoute,
 } as any)
 const AppInvitationsRoute = AppInvitationsRouteImport.update({
@@ -220,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/condos': typeof AdminCondosRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -240,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
   '/app/invitations': typeof AppInvitationsRoute
+  '/app/join-condo': typeof AppJoinCondoRoute
   '/app/my-condo': typeof AppMyCondoRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/services': typeof AppServicesRoute
@@ -255,6 +269,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/condos': typeof AdminCondosRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -275,6 +290,7 @@ export interface FileRoutesByTo {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
   '/app/invitations': typeof AppInvitationsRoute
+  '/app/join-condo': typeof AppJoinCondoRoute
   '/app/my-condo': typeof AppMyCondoRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/services': typeof AppServicesRoute
@@ -292,6 +308,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/condos': typeof AdminCondosRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -312,6 +329,7 @@ export interface FileRoutesById {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
   '/app/invitations': typeof AppInvitationsRoute
+  '/app/join-condo': typeof AppJoinCondoRoute
   '/app/my-condo': typeof AppMyCondoRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/services': typeof AppServicesRoute
@@ -330,6 +348,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/login'
+    | '/reset-password'
     | '/admin/analytics'
     | '/admin/condos'
     | '/admin/dashboard'
@@ -350,6 +369,7 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/explore'
     | '/app/invitations'
+    | '/app/join-condo'
     | '/app/my-condo'
     | '/app/reservations'
     | '/app/services'
@@ -365,6 +385,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/reset-password'
     | '/admin/analytics'
     | '/admin/condos'
     | '/admin/dashboard'
@@ -385,6 +406,7 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/explore'
     | '/app/invitations'
+    | '/app/join-condo'
     | '/app/my-condo'
     | '/app/reservations'
     | '/app/services'
@@ -401,6 +423,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/login'
+    | '/reset-password'
     | '/admin/analytics'
     | '/admin/condos'
     | '/admin/dashboard'
@@ -421,6 +444,7 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/explore'
     | '/app/invitations'
+    | '/app/join-condo'
     | '/app/my-condo'
     | '/app/reservations'
     | '/app/services'
@@ -438,10 +462,18 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -524,6 +556,13 @@ declare module '@tanstack/react-router' {
       path: '/my-condo'
       fullPath: '/app/my-condo'
       preLoaderRoute: typeof AppMyCondoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/join-condo': {
+      id: '/app/join-condo'
+      path: '/join-condo'
+      fullPath: '/app/join-condo'
+      preLoaderRoute: typeof AppJoinCondoRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/invitations': {
@@ -751,6 +790,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppExploreRoute: typeof AppExploreRoute
   AppInvitationsRoute: typeof AppInvitationsRoute
+  AppJoinCondoRoute: typeof AppJoinCondoRoute
   AppMyCondoRoute: typeof AppMyCondoRoute
   AppReservationsRoute: typeof AppReservationsRoute
   AppServicesRoute: typeof AppServicesRoute
@@ -767,6 +807,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppExploreRoute: AppExploreRoute,
   AppInvitationsRoute: AppInvitationsRoute,
+  AppJoinCondoRoute: AppJoinCondoRoute,
   AppMyCondoRoute: AppMyCondoRoute,
   AppReservationsRoute: AppReservationsRoute,
   AppServicesRoute: AppServicesRoute,
@@ -783,6 +824,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
