@@ -60,15 +60,13 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       });
       if (!authRes.ok) {
         const body = await authRes.text().catch(() => '');
-        console.error(`[Supabase Auth] getUser failed ${authRes.status}: ${body}`);
-        throw new Error('Unauthorized: Invalid token');
+        throw new Error(`Auth failed: ${authRes.status} at ${SUPABASE_URL} — ${body}`);
       }
       userData = await authRes.json();
-      if (!userData?.id) throw new Error('Unauthorized: Invalid token');
+      if (!userData?.id) throw new Error(`Auth failed: no user id — project: ${SUPABASE_URL}`);
     } catch (err) {
-      if (err instanceof Error && err.message.startsWith('Unauthorized')) throw err;
-      console.error('[Supabase Auth] Token validation error:', err);
-      throw new Error('Unauthorized: Invalid token');
+      if (err instanceof Error && err.message.startsWith('Auth failed')) throw err;
+      throw new Error(`Auth error: ${err instanceof Error ? err.message : String(err)} — url: ${SUPABASE_URL}`);
     }
 
     const supabase = createClient<Database>(
