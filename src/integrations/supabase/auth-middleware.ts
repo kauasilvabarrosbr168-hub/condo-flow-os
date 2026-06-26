@@ -9,11 +9,12 @@ import type { Database } from './types'
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
 
-    // VITE_ vars take priority so the server validates tokens against the same
-    // Supabase project the client authenticated against (Lovable may override VITE_
-    // vars in its deployment environment while our committed .env provides the fallback).
-    const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
-    const SUPABASE_PUBLISHABLE_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
+    // import.meta.env.VITE_* is inlined at build time by Vite into both the client
+    // and server bundles, so it is ALWAYS the same project the browser client uses.
+    // This prevents a mismatch when the deployment platform (Lovable) overrides
+    // runtime process.env vars with a different project than what was compiled in.
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
+    const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
       const missing = [
