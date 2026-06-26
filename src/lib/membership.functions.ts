@@ -90,10 +90,10 @@ export const joinCondoByCode = createServerFn({ method: "POST" })
     z.object({ code: z.string().min(1).max(20), unitLabel: z.string().trim().max(40).optional() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const userId = context.userId;
+    const { supabase, userId } = context;
 
-    // Check for existing pending request
-    const { data: existing } = await supabaseAdmin
+    // Check for existing pending request (RLS: user sees own rows)
+    const { data: existing } = await supabase
       .from("membership_requests")
       .select("id, status, condo_id")
       .eq("user_id", userId)
@@ -101,16 +101,15 @@ export const joinCondoByCode = createServerFn({ method: "POST" })
       .maybeSingle();
     if (existing) return { condoId: existing.condo_id, alreadyPending: true };
 
-    // Find condo by join code (case-insensitive)
-    const { data: condo, error: condoErr } = await supabaseAdmin
-      .from("condominiums")
-      .select("id, name")
-      .eq("join_code", data.code.toUpperCase().trim())
-      .maybeSingle();
+    // Find condo by join code via SECURITY DEFINER RPC (no service role needed)
+    const { data: condos, error: condoErr } = await supabase
+      .rpc("find_condo_by_join_code", { p_code: data.code });
 
+    const condo = condos?.[0] ?? null;
     if (condoErr || !condo) throw new Error("Código inválido ou condomínio não encontrado.");
 
-    const { data: row, error } = await supabaseAdmin
+    // Insert membership request (RLS: user_id = auth.uid())
+    const { data: row, error } = await supabase
       .from("membership_requests")
       .insert({
         user_id: userId,
@@ -128,7 +127,8 @@ export const joinCondoByCode = createServerFn({ method: "POST" })
 export const getMyMembershipStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data } = await supabaseAdmin
+    // RLS: user sees only their own rows, no service role needed
+    const { data } = await context.supabase
       .from("membership_requests")
       .select("id, status, requested_role, condo_id, proposed_condo_name, rejection_reason, created_at")
       .eq("user_id", context.userId)
