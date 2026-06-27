@@ -112,7 +112,9 @@ function CondosListPage() {
       const id = deleteTarget.id;
       // Clear condo_id from profiles (don't delete users)
       await supabase.from("profiles").update({ condo_id: null }).eq("condo_id", id);
-      // Delete related records in order
+      // Delete related records in order (children first)
+      await supabase.from("reservations").delete().eq("condo_id", id);
+      await supabase.from("common_areas").delete().eq("condo_id", id);
       await supabase.from("membership_requests").delete().eq("condo_id", id);
       await supabase.from("user_roles").delete().eq("condo_id", id);
       await supabase.from("invitations").delete().eq("condo_id", id);
