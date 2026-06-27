@@ -16,8 +16,8 @@ dist-ssr
 .nitro
 *.local
 
-# Environment variables
-.env
+# Environment variables — only .env.local (contains secrets) is gitignored
+# .env (public vars only) is tracked so Lovable can read the correct Supabase project
 .env.local
 .env.*.local
 
