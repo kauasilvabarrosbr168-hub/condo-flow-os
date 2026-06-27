@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { notifyMembershipApproved, notifyMembershipRejected, notifyNewMembershipRequest } from "@/lib/notify.server";
 
 const requestSchema = z.object({
@@ -25,7 +24,7 @@ export const requestMembership = createServerFn({ method: "POST" })
       throw new Error("Selecione um condomínio.");
     }
     // Avoid duplicate pending request
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await context.supabase
       .from("membership_requests")
       .select("id, status")
       .eq("user_id", userId)
@@ -33,7 +32,7 @@ export const requestMembership = createServerFn({ method: "POST" })
       .maybeSingle();
     if (existing) return existing;
 
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("membership_requests")
       .insert({
         user_id: userId,
@@ -52,9 +51,9 @@ export const requestMembership = createServerFn({ method: "POST" })
     // Notify síndico of new request (if condo already exists)
     if (data.condoId) {
       Promise.all([
-        supabaseAdmin.from("profiles").select("full_name, email, phone").eq("id", userId).maybeSingle(),
-        supabaseAdmin.from("condominiums").select("name").eq("id", data.condoId).maybeSingle(),
-        supabaseAdmin
+        context.supabase.from("profiles").select("full_name, email, phone").eq("id", userId).maybeSingle(),
+        context.supabase.from("condominiums").select("name").eq("id", data.condoId).maybeSingle(),
+        context.supabase
           .from("user_roles")
           .select("user_id")
           .eq("condo_id", data.condoId)
@@ -62,7 +61,7 @@ export const requestMembership = createServerFn({ method: "POST" })
       ]).then(async ([{ data: requester }, { data: condo }, { data: sindicos }]) => {
         if (!requester || !condo || !sindicos?.length) return;
         for (const s of sindicos) {
-          const { data: sindicoProfile } = await supabaseAdmin
+          const { data: sindicoProfile } = await context.supabase
             .from("profiles")
             .select("full_name, email, phone")
             .eq("id", s.user_id)
@@ -138,24 +137,27 @@ export const getMyMembershipStatus = createServerFn({ method: "POST" })
     return data;
   });
 
+const SUPER_ADMIN_EMAILS = ['admin@condoflow.com'];
+
 export const listPendingRequests = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const userId = context.userId;
-    const { data: isAdmin } = await supabaseAdmin
-      .from("platform_admins")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const email = context.claims?.email as string | undefined;
+    const isSuperAdmin = email && SUPER_ADMIN_EMAILS.includes(email);
 
-    let query = supabaseAdmin
+    const { data: isAdmin } = isSuperAdmin
+      ? { data: { id: 'super' } }
+      : await context.supabase.from("platform_admins").select("id").eq("user_id", userId).maybeSingle();
+
+    let query = context.supabase
       .from("membership_requests")
       .select("*")
       .in("status", ["pending", "sindico_approved"])
       .order("created_at", { ascending: false });
 
     if (!isAdmin) {
-      const { data: condos } = await supabaseAdmin
+      const { data: condos } = await context.supabase
         .from("user_roles")
         .select("condo_id")
         .eq("user_id", userId)
@@ -172,8 +174,10 @@ export const listPendingRequests = createServerFn({ method: "POST" })
     const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
     const condoIds = Array.from(new Set(rows.map((r) => r.condo_id).filter(Boolean) as string[]));
     const [{ data: profs }, { data: condos }] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id, full_name, email").in("id", userIds),
-      condoIds.length ? supabaseAdmin.from("condominiums").select("id, name").in("id", condoIds) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+      context.supabase.from("profiles").select("id, full_name, email").in("id", userIds),
+      condoIds.length
+        ? context.supabase.from("condominiums").select("id, name").in("id", condoIds)
+        : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     ]);
     const pmap = new Map((profs ?? []).map((p) => [p.id, p]));
     const cmap = new Map((condos ?? []).map((c) => [c.id, c]));
@@ -198,27 +202,32 @@ export const decideMembership = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const userId = context.userId;
-    const { data: isAdmin } = await supabaseAdmin
-      .from("platform_admins")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const { data: isSindico } = await supabaseAdmin
-      .from("user_roles")
-      .select("id")
-      .eq("user_id", userId)
-      .in("role", ["sindico", "administradora"])
-      .maybeSingle();
-    if (!isAdmin && !isSindico) throw new Error("Sem permissão para aprovar solicitações.");
+    const email = context.claims?.email as string | undefined;
+    const isSuperAdmin = email && SUPER_ADMIN_EMAILS.includes(email);
+
+    if (!isSuperAdmin) {
+      const { data: isAdmin } = await context.supabase
+        .from("platform_admins")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const { data: isSindico } = await context.supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", userId)
+        .in("role", ["sindico", "administradora"])
+        .maybeSingle();
+      if (!isAdmin && !isSindico) throw new Error("Sem permissão para aprovar solicitações.");
+    }
 
     // Fetch request details before deciding (needed for notifications)
-    const { data: req } = await supabaseAdmin
+    const { data: req } = await context.supabase
       .from("membership_requests")
       .select("user_id, condo_id, proposed_condo_name, requested_role")
       .eq("id", data.requestId)
       .maybeSingle();
 
-    const { data: row, error } = await supabaseAdmin.rpc("decide_membership_request", {
+    const { data: row, error } = await context.supabase.rpc("decide_membership_request", {
       p_request_id: data.requestId,
       p_decision: data.decision,
       p_reason: data.reason ?? undefined,
@@ -229,9 +238,9 @@ export const decideMembership = createServerFn({ method: "POST" })
     // Fire notifications asynchronously (never block the response)
     if (req) {
       const [{ data: profile }, { data: condo }] = await Promise.all([
-        supabaseAdmin.from("profiles").select("full_name, email, phone").eq("id", req.user_id).maybeSingle(),
+        context.supabase.from("profiles").select("full_name, email, phone").eq("id", req.user_id).maybeSingle(),
         req.condo_id
-          ? supabaseAdmin.from("condominiums").select("name").eq("id", req.condo_id).maybeSingle()
+          ? context.supabase.from("condominiums").select("name").eq("id", req.condo_id).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
       const condoName = condo?.name ?? req.proposed_condo_name ?? "seu condomínio";

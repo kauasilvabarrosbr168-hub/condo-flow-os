@@ -184,17 +184,16 @@ export const updateCondo = createServerFn({ method: "POST" })
 export const getMyCondoId = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: prof } = await supabaseAdmin
+    const { data: prof } = await context.supabase
       .from("profiles")
       .select("condo_id")
       .eq("id", context.userId)
       .maybeSingle();
     if (prof?.condo_id) return { condoId: prof.condo_id as string };
-    const { data: role } = await supabaseAdmin
+    const { data: role } = await context.supabase
       .from("user_roles")
       .select("condo_id")
       .eq("user_id", context.userId)
-      .in("role", ["sindico", "administradora"])
       .limit(1)
       .maybeSingle();
     return { condoId: (role?.condo_id as string | undefined) ?? null };
