@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { EmptyState, Stat } from "@/components/empty-state";
 import { Badge } from "@/components/brand";
+import { ReservationsCalendar } from "@/components/condo/reservations-calendar";
 
 export const Route = createFileRoute("/app/dashboard")({
   head: () => ({ meta: [{ title: "Início · CondoFlow" }] }),
@@ -221,6 +222,8 @@ function AdminHome({ condoId, userName }: { condoId: string; userName: string })
         </div>
       </div>
 
+      <ReservationsCalendar condoId={condoId} />
+
       <ExploreTeaser />
     </PageShell>
   );
@@ -422,6 +425,8 @@ function ResidentHome({ condoId, userId, userName }: { condoId: string; userId: 
           </div>
         </div>
       </div>
+
+      <ReservationsCalendar condoId={condoId} />
     </PageShell>
   );
 }
