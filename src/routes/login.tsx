@@ -588,8 +588,8 @@ function LoginPage() {
           {mode === "signup" && !invite && (
             <div>
               <span className="text-xs font-medium text-muted-foreground">Eu sou</span>
-              <div className="mt-1 grid grid-cols-3 gap-2">
-                {profileOptions.map((opt) => {
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {profileOptions.map((opt, idx) => {
                   const Icon = opt.icon;
                   const active = profileType === opt.value;
                   return (
@@ -597,13 +597,23 @@ function LoginPage() {
                       key={opt.value}
                       type="button"
                       onClick={() => setProfileType(opt.value)}
-                      className={`rounded-xl border p-2.5 text-left transition ${
-                        active ? "border-primary bg-primary/5 ring-2 ring-primary/30" : "border-border bg-card hover:border-primary/40"
+                      style={{ animationDelay: `${idx * 70}ms` }}
+                      className={`group relative overflow-hidden rounded-xl border p-3 text-left transition-all duration-300 animate-fade-in hover:-translate-y-0.5 ${
+                        active
+                          ? "border-primary bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 ring-2 ring-primary/40 shadow-elegant"
+                          : "border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card hover:border-primary/60 hover:from-primary/15"
                       }`}
                     >
-                      <Icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
-                      <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
-                      <p className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</p>
+                      <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg transition ${
+                        active
+                          ? "bg-gradient-hero text-primary-foreground shadow-elegant"
+                          : "bg-primary/15 text-primary group-hover:bg-primary/25"
+                      }`}>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <p className={`mt-2 text-xs font-bold ${active ? "text-primary" : "text-foreground"}`}>{opt.label}</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{opt.desc}</p>
+                      {active && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary animate-pulse" />}
                     </button>
                   );
                 })}

@@ -14,7 +14,7 @@ const MODULES = [
   { icon: Building, name: "Áreas comuns", desc: "Configure o que pode ser reservado e as regras de cada espaço.", to: "/app/areas" as const, status: "ativo" as const },
   { icon: Flame, name: "Sauna inteligente", desc: "Ligamento automático, controle de gás e confirmação 2h antes.", to: "/app/explore" as const, status: "em-breve" as const },
   { icon: MessageSquare, name: "Comunicação multicanal", desc: "Push, email e WhatsApp para o que realmente importa.", to: "/app/communication" as const, status: "em-breve" as const },
-  { icon: BarChart3, name: "Analytics operacional", desc: "Métricas reais conforme o condomínio é utilizado.", to: "/app/analytics" as const, status: "em-breve" as const },
+  { icon: BarChart3, name: "Analytics operacional", desc: "Calendário ao vivo de reservas e métricas reais do condomínio.", to: "/app/analytics" as const, status: "ativo" as const },
   { icon: Users, name: "IA operacional", desc: "Sugestões de manutenção, alertas inteligentes e priorização automática.", to: "/app/explore" as const, status: "roadmap" as const },
 ];
 
@@ -60,6 +60,15 @@ function ExplorePage() {
 
 function StatusPill({ status }: { status: "ativo" | "em-breve" | "roadmap" }) {
   if (status === "ativo") return <Badge tone="success">Ativo</Badge>;
-  if (status === "em-breve") return <Badge tone="warning">Em breve</Badge>;
-  return <Badge tone="default">Roadmap</Badge>;
+  if (status === "em-breve")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/60 bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 shadow-sm">
+        Em breve
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+      Roadmap
+    </span>
+  );
 }

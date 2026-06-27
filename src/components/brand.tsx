@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 export function SoonBadge({ children = "em breve" }: { children?: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 text-warning-foreground px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/60 bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 shadow-sm">
       <Construction className="h-2.5 w-2.5" />
       {children}
     </span>
@@ -14,7 +14,7 @@ export function SoonBadge({ children = "em breve" }: { children?: ReactNode }) {
 export function InDevOverlay({ label = "Em desenvolvimento" }: { label?: string }) {
   return (
     <div className="pointer-events-none absolute inset-0 rounded-2xl bg-card/70 backdrop-blur-[2px] flex items-center justify-center">
-      <span className="inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/15 px-3 py-1.5 text-xs font-semibold text-warning-foreground shadow-card">
+      <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/60 bg-amber-500/25 px-3 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-200 shadow-card">
         <Construction className="h-3.5 w-3.5" />
         {label}
       </span>
