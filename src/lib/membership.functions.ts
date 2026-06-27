@@ -68,10 +68,10 @@ export const requestMembership = createServerFn({ method: "POST" })
             .maybeSingle();
           if (!sindicoProfile) continue;
           notifyNewMembershipRequest({
-            toEmail: sindicoProfile.email,
-            toPhone: sindicoProfile.phone,
-            sindicoName: sindicoProfile.full_name,
-            requesterName: requester.full_name,
+            toEmail: sindicoProfile.email ?? "",
+            toPhone: sindicoProfile.phone ?? undefined,
+            sindicoName: sindicoProfile.full_name ?? "",
+            requesterName: requester.full_name ?? "",
             requesterRole: data.requestedRole,
             condoName: condo.name,
             requestId: row.id,
@@ -247,16 +247,16 @@ export const decideMembership = createServerFn({ method: "POST" })
       if (profile) {
         if (data.decision === "approve") {
           notifyMembershipApproved({
-            toEmail: profile.email,
-            toPhone: profile.phone,
-            fullName: profile.full_name,
+            toEmail: profile.email ?? "",
+            toPhone: profile.phone ?? undefined,
+            fullName: profile.full_name ?? "",
             condoName,
           }).catch(console.error);
         } else {
           notifyMembershipRejected({
-            toEmail: profile.email,
-            toPhone: profile.phone,
-            fullName: profile.full_name,
+            toEmail: profile.email ?? "",
+            toPhone: profile.phone ?? undefined,
+            fullName: profile.full_name ?? "",
             condoName,
             reason: data.reason,
           }).catch(console.error);

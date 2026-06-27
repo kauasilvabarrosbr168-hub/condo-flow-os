@@ -30,13 +30,14 @@ async function assertPlatformAdmin(userId: string, email?: string) {
 export const bootstrapPlatformAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { count } = await supabaseAdmin
+    const { count } = await context.supabase
       .from("platform_admins")
       .select("id", { count: "exact", head: true });
     if ((count ?? 0) > 0) return { ok: false, reason: "already_has_admin" };
-    const { error } = await supabaseAdmin
+    const email = (context.claims?.email as string | undefined) ?? "";
+    const { error } = await context.supabase
       .from("platform_admins")
-      .insert({ user_id: context.userId });
+      .insert({ user_id: context.userId, email });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -47,7 +48,8 @@ export const assignMemberToCondo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     // Uses SECURITY DEFINER RPC so the operation runs in the same Supabase
     // project as the client — no service role key required.
-    const { error } = await context.supabase.rpc("assign_member_to_condo", {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (context.supabase as any).rpc("assign_member_to_condo", {
       p_user_id: data.userId,
       p_condo_id: data.condoId,
       p_role: data.role,

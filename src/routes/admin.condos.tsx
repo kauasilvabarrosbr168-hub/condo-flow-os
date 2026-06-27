@@ -25,7 +25,7 @@ type Row = {
   id: string;
   name: string;
   address: string | null;
-  created_at: string;
+  created_at: string | null;
   join_code: string | null;
   users: number;
   plan: string | null;
@@ -82,7 +82,7 @@ function CondosPage() {
     });
 
     setRows(
-      (condos ?? []).map((c: { id: string; name: string; address: string | null; created_at: string; join_code: string | null }) => ({
+      (condos ?? []).map((c: { id: string; name: string; address: string | null; created_at: string | null; join_code: string | null }) => ({
         ...c,
         users: userCounts.get(c.id) ?? 0,
         plan: subMap.get(c.id)?.plan ?? null,
@@ -317,7 +317,7 @@ function CondosPage() {
                       <UsersIcon className="h-3.5 w-3.5" /> {r.users}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{new Date(r.created_at).toLocaleDateString("pt-BR")}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{r.created_at ? new Date(r.created_at).toLocaleDateString("pt-BR") : "—"}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex items-center gap-2">
                       <Link
@@ -388,8 +388,8 @@ type Role = "sindico" | "administradora" | "morador" | "funcionario";
 
 type UserOption = {
   id: string;
-  full_name: string;
-  email: string;
+  full_name: string | null;
+  email: string | null;
   condo_id: string | null;
   condo_name: string | null;
 };
@@ -421,7 +421,7 @@ function MembersDialog({
         supabase.from("condominiums").select("id, name"),
       ]);
       const cmap = new Map((condos ?? []).map((c: { id: string; name: string }) => [c.id, c.name]));
-      setUsers((profs ?? []).map((p: { id: string; full_name: string; email: string; condo_id: string | null }) => ({
+      setUsers((profs ?? []).map((p: { id: string; full_name: string | null; email: string | null; condo_id: string | null }) => ({
         ...p,
         condo_name: p.condo_id ? cmap.get(p.condo_id) ?? null : null,
       })));
@@ -433,7 +433,7 @@ function MembersDialog({
     if (onlyUnassigned) list = list.filter((u) => !u.condo_id || u.condo_id === condo?.id);
     if (q) {
       const t = q.toLowerCase();
-      list = list.filter((u) => (u.full_name + u.email).toLowerCase().includes(t));
+      list = list.filter((u) => ((u.full_name ?? "") + (u.email ?? "")).toLowerCase().includes(t));
     }
     return list.slice(0, 50);
   }, [users, q, onlyUnassigned, condo?.id]);

@@ -49,7 +49,7 @@ function TeamPage() {
             <div key={p.id} className="rounded-2xl border border-border bg-card p-4 shadow-card">
               <div className="flex items-center gap-3">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-hero text-primary-foreground text-xs font-semibold">
-                  {p.full_name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()}
+                  {(p.full_name ?? "").split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{p.full_name}</p>

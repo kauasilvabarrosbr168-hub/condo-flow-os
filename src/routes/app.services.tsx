@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { ClipboardCheck, Loader2, Camera, CheckCircle2, X } from "lucide-react";

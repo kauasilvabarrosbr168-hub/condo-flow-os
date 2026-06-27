@@ -13,8 +13,8 @@ export const Route = createFileRoute("/admin/users")({
 
 type Row = {
   id: string;
-  full_name: string;
-  email: string;
+  full_name: string | null;
+  email: string | null;
   unit_label: string | null;
   condo_id: string | null;
   condo_name: string | null;
@@ -40,7 +40,7 @@ function UsersPage() {
         rolesMap.set(r.user_id, arr);
       });
       setRows(
-        (profs ?? []).map((p: { id: string; full_name: string; email: string; unit_label: string | null; condo_id: string | null }) => ({
+        (profs ?? []).map((p: { id: string; full_name: string | null; email: string | null; unit_label: string | null; condo_id: string | null }) => ({
           ...p,
           condo_name: p.condo_id ? condoMap.get(p.condo_id) ?? null : null,
           roles: rolesMap.get(p.id) ?? [],
@@ -50,7 +50,7 @@ function UsersPage() {
   }, []);
 
   const filtered = useMemo(
-    () => (rows ?? []).filter((r) => (r.full_name + r.email).toLowerCase().includes(q.toLowerCase())),
+    () => (rows ?? []).filter((r) => ((r.full_name ?? "") + (r.email ?? "")).toLowerCase().includes(q.toLowerCase())),
     [rows, q],
   );
 

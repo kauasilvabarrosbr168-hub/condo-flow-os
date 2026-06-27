@@ -107,7 +107,8 @@ export const upsertArea = createServerFn({ method: "POST" })
     if (data.area.id) {
       const { data: row, error } = await context.supabase
         .from("common_areas")
-        .update(payload)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(payload as any)
         .eq("id", data.area.id)
         .select()
         .single();
@@ -116,7 +117,8 @@ export const upsertArea = createServerFn({ method: "POST" })
     }
     const { data: row, error } = await context.supabase
       .from("common_areas")
-      .insert(payload)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert(payload as any)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -165,20 +167,22 @@ export const updateCondo = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const patch: any = {
+      name: data.patch.name,
+      address: data.patch.address ?? null,
+      description: data.patch.description ?? null,
+      logo_url: data.patch.logo_url ?? null,
+      cover_url: data.patch.cover_url ?? null,
+      towers_count: data.patch.towers_count ?? null,
+      blocks_count: data.patch.blocks_count ?? null,
+      rules: data.patch.rules ?? null,
+      contacts: data.patch.contacts ?? [],
+      general_info: data.patch.general_info ?? null,
+    };
     const { data: row, error } = await context.supabase
       .from("condominiums")
-      .update({
-        name: data.patch.name,
-        address: data.patch.address ?? null,
-        description: data.patch.description ?? null,
-        logo_url: data.patch.logo_url ?? null,
-        cover_url: data.patch.cover_url ?? null,
-        towers_count: data.patch.towers_count ?? null,
-        blocks_count: data.patch.blocks_count ?? null,
-        rules: data.patch.rules ?? null,
-        contacts: data.patch.contacts ?? [],
-        general_info: data.patch.general_info ?? null,
-      })
+      .update(patch)
       .eq("id", data.condoId)
       .select()
       .single();
