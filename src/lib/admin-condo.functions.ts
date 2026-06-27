@@ -1,19 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const SUPER_ADMIN_EMAILS = ['admin@condoflow.com'];
 
-async function assertCanManageCondo(userId: string, condoId: string, email?: string) {
+async function assertCanManageCondo(
+  supabase: SupabaseClient,
+  userId: string,
+  condoId: string,
+  email?: string,
+) {
   if (email && SUPER_ADMIN_EMAILS.includes(email)) return;
-  const { data: isAdmin } = await supabaseAdmin
+  const { data: isAdmin } = await supabase
     .from("platform_admins")
     .select("id")
     .eq("user_id", userId)
     .maybeSingle();
   if (isAdmin) return;
-  const { data: role } = await supabaseAdmin
+  const { data: role } = await supabase
     .from("user_roles")
     .select("id")
     .eq("user_id", userId)
@@ -27,19 +32,19 @@ export const getCondoDetails = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.userId, data.condoId, context.claims?.email as string | undefined);
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
     const [{ data: condo }, { data: areas }, { data: roleRows }, { data: sub }] = await Promise.all([
-      supabaseAdmin.from("condominiums").select("*").eq("id", data.condoId).single(),
-      supabaseAdmin
+      context.supabase.from("condominiums").select("*").eq("id", data.condoId).single(),
+      context.supabase
         .from("common_areas")
         .select("*")
         .eq("condo_id", data.condoId)
         .order("created_at", { ascending: false }),
-      supabaseAdmin
+      context.supabase
         .from("user_roles")
         .select("user_id, role")
         .eq("condo_id", data.condoId),
-      supabaseAdmin
+      context.supabase
         .from("subscriptions")
         .select("status, plans(name, code)")
         .eq("condo_id", data.condoId)
@@ -47,7 +52,7 @@ export const getCondoDetails = createServerFn({ method: "POST" })
     ]);
     const memberIds = Array.from(new Set((roleRows ?? []).map((r) => r.user_id)));
     const { data: profs } = memberIds.length
-      ? await supabaseAdmin.from("profiles").select("id, full_name, email, unit_label").in("id", memberIds)
+      ? await context.supabase.from("profiles").select("id, full_name, email, unit_label").in("id", memberIds)
       : { data: [] as { id: string; full_name: string; email: string; unit_label: string | null }[] };
     const pmap = new Map((profs ?? []).map((p) => [p.id, p]));
     const members = (roleRows ?? []).map((r) => ({
@@ -85,7 +90,7 @@ export const upsertArea = createServerFn({ method: "POST" })
     z.object({ condoId: z.string().uuid(), area: areaSchema }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.userId, data.condoId, context.claims?.email as string | undefined);
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
     const payload = {
       condo_id: data.condoId,
       name: data.area.name,
@@ -100,7 +105,7 @@ export const upsertArea = createServerFn({ method: "POST" })
       available_slots: data.area.available_slots ?? null,
     };
     if (data.area.id) {
-      const { data: row, error } = await supabaseAdmin
+      const { data: row, error } = await context.supabase
         .from("common_areas")
         .update(payload)
         .eq("id", data.area.id)
@@ -109,7 +114,7 @@ export const upsertArea = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       return row;
     }
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("common_areas")
       .insert(payload)
       .select()
@@ -122,14 +127,14 @@ export const deleteArea = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { areaId: string }) => z.object({ areaId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: area } = await supabaseAdmin
+    const { data: area } = await context.supabase
       .from("common_areas")
       .select("condo_id")
       .eq("id", data.areaId)
       .single();
     if (!area) throw new Error("not_found");
-    await assertCanManageCondo(context.userId, area.condo_id);
-    const { error } = await supabaseAdmin.from("common_areas").delete().eq("id", data.areaId);
+    await assertCanManageCondo(context.supabase, context.userId, area.condo_id, context.claims?.email as string | undefined);
+    const { error } = await context.supabase.from("common_areas").delete().eq("id", data.areaId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -159,8 +164,8 @@ export const updateCondo = createServerFn({ method: "POST" })
     z.object({ condoId: z.string().uuid(), patch: condoUpdateSchema }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.userId, data.condoId, context.claims?.email as string | undefined);
-    const { data: row, error } = await supabaseAdmin
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
+    const { data: row, error } = await context.supabase
       .from("condominiums")
       .update({
         name: data.patch.name,
@@ -203,8 +208,8 @@ export const getCondoJoinCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.userId, data.condoId, context.claims?.email as string | undefined);
-    const { data: condo, error } = await supabaseAdmin
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
+    const { data: condo, error } = await context.supabase
       .from("condominiums")
       .select("join_code")
       .eq("id", data.condoId)
@@ -217,8 +222,8 @@ export const regenerateCondoJoinCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.userId, data.condoId, context.claims?.email as string | undefined);
-    const { data: newCode, error } = await supabaseAdmin.rpc("regenerate_condo_join_code", {
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
+    const { data: newCode, error } = await context.supabase.rpc("regenerate_condo_join_code", {
       p_condo_id: data.condoId,
     });
     if (error) throw new Error(error.message);

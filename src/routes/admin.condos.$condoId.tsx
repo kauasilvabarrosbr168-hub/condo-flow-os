@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Outlet, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -46,6 +46,17 @@ type Detail = {
 
 function CondoDetailPage() {
   const { condoId } = Route.useParams();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Child route matched (e.g. /edit) — let the child render
+  if (pathname !== `/admin/condos/${condoId}`) {
+    return <Outlet />;
+  }
+
+  return <CondoDetailContent condoId={condoId} />;
+}
+
+function CondoDetailContent({ condoId }: { condoId: string }) {
   const navigate = useNavigate();
   const fetchDetail = useServerFn(getCondoDetails);
   const upsert = useServerFn(upsertArea);
@@ -58,7 +69,6 @@ function CondoDetailPage() {
 
   const load = useCallback(() => {
     fetchDetail({ data: { condoId } }).then((d) => setData(d as unknown as Detail));
-
   }, [fetchDetail, condoId]);
 
   useEffect(() => { load(); }, [load]);
