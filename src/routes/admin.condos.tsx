@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Building2, Search, Users as UsersIcon, Loader2, CheckCircle2, PauseCircle, Plus, Copy, Mail, UserPlus, Pencil, Hash, Trash2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -20,6 +20,13 @@ export const Route = createFileRoute("/admin/condos")({
   component: CondosPage,
 });
 
+function CondosPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/admin/condos") {
+    return <Outlet />;
+  }
+  return <CondosListPage />;
+}
 
 type Row = {
   id: string;
@@ -32,7 +39,7 @@ type Row = {
   status: string | null;
 };
 
-function CondosPage() {
+function CondosListPage() {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [q, setQ] = useState("");
