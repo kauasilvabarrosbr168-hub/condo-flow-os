@@ -12,7 +12,10 @@ const AssignSchema = z.object({
   unitLabel: z.string().trim().max(40).optional().nullable(),
 });
 
-async function assertPlatformAdmin(userId: string) {
+const SUPER_ADMIN_EMAILS = ['admin@condoflow.com'];
+
+async function assertPlatformAdmin(userId: string, email?: string) {
+  if (email && SUPER_ADMIN_EMAILS.includes(email)) return;
   const { data, error } = await supabaseAdmin
     .from("platform_admins")
     .select("id")
@@ -42,7 +45,7 @@ export const assignMemberToCondo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => AssignSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertPlatformAdmin(context.userId);
+    await assertPlatformAdmin(context.userId, context.claims?.email as string | undefined);
 
     const profileUpdate: { condo_id: string; unit_label?: string | null } = {
       condo_id: data.condoId,
