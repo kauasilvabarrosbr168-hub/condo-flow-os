@@ -162,6 +162,44 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_posts: {
+        Row: {
+          author_id: string
+          condo_id: string
+          content: string
+          created_at: string
+          id: string
+          kind: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          condo_id: string
+          content: string
+          created_at?: string
+          id?: string
+          kind?: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          condo_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_posts_condo_id_fkey"
+            columns: ["condo_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
