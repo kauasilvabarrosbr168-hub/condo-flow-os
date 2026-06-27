@@ -1,22 +1,36 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { BarChart3 } from "lucide-react";
-import { EmptyState } from "@/components/empty-state";
+// @ts-nocheck
+import { createFileRoute } from "@tanstack/react-router";
+import { BarChart3, Sparkles } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { ReservationsCalendar } from "@/components/condo/reservations-calendar";
+import { Badge } from "@/components/brand";
 
 export const Route = createFileRoute("/app/analytics")({
   head: () => ({ meta: [{ title: "Analytics · CondoFlow" }] }),
-  component: () => (
-    <div className="px-4 lg:px-8 py-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Métricas reais do seu condomínio, sem números inventados.</p>
-      </div>
-      <EmptyState
-        icon={BarChart3}
-        title="Ainda não há dados suficientes"
-        description="Os gráficos aparecem assim que houver reservas concluídas, tarefas executadas e atividade na operação. Comece criando uma reserva."
-        tone="primary"
-        action={<Link to="/app/reservations" className="text-xs font-medium text-primary hover:underline">Criar primeira reserva →</Link>}
-      />
-    </div>
-  ),
+  component: AnalyticsPage,
 });
+
+function AnalyticsPage() {
+  const { profile, condo } = useAuth();
+  const condoId = condo?.id ?? profile?.condo_id ?? null;
+  if (!condoId) return null;
+
+  return (
+    <div className="px-4 lg:px-8 py-8 space-y-6 animate-fade-in">
+      <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6 relative overflow-hidden">
+        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
+        <div className="relative">
+          <Badge tone="primary"><Sparkles className="h-3 w-3" /> Liberado</Badge>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-primary" /> Analytics de reservas
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground max-w-xl">
+            Veja em tempo real quem fez reservas, em quais dias e em qual área. Clique em qualquer dia para ver os detalhes completos.
+          </p>
+        </div>
+      </div>
+
+      <ReservationsCalendar condoId={condoId} />
+    </div>
+  );
+}
