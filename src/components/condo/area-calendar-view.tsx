@@ -80,6 +80,7 @@ export function AreaCalendarView({
       .select("id,starts_at,ends_at,guests,notes,status,resident_id")
       .eq("area_id", area.id)
       .eq("condo_id", condoId)
+      .neq("status", "cancelada")
       .gte("starts_at", start)
       .lte("starts_at", end)
       .order("starts_at", { ascending: true });
@@ -198,16 +199,17 @@ export function AreaCalendarView({
     if (!confirm("Cancelar esta reserva?")) return;
     const { error } = await supabase
       .from("reservations")
-      .update({ status: "cancelled" })
+      .update({ status: "cancelada" })
       .eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success("Reserva cancelada"); qc.invalidateQueries({ queryKey: ["reservations", condoId] }); }
   };
 
   const statusColor: Record<string, string> = {
-    confirmed: "bg-emerald-500",
-    pending: "bg-amber-400",
-    cancelled: "bg-muted-foreground/40",
+    confirmada: "bg-emerald-500",
+    pendente: "bg-amber-400",
+    em_execucao: "bg-blue-500",
+    concluida: "bg-emerald-700",
   };
 
   return (
@@ -268,7 +270,7 @@ export function AreaCalendarView({
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const d = i + 1;
                 const rsvs = byDay.get(d) ?? [];
-                const active = rsvs.some((r) => r.status !== "cancelled");
+                const active = rsvs.length > 0;
                 const selected = selectedDay === d;
                 const today_ = isToday(d);
                 return (
@@ -283,9 +285,6 @@ export function AreaCalendarView({
                     {active && (
                       <span className={`absolute bottom-1 h-1 w-1 rounded-full ${selected ? "bg-primary-foreground" : "bg-primary"}`} />
                     )}
-                    {rsvs.length > 0 && !active && (
-                      <span className="absolute bottom-1 h-1 w-1 rounded-full bg-muted-foreground/40" />
-                    )}
                   </button>
                 );
               })}
@@ -295,7 +294,6 @@ export function AreaCalendarView({
           {/* Legend */}
           <div className="mt-3 flex items-center gap-4 text-[10px] text-muted-foreground border-t border-border pt-3">
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary inline-block" />Com reservas</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-muted-foreground/40 inline-block" />Só canceladas</span>
           </div>
         </div>
 
@@ -335,7 +333,7 @@ export function AreaCalendarView({
                         </p>
                       )}
                     </div>
-                    {isAdmin && r.status !== "cancelled" && (
+                    {isAdmin && r.status !== "cancelada" && (
                       <button
                         onClick={() => cancelReservation(r.id)}
                         className="h-7 w-7 rounded-lg hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center shrink-0"

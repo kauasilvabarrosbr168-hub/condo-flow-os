@@ -53,6 +53,7 @@ function ReservationsPage() {
         .from("reservations")
         .select("id,area_id,resident_id,starts_at,ends_at,guests,notes,status")
         .eq("condo_id", condoId!)
+        .neq("status", "cancelada")
         .order("starts_at", { ascending: true });
       return (data ?? []) as Reservation[];
     },
