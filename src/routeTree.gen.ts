@@ -24,6 +24,7 @@ import { Route as AppReservationsRouteImport } from './routes/app.reservations'
 import { Route as AppMyCondoRouteImport } from './routes/app.my-condo'
 import { Route as AppJoinCondoRouteImport } from './routes/app.join-condo'
 import { Route as AppInvitationsRouteImport } from './routes/app.invitations'
+import { Route as AppFeedbackRouteImport } from './routes/app.feedback'
 import { Route as AppExploreRouteImport } from './routes/app.explore'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppCommunicationRouteImport } from './routes/app.communication'
@@ -119,6 +120,11 @@ const AppJoinCondoRoute = AppJoinCondoRouteImport.update({
 const AppInvitationsRoute = AppInvitationsRouteImport.update({
   id: '/invitations',
   path: '/invitations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeedbackRoute = AppFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => AppRoute,
 } as any)
 const AppExploreRoute = AppExploreRouteImport.update({
@@ -252,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/app/communication': typeof AppCommunicationRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
+  '/app/feedback': typeof AppFeedbackRoute
   '/app/invitations': typeof AppInvitationsRoute
   '/app/join-condo': typeof AppJoinCondoRoute
   '/app/my-condo': typeof AppMyCondoRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   '/app/communication': typeof AppCommunicationRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
+  '/app/feedback': typeof AppFeedbackRoute
   '/app/invitations': typeof AppInvitationsRoute
   '/app/join-condo': typeof AppJoinCondoRoute
   '/app/my-condo': typeof AppMyCondoRoute
@@ -328,6 +336,7 @@ export interface FileRoutesById {
   '/app/communication': typeof AppCommunicationRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
+  '/app/feedback': typeof AppFeedbackRoute
   '/app/invitations': typeof AppInvitationsRoute
   '/app/join-condo': typeof AppJoinCondoRoute
   '/app/my-condo': typeof AppMyCondoRoute
@@ -368,6 +377,7 @@ export interface FileRouteTypes {
     | '/app/communication'
     | '/app/dashboard'
     | '/app/explore'
+    | '/app/feedback'
     | '/app/invitations'
     | '/app/join-condo'
     | '/app/my-condo'
@@ -405,6 +415,7 @@ export interface FileRouteTypes {
     | '/app/communication'
     | '/app/dashboard'
     | '/app/explore'
+    | '/app/feedback'
     | '/app/invitations'
     | '/app/join-condo'
     | '/app/my-condo'
@@ -443,6 +454,7 @@ export interface FileRouteTypes {
     | '/app/communication'
     | '/app/dashboard'
     | '/app/explore'
+    | '/app/feedback'
     | '/app/invitations'
     | '/app/join-condo'
     | '/app/my-condo'
@@ -570,6 +582,13 @@ declare module '@tanstack/react-router' {
       path: '/invitations'
       fullPath: '/app/invitations'
       preLoaderRoute: typeof AppInvitationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/feedback': {
+      id: '/app/feedback'
+      path: '/feedback'
+      fullPath: '/app/feedback'
+      preLoaderRoute: typeof AppFeedbackRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/explore': {
@@ -789,6 +808,7 @@ interface AppRouteChildren {
   AppCommunicationRoute: typeof AppCommunicationRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppExploreRoute: typeof AppExploreRoute
+  AppFeedbackRoute: typeof AppFeedbackRoute
   AppInvitationsRoute: typeof AppInvitationsRoute
   AppJoinCondoRoute: typeof AppJoinCondoRoute
   AppMyCondoRoute: typeof AppMyCondoRoute
@@ -806,6 +826,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCommunicationRoute: AppCommunicationRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppExploreRoute: AppExploreRoute,
+  AppFeedbackRoute: AppFeedbackRoute,
   AppInvitationsRoute: AppInvitationsRoute,
   AppJoinCondoRoute: AppJoinCondoRoute,
   AppMyCondoRoute: AppMyCondoRoute,

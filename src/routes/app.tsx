@@ -67,8 +67,8 @@ const NAV: (NavItem | NavGroup)[] = [
     items: [
       { to: "/app/my-condo", label: "Meu condomínio", icon: Building, roles: ["sindico", "administradora"] },
       { to: "/app/areas", label: "Áreas comuns", icon: Building, roles: ["sindico", "administradora"] },
-      { to: "/app/tasks", label: "Tarefas", icon: ListChecks },
-      { to: "/app/services", label: "Serviços", icon: ListChecks },
+      { to: "/app/tasks", label: "Tarefas", icon: ListChecks, roles: ["funcionario"] },
+      { to: "/app/services", label: "Serviços", icon: ListChecks, roles: ["funcionario"] },
       { to: "/app/timeline", label: "Timeline", icon: Activity },
     ],
   },
@@ -82,7 +82,8 @@ const NAV: (NavItem | NavGroup)[] = [
       { to: "/app/invitations", label: "Convites", icon: Mail, roles: ["sindico", "administradora"] },
     ],
   },
-  { to: "/app/communication", label: "Comunicação", icon: MessageSquare },
+  { to: "/app/feedback", label: "Mural do condomínio", icon: MessageSquare },
+  { to: "/app/communication", label: "Comunicação", icon: Bell },
   { to: "/app/analytics", label: "Analytics", icon: BarChart3, roles: ["sindico", "administradora"] },
 ];
 
