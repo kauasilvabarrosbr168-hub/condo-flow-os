@@ -22,6 +22,22 @@ async function assertPlatformAdmin(userId: string) {
   if (!data) throw new Error("forbidden");
 }
 
+// One-time bootstrap: adds the caller as platform admin only when the table is empty.
+// After the first admin is set, this function becomes a no-op (returns false).
+export const bootstrapPlatformAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { count } = await supabaseAdmin
+      .from("platform_admins")
+      .select("id", { count: "exact", head: true });
+    if ((count ?? 0) > 0) return { ok: false, reason: "already_has_admin" };
+    const { error } = await supabaseAdmin
+      .from("platform_admins")
+      .insert({ user_id: context.userId });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const assignMemberToCondo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => AssignSchema.parse(input))

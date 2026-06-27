@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useServerFn } from "@tanstack/react-start";
-import { assignMemberToCondo } from "@/lib/admin-members.functions";
+import { assignMemberToCondo, bootstrapPlatformAdmin } from "@/lib/admin-members.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/condos")({
@@ -44,7 +44,25 @@ function CondosPage() {
   const [memberCondo, setMemberCondo] = useState<Row | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(false);
   const assignMemberFn = useServerFn(assignMemberToCondo);
+  const bootstrapFn = useServerFn(bootstrapPlatformAdmin);
+
+  const handleBootstrap = async () => {
+    setBootstrapping(true);
+    try {
+      const result = await bootstrapFn({ data: undefined });
+      if (result.ok) {
+        toast.success("Você agora é administrador da plataforma. Recarregue a página.");
+      } else {
+        toast.info("Já existe um administrador cadastrado.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao configurar admin.");
+    } finally {
+      setBootstrapping(false);
+    }
+  };
 
 
   const load = async () => {
@@ -167,6 +185,9 @@ function CondosPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome…" className="pl-9" />
             </div>
+            <Button variant="outline" onClick={handleBootstrap} disabled={bootstrapping} title="Use uma vez para se tornar admin da plataforma">
+              {bootstrapping ? <Loader2 className="h-4 w-4 animate-spin" /> : "⚙ Ativar admin"}
+            </Button>
             <Button onClick={() => setShowCreate((v) => !v)}>
               <Plus className="h-4 w-4" /> Novo condomínio
             </Button>
