@@ -45,32 +45,13 @@ export const assignMemberToCondo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => AssignSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertPlatformAdmin(context.userId, context.claims?.email as string | undefined);
-
-    const profileUpdate: { condo_id: string; unit_label?: string | null } = {
-      condo_id: data.condoId,
-    };
-    if (data.unitLabel !== undefined) profileUpdate.unit_label = data.unitLabel;
-
-    const { error: pErr } = await supabaseAdmin
-      .from("profiles")
-      .update(profileUpdate)
-      .eq("id", data.userId);
-    if (pErr) throw new Error(pErr.message);
-
-    const { data: existing } = await supabaseAdmin
-      .from("user_roles")
-      .select("id")
-      .eq("user_id", data.userId)
-      .eq("condo_id", data.condoId)
-      .eq("role", data.role)
-      .maybeSingle();
-
-    if (!existing) {
-      const { error: rErr } = await supabaseAdmin
-        .from("user_roles")
-        .insert({ user_id: data.userId, condo_id: data.condoId, role: data.role });
-      if (rErr) throw new Error(rErr.message);
-    }
-
+    // Uses SECURITY DEFINER RPC so the operation runs in the same Supabase
+    // project as the client — no service role key required.
+    const { error } = await context.supabase.rpc("assign_member_to_condo", {
+      p_user_id: data.userId,
+      p_condo_id: data.condoId,
+      p_role: data.role,
+      p_unit_label: data.unitLabel ?? null,
+    });
+    if (error) throw new Error(error.message);
   });
