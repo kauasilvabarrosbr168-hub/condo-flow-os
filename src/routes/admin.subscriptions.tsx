@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, CreditCard } from "lucide-react";
@@ -22,7 +21,7 @@ type Row = {
   plan_id: string;
   plan_name: string;
   price_cents: number;
-  status: SubStatus;
+  status: string;
   trial_ends_at: string | null;
   current_period_end: string | null;
   discount_pct: number;

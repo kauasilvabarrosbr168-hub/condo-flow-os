@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
@@ -28,7 +27,7 @@ type Metrics = {
   mrrCents: number;
   openTickets: number;
   activity24h: number;
-  recentCondos: { id: string; name: string; created_at: string }[];
+  recentCondos: { id: string; name: string; created_at: string | null }[];
   recentActivity: { id: string; title: string; kind: string; created_at: string }[];
 };
 
@@ -106,7 +105,7 @@ function AdminDashboard() {
                     </span>
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{c.name}</p>
-                      <p className="text-[11px] text-muted-foreground">Criado em {new Date(c.created_at).toLocaleDateString("pt-BR")}</p>
+                      <p className="text-[11px] text-muted-foreground">Criado em {c.created_at ? new Date(c.created_at).toLocaleDateString("pt-BR") : "—"}</p>
                     </div>
                   </div>
                   <ArrowUpRight className="h-4 w-4 text-muted-foreground" />

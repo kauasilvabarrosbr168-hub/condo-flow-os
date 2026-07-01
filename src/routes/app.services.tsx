@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { ClipboardCheck, Loader2, Camera, CheckCircle2, X } from "lucide-react";
@@ -16,7 +15,7 @@ export const Route = createFileRoute("/app/services")({
   component: ServicesPage,
 });
 
-type Task = { id: string; title: string; description: string | null; due_at: string | null; status: string };
+type Task = { id: string; title: string | null; description: string | null; due_at: string | null; status: string | null };
 type Log = { id: string; title: string; notes: string | null; photo_url: string | null; done_at: string; worker_id: string };
 
 function ServicesPage() {
@@ -81,7 +80,7 @@ function ServicesPage() {
                   {t.due_at && <p className="text-[11px] text-muted-foreground mt-0.5">Até {new Date(t.due_at).toLocaleString("pt-BR")}</p>}
                 </div>
                 {isWorker && (
-                  <Button size="sm" onClick={() => setCheckin({ taskId: t.id, title: t.title })}>
+                  <Button size="sm" onClick={() => setCheckin({ taskId: t.id, title: t.title ?? "" })}>
                     <CheckCircle2 className="h-4 w-4" /> Concluir
                   </Button>
                 )}

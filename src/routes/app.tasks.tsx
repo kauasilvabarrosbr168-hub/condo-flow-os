@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ListChecks, Check, Loader2, Clock } from "lucide-react";
@@ -77,7 +76,7 @@ function TasksPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className={`text-sm font-medium ${t.status === "concluida" ? "line-through text-muted-foreground" : ""}`}>{t.title}</p>
-                  <Badge tone={kindTone(t.kind)}>{kindLabel(t.kind)}</Badge>
+                  <Badge tone={kindTone(t.kind ?? "")}>{kindLabel(t.kind ?? "")}</Badge>
                   {t.status === "em_andamento" && <Badge tone="primary">Em andamento</Badge>}
                 </div>
                 {t.description && <p className="text-xs text-muted-foreground mt-1">{t.description}</p>}

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,7 +16,7 @@ type Reservation = {
   notes: string | null;
   status: string;
   resident_id: string;
-  profiles?: { full_name: string; unit_label: string | null } | null;
+  profiles?: { full_name: string | null; unit_label: string | null } | null;
 };
 
 type Notice = {
@@ -25,7 +24,7 @@ type Notice = {
   content: string;
   created_at: string;
   author_id: string;
-  profiles?: { full_name: string } | null;
+  profiles?: { full_name: string | null } | null;
 };
 
 type Area = {
@@ -88,7 +87,7 @@ export function AreaCalendarView({
     setLoadingRes(false);
 
     // Enrich with profiles
-    const ids = Array.from(new Set((data ?? []).map((r) => r.resident_id)));
+    const ids = Array.from(new Set((data ?? []).map((r) => r.resident_id).filter((id): id is string => id !== null)));
     if (ids.length) {
       const { data: profs } = await supabase
         .from("profiles")
