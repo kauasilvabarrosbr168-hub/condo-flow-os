@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -52,52 +52,9 @@ export type Database = {
           },
         ]
       }
-      area_notices: {
-        Row: {
-          area_id: string
-          author_id: string
-          condo_id: string
-          content: string
-          created_at: string
-          id: string
-        }
-        Insert: {
-          area_id: string
-          author_id: string
-          condo_id: string
-          content: string
-          created_at?: string
-          id?: string
-        }
-        Update: {
-          area_id?: string
-          author_id?: string
-          condo_id?: string
-          content?: string
-          created_at?: string
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "area_notices_area_id_fkey"
-            columns: ["area_id"]
-            isOneToOne: false
-            referencedRelation: "common_areas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "area_notices_condo_id_fkey"
-            columns: ["condo_id"]
-            isOneToOne: false
-            referencedRelation: "condominiums"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       common_areas: {
         Row: {
           active: boolean
-          available_slots: Json | null
           capacity: number | null
           condo_id: string
           cover_url: string | null
@@ -114,7 +71,6 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          available_slots?: Json | null
           capacity?: number | null
           condo_id: string
           cover_url?: string | null
@@ -131,7 +87,6 @@ export type Database = {
         }
         Update: {
           active?: boolean
-          available_slots?: Json | null
           capacity?: number | null
           condo_id?: string
           cover_url?: string | null
@@ -162,12 +117,11 @@ export type Database = {
           blocks_count: number | null
           contacts: Json
           cover_url: string | null
-          created_at: string | null
-          created_by: string | null
+          created_at: string
+          created_by: string
           description: string | null
           general_info: string | null
           id: string
-          join_code: string
           logo_url: string | null
           name: string
           rules: string | null
@@ -179,12 +133,11 @@ export type Database = {
           blocks_count?: number | null
           contacts?: Json
           cover_url?: string | null
-          created_at?: string | null
-          created_by?: string | null
+          created_at?: string
+          created_by: string
           description?: string | null
           general_info?: string | null
           id?: string
-          join_code?: string
           logo_url?: string | null
           name: string
           rules?: string | null
@@ -196,12 +149,11 @@ export type Database = {
           blocks_count?: number | null
           contacts?: Json
           cover_url?: string | null
-          created_at?: string | null
-          created_by?: string | null
+          created_at?: string
+          created_by?: string
           description?: string | null
           general_info?: string | null
           id?: string
-          join_code?: string
           logo_url?: string | null
           name?: string
           rules?: string | null
@@ -218,6 +170,7 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          updated_at: string
         }
         Insert: {
           author_id: string
@@ -226,6 +179,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          updated_at?: string
         }
         Update: {
           author_id?: string
@@ -234,6 +188,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -421,25 +376,31 @@ export type Database = {
       platform_audit_logs: {
         Row: {
           action: string
+          admin_user_id: string
           created_at: string
           id: string
-          meta: Json | null
+          ip: string | null
+          meta: Json
           target_id: string | null
           target_kind: string | null
         }
         Insert: {
           action: string
+          admin_user_id: string
           created_at?: string
           id?: string
-          meta?: Json | null
+          ip?: string | null
+          meta?: Json
           target_id?: string | null
           target_kind?: string | null
         }
         Update: {
           action?: string
+          admin_user_id?: string
           created_at?: string
           id?: string
-          meta?: Json | null
+          ip?: string | null
+          meta?: Json
           target_id?: string | null
           target_kind?: string | null
         }
@@ -449,49 +410,40 @@ export type Database = {
         Row: {
           avatar_url: string | null
           condo_id: string | null
-          condominium_id: string | null
-          created_at: string | null
-          email: string | null
-          full_name: string | null
+          created_at: string
+          email: string
+          full_name: string
           id: string
-          name: string | null
           phone: string | null
-          role: string | null
           unit_label: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           condo_id?: string | null
-          condominium_id?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
+          created_at?: string
+          email: string
+          full_name: string
           id: string
-          name?: string | null
           phone?: string | null
-          role?: string | null
           unit_label?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           condo_id?: string | null
-          condominium_id?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
           id?: string
-          name?: string | null
           phone?: string | null
-          role?: string | null
           unit_label?: string | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_condominium_id_fkey"
-            columns: ["condominium_id"]
+            foreignKeyName: "profiles_condo_id_fkey"
+            columns: ["condo_id"]
             isOneToOne: false
             referencedRelation: "condominiums"
             referencedColumns: ["id"]
@@ -500,52 +452,43 @@ export type Database = {
       }
       reservations: {
         Row: {
-          area: string | null
-          area_id: string | null
-          condo_id: string | null
-          condominium_id: string | null
-          created_at: string | null
-          ends_at: string | null
+          area_id: string
+          condo_id: string
+          created_at: string
+          ends_at: string
           guests: number | null
           id: string
           notes: string | null
-          reservation_date: string | null
-          resident_id: string | null
-          starts_at: string | null
-          status: string | null
-          user_id: string | null
+          resident_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["reservation_status"]
+          updated_at: string
         }
         Insert: {
-          area?: string | null
-          area_id?: string | null
-          condo_id?: string | null
-          condominium_id?: string | null
-          created_at?: string | null
-          ends_at?: string | null
+          area_id: string
+          condo_id: string
+          created_at?: string
+          ends_at: string
           guests?: number | null
           id?: string
           notes?: string | null
-          reservation_date?: string | null
-          resident_id?: string | null
-          starts_at?: string | null
-          status?: string | null
-          user_id?: string | null
+          resident_id: string
+          starts_at: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
         }
         Update: {
-          area?: string | null
-          area_id?: string | null
-          condo_id?: string | null
-          condominium_id?: string | null
-          created_at?: string | null
-          ends_at?: string | null
+          area_id?: string
+          condo_id?: string
+          created_at?: string
+          ends_at?: string
           guests?: number | null
           id?: string
           notes?: string | null
-          reservation_date?: string | null
-          resident_id?: string | null
-          starts_at?: string | null
-          status?: string | null
-          user_id?: string | null
+          resident_id?: string
+          starts_at?: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
         }
         Relationships: [
           {
@@ -560,20 +503,6 @@ export type Database = {
             columns: ["condo_id"]
             isOneToOne: false
             referencedRelation: "condominiums"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reservations_condominium_id_fkey"
-            columns: ["condominium_id"]
-            isOneToOne: false
-            referencedRelation: "condominiums"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reservations_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -623,7 +552,7 @@ export type Database = {
           id: string
           notes: string | null
           plan_id: string
-          status: string
+          status: Database["public"]["Enums"]["subscription_status"]
           trial_ends_at: string | null
           updated_at: string
         }
@@ -635,7 +564,7 @@ export type Database = {
           id?: string
           notes?: string | null
           plan_id: string
-          status?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
           trial_ends_at?: string | null
           updated_at?: string
         }
@@ -647,7 +576,7 @@ export type Database = {
           id?: string
           notes?: string | null
           plan_id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
           trial_ends_at?: string | null
           updated_at?: string
         }
@@ -661,83 +590,117 @@ export type Database = {
           },
         ]
       }
+      support_sessions: {
+        Row: {
+          admin_user_id: string
+          condo_id: string | null
+          ended_at: string | null
+          id: string
+          reason: string | null
+          started_at: string
+          target_user_id: string
+        }
+        Insert: {
+          admin_user_id: string
+          condo_id?: string | null
+          ended_at?: string | null
+          id?: string
+          reason?: string | null
+          started_at?: string
+          target_user_id: string
+        }
+        Update: {
+          admin_user_id?: string
+          condo_id?: string | null
+          ended_at?: string | null
+          id?: string
+          reason?: string | null
+          started_at?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
+          assigned_to: string | null
+          body: string | null
           condo_id: string
           created_at: string
           id: string
+          opened_by: string
           priority: Database["public"]["Enums"]["ticket_priority"]
           status: Database["public"]["Enums"]["ticket_status"]
           subject: string
+          updated_at: string
         }
         Insert: {
+          assigned_to?: string | null
+          body?: string | null
           condo_id: string
           created_at?: string
           id?: string
+          opened_by: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           status?: Database["public"]["Enums"]["ticket_status"]
           subject: string
+          updated_at?: string
         }
         Update: {
+          assigned_to?: string | null
+          body?: string | null
           condo_id?: string
           created_at?: string
           id?: string
+          opened_by?: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           status?: Database["public"]["Enums"]["ticket_status"]
           subject?: string
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "support_tickets_condo_id_fkey"
-            columns: ["condo_id"]
-            isOneToOne: false
-            referencedRelation: "condominiums"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tasks: {
         Row: {
-          assigned_to: string | null
           assignee_id: string | null
           completed_at: string | null
-          condo_id: string | null
-          created_at: string | null
+          condo_id: string
+          created_at: string
           description: string | null
           due_at: string | null
           id: string
-          kind: string | null
+          kind: Database["public"]["Enums"]["task_kind"]
           reservation_id: string | null
-          status: string | null
-          title: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
         }
         Insert: {
-          assigned_to?: string | null
           assignee_id?: string | null
           completed_at?: string | null
-          condo_id?: string | null
-          created_at?: string | null
+          condo_id: string
+          created_at?: string
           description?: string | null
           due_at?: string | null
           id?: string
-          kind?: string | null
+          kind?: Database["public"]["Enums"]["task_kind"]
           reservation_id?: string | null
-          status?: string | null
-          title?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
         }
         Update: {
-          assigned_to?: string | null
           assignee_id?: string | null
           completed_at?: string | null
-          condo_id?: string | null
-          created_at?: string | null
+          condo_id?: string
+          created_at?: string
           description?: string | null
           due_at?: string | null
           id?: string
-          kind?: string | null
+          kind?: Database["public"]["Enums"]["task_kind"]
           reservation_id?: string | null
-          status?: string | null
-          title?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -793,15 +756,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      assign_member_to_condo: {
-        Args: {
-          p_condo_id: string
-          p_role: string
-          p_unit_label?: string
-          p_user_id: string
-        }
-        Returns: undefined
-      }
+      accept_invitation: { Args: { p_token: string }; Returns: string }
       claim_first_platform_admin: { Args: never; Returns: boolean }
       decide_membership_request: {
         Args: { p_decision: string; p_reason?: string; p_request_id: string }
@@ -830,12 +785,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      find_condo_by_join_code: {
-        Args: { p_code: string }
+      get_invitation_by_token: {
+        Args: { p_token: string }
         Returns: {
+          accepted_at: string
+          condo_id: string
+          email: string
+          expires_at: string
+          full_name: string
           id: string
-          name: string
+          role: Database["public"]["Enums"]["app_role"]
+          unit_label: string
         }[]
+      }
+      has_role: {
+        Args: {
+          _condo_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       is_condo_admin: {
         Args: { _condo_id: string; _user_id: string }
@@ -854,10 +823,7 @@ export type Database = {
           name: string
         }[]
       }
-      regenerate_condo_join_code: {
-        Args: { p_condo_id: string }
-        Returns: string
-      }
+      user_condo_id: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       app_role: "sindico" | "administradora" | "morador" | "funcionario"
@@ -877,10 +843,10 @@ export type Database = {
         | "active"
         | "past_due"
         | "suspended"
-        | "canceled"
+        | "cancelled"
       task_kind: "pre_checklist" | "pos_checklist" | "manutencao" | "incidente"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
-      ticket_priority: "urgent" | "high" | "medium" | "low"
+      ticket_priority: "low" | "normal" | "high" | "urgent"
       ticket_status: "open" | "pending" | "resolved" | "closed"
     }
     CompositeTypes: {
@@ -1028,11 +994,11 @@ export const Constants = {
         "active",
         "past_due",
         "suspended",
-        "canceled",
+        "cancelled",
       ],
       task_kind: ["pre_checklist", "pos_checklist", "manutencao", "incidente"],
       task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
-      ticket_priority: ["urgent", "high", "medium", "low"],
+      ticket_priority: ["low", "normal", "high", "urgent"],
       ticket_status: ["open", "pending", "resolved", "closed"],
     },
   },
