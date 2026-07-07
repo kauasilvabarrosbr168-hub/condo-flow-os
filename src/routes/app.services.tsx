@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ClipboardCheck, Loader2, Camera, CheckCircle2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +24,7 @@ function ServicesPage() {
   const { profile, condo, primaryRole, user, isAdmin } = useAuth();
   const condoId = condo?.id ?? profile?.condo_id ?? null;
   const isWorker = primaryRole === "funcionario";
+  const dispatchFn = useServerFn(dispatchAIEvent);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [logs, setLogs] = useState<Log[] | null>(null);
   const [checkin, setCheckin] = useState<{ taskId?: string; title: string } | null>(null);
@@ -119,13 +122,14 @@ function ServicesPage() {
           init={checkin}
           onClose={() => setCheckin(null)}
           onDone={async () => { await load(); setCheckin(null); }}
+          dispatchFn={dispatchFn}
         />
       )}
     </div>
   );
 }
 
-function CheckInDialog({ condoId, userId, init, onClose, onDone }: { condoId: string; userId: string; init: { taskId?: string; title: string }; onClose: () => void; onDone: () => void | Promise<void> }) {
+function CheckInDialog({ condoId, userId, init, onClose, onDone, dispatchFn }: { condoId: string; userId: string; init: { taskId?: string; title: string }; onClose: () => void; onDone: () => void | Promise<void>; dispatchFn: (a: any) => Promise<any> }) {
   const [notes, setNotes] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -158,6 +162,7 @@ function CheckInDialog({ condoId, userId, init, onClose, onDone }: { condoId: st
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Serviço registrado");
+    void dispatchFn({ data: { condoId, eventType: "service_completed", entityType: "service_log", entityId: init.taskId ?? "free", context: { taskTitle: init.title } } });
     await onDone();
   };
 

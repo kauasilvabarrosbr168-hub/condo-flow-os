@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { ListChecks, Check, Loader2, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +8,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/brand";
 import { toast } from "sonner";
 import { useState } from "react";
+import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
 
 export const Route = createFileRoute("/app/tasks")({
   head: () => ({ meta: [{ title: "Tarefas · CondoFlow" }] }),
@@ -18,6 +20,8 @@ function TasksPage() {
   const condoId = condo?.id ?? profile?.condo_id ?? null;
   const qc = useQueryClient();
   const [scope, setScope] = useState<"mine" | "all">(isAdmin ? "all" : "mine");
+
+  const dispatchFn = useServerFn(dispatchAIEvent);
 
   const { data: tasks, isLoading } = useQuery({
     enabled: !!condoId,
@@ -32,9 +36,13 @@ function TasksPage() {
 
   if (!condoId) return <div className="p-8"><EmptyState icon={ListChecks} title="Sem condomínio vinculado" description="Aguarde um convite." /></div>;
 
-  const updateStatus = async (id: string, status: "pendente" | "em_andamento" | "concluida") => {
+  const updateStatus = async (id: string, status: "pendente" | "em_andamento" | "concluida", taskTitle?: string, dueAt?: string | null) => {
     const { error } = await supabase.from("tasks").update({ status, completed_at: status === "concluida" ? new Date().toISOString() : null }).eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Atualizado"); qc.invalidateQueries({ queryKey: ["tasks"] }); }
+    if (error) { toast.error(error.message); return; }
+    toast.success("Atualizado");
+    qc.invalidateQueries({ queryKey: ["tasks"] });
+    const wasOverdue = dueAt ? new Date(dueAt) < new Date() : false;
+    void dispatchFn({ data: { condoId: condoId!, eventType: "task_status_changed", entityType: "task", entityId: id, context: { title: taskTitle ?? "tarefa", newStatus: status, wasOverdue } } });
   };
 
   return (
@@ -66,7 +74,7 @@ function TasksPage() {
           {tasks!.map((t) => (
             <li key={t.id} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-card hover:shadow-elegant transition">
               <button
-                onClick={() => updateStatus(t.id, t.status === "concluida" ? "pendente" : "concluida")}
+                onClick={() => updateStatus(t.id, t.status === "concluida" ? "pendente" : "concluida", t.title ?? undefined, t.due_at)}
                 className={`mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md border transition ${
                   t.status === "concluida" ? "bg-success border-success text-success-foreground" : "border-border hover:border-primary"
                 }`}
@@ -87,7 +95,7 @@ function TasksPage() {
                 )}
               </div>
               {t.status !== "concluida" && t.status !== "em_andamento" && (
-                <button onClick={() => updateStatus(t.id, "em_andamento")} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-muted">Iniciar</button>
+                <button onClick={() => updateStatus(t.id, "em_andamento", t.title ?? undefined, t.due_at)} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-muted">Iniciar</button>
               )}
             </li>
           ))}

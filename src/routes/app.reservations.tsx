@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { CalendarPlus, Building, Loader2, X, Trash2, Check, Clock } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { CalendarPlus, Building, Loader2, X, Trash2, Check, Clock, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/brand";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
+import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
 
 export const Route = createFileRoute("/app/reservations")({
   head: () => ({ meta: [{ title: "Reservas · CondoFlow" }] }),
@@ -14,6 +16,7 @@ export const Route = createFileRoute("/app/reservations")({
 });
 
 type Area = { id: string; name: string; description: string | null; min_advance_hours: number };
+type CleaningService = { id: string; name: string; phone: string | null; price_cents: number };
 type Reservation = {
   id: string;
   area_id: string;
@@ -29,6 +32,7 @@ function ReservationsPage() {
   const { profile, condo, user, isAdmin } = useAuth();
   const qc = useQueryClient();
   const condoId = condo?.id ?? profile?.condo_id ?? null;
+  const dispatchFn = useServerFn(dispatchAIEvent);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "mine" | "upcoming">("upcoming");
 
@@ -42,6 +46,20 @@ function ReservationsPage() {
         .eq("condo_id", condoId!)
         .eq("active", true);
       return (data ?? []) as Area[];
+    },
+  });
+
+  const { data: cleaningServices } = useQuery({
+    enabled: !!condoId,
+    queryKey: ["cleaning_services", condoId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cleaning_services")
+        .select("id,name,phone,price_cents")
+        .eq("condo_id", condoId!)
+        .eq("active", true)
+        .order("name");
+      return (data ?? []) as CleaningService[];
     },
   });
 
@@ -174,7 +192,9 @@ function ReservationsPage() {
                           onClick={async () => {
                             if (!confirm("Cancelar esta reserva?")) return;
                             const { error } = await supabase.from("reservations").update({ status: "cancelada" }).eq("id", r.id);
-                            if (error) toast.error(error.message); else toast.success("Reserva cancelada");
+                            if (error) { toast.error(error.message); return; }
+                            toast.success("Reserva cancelada");
+                            void dispatchFn({ data: { condoId: condoId!, eventType: "reservation_cancelled", entityType: "reservation", entityId: r.id, context: { areaName: area?.name ?? "área" } } });
                           }}
                           className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted"
                         >
@@ -193,10 +213,12 @@ function ReservationsPage() {
       {open && canReserve && (
         <NewReservationDialog
           areas={areas!}
+          cleaningServices={cleaningServices ?? []}
           condoId={condoId}
           userId={user!.id}
           onClose={() => setOpen(false)}
           onCreated={() => qc.invalidateQueries({ queryKey: ["reservations", condoId] })}
+          dispatchFn={dispatchFn}
         />
       )}
     </div>
@@ -205,16 +227,21 @@ function ReservationsPage() {
 
 function NewReservationDialog({
   areas,
+  cleaningServices,
   condoId,
   userId,
   onClose,
   onCreated,
+  dispatchFn,
 }: {
   areas: Area[];
+  cleaningServices: CleaningService[];
   condoId: string;
   userId: string;
   onClose: () => void;
   onCreated: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  dispatchFn: (args: any) => Promise<any>;
 }) {
   const [areaId, setAreaId] = useState(areas[0]?.id ?? "");
   const [date, setDate] = useState(() => new Date(Date.now() + 86400000).toLocaleDateString("sv"));
@@ -222,7 +249,10 @@ function NewReservationDialog({
   const [endTime, setEndTime] = useState("22:00");
   const [guests, setGuests] = useState(0);
   const [notes, setNotes] = useState("");
+  const [cleaningServiceId, setCleaningServiceId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const selectedCleaning = cleaningServices.find((s) => s.id === cleaningServiceId) ?? null;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,7 +268,7 @@ function NewReservationDialog({
       setBusy(false);
       return;
     }
-    const { error } = await supabase.from("reservations").insert({
+    const { data: resData, error } = await supabase.from("reservations").insert({
       condo_id: condoId,
       area_id: areaId,
       resident_id: userId,
@@ -246,10 +276,30 @@ function NewReservationDialog({
       ends_at: ends,
       guests,
       notes: notes || null,
-    });
+      cleaning_service_id: cleaningServiceId,
+    }).select("id").single();
+    if (error) { toast.error(error.message); setBusy(false); return; }
+
+    if (cleaningServiceId && resData?.id) {
+      const areaName = areas.find((a) => a.id === areaId)?.name ?? "Área";
+      await supabase.from("tasks").insert({
+        condo_id: condoId,
+        reservation_id: resData.id,
+        title: `Limpeza pós-evento — ${areaName}`,
+        description: selectedCleaning ? `Prestador: ${selectedCleaning.name}${selectedCleaning.phone ? ` · ${selectedCleaning.phone}` : ""}` : null,
+        kind: "pos_checklist",
+        status: "pendente",
+        due_at: ends,
+      });
+    }
+
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
     toast.success("Reserva criada! O fluxo automático foi iniciado.");
+    const areaName = areas.find((a) => a.id === areaId)?.name ?? "área";
+    void dispatchFn({ data: { condoId, eventType: "reservation_created", entityType: "reservation", entityId: resData?.id ?? "", context: { areaName, cleaningServiceId, guests } } });
+    if (cleaningServiceId && resData?.id) {
+      void dispatchFn({ data: { condoId, eventType: "cleaning_requested", entityType: "reservation", entityId: resData.id, context: { serviceName: selectedCleaning?.name, areaName } } });
+    }
     onCreated();
     onClose();
   };
@@ -289,6 +339,32 @@ function NewReservationDialog({
           <Field label="Observações">
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} rows={3} className={inputCls + " py-2 resize-none"} placeholder="Algo que o síndico ou funcionário deva saber..." />
           </Field>
+
+          {cleaningServices.length > 0 && (
+            <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+              <p className="text-xs font-semibold flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> Serviço de limpeza pós-evento (opcional)</p>
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="radio" name="cleaning" checked={cleaningServiceId === null} onChange={() => setCleaningServiceId(null)} className="h-4 w-4" />
+                  <span className="text-muted-foreground">Sem limpeza</span>
+                </label>
+                {cleaningServices.map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="cleaning" checked={cleaningServiceId === s.id} onChange={() => setCleaningServiceId(s.id)} className="h-4 w-4" />
+                    <span className="flex-1">{s.name}</span>
+                    <span className="text-xs text-primary font-medium">
+                      {s.price_cents === 0 ? "A combinar" : `R$ ${(s.price_cents / 100).toFixed(2).replace(".", ",")}`}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {selectedCleaning && (
+                <p className="text-[11px] text-muted-foreground pt-1 border-t border-border">
+                  Uma tarefa de limpeza será criada automaticamente para {selectedCleaning.name}.
+                </p>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-2 p-5 border-t border-border">
           <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-muted">Cancelar</button>

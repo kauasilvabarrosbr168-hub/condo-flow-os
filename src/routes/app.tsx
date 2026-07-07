@@ -26,6 +26,7 @@ import {
   Clock,
   ShieldCheck,
   XCircle,
+  Brain,
 } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { useAuth, type Role } from "@/hooks/use-auth";
@@ -69,6 +70,7 @@ const NAV: (NavItem | NavGroup)[] = [
       { to: "/app/areas", label: "Áreas comuns", icon: Building, roles: ["sindico", "administradora"] },
       { to: "/app/tasks", label: "Tarefas", icon: ListChecks, roles: ["funcionario"] },
       { to: "/app/services", label: "Serviços", icon: ListChecks, roles: ["funcionario"] },
+      { to: "/app/ai-monitor", label: "IA Operacional", icon: Brain, roles: ["sindico", "administradora"] },
       { to: "/app/timeline", label: "Timeline", icon: Activity },
     ],
   },
@@ -291,6 +293,16 @@ function AppLayout() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle compact />
+            {(primaryRole === "sindico" || primaryRole === "administradora") && (
+              <Link
+                to="/app/ai-monitor"
+                className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted transition"
+                title="Motor de IA Operacional"
+              >
+                <Brain className="h-4 w-4 text-primary" />
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+              </Link>
+            )}
             <Link
               to="/app/communication"
               className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted transition"
