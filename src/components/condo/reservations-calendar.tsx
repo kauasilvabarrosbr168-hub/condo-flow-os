@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, CalendarDays, X, Home, Clock, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, List } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type Reservation = {
@@ -14,18 +14,35 @@ type Reservation = {
   created_at: string | null;
 };
 
-const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const DAY_NAMES = ["D","S","T","Q","Q","S","S"];
+const MONTH_NAMES = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+];
+const DAY_HEADERS = ["DOM","SEG","TER","QUA","QUI","SEX","SÁB"];
+
+// Paleta de cores por área (índice)
+const AREA_COLORS = [
+  { bg: "rgba(34,197,94,0.15)",  dot: "#22C55E", text: "#16A34A", dark: "#4ADE80" },
+  { bg: "rgba(168,85,247,0.15)", dot: "#A855F7", text: "#9333EA", dark: "#C084FC" },
+  { bg: "rgba(249,115,22,0.15)", dot: "#F97316", text: "#EA580C", dark: "#FB923C" },
+  { bg: "rgba(59,130,246,0.15)", dot: "#3B82F6", text: "#2563EB", dark: "#60A5FA" },
+  { bg: "rgba(236,72,153,0.15)", dot: "#EC4899", text: "#DB2777", dark: "#F472B6" },
+  { bg: "rgba(234,179,8,0.15)",  dot: "#EAB308", text: "#CA8A04", dark: "#FDE047" },
+];
+
+function getAreaColor(index: number) {
+  return AREA_COLORS[index % AREA_COLORS.length];
+}
 
 export function ReservationsCalendar({ condoId, compact = false }: { condoId: string; compact?: boolean }) {
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [listView, setListView] = useState(false);
 
   const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-  const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  const monthEnd   = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
 
   const { data, isLoading } = useQuery({
     queryKey: ["reservations-calendar", condoId, monthStart.toISOString()],
@@ -35,19 +52,21 @@ export function ReservationsCalendar({ condoId, compact = false }: { condoId: st
           .from("reservations")
           .select("id,starts_at,ends_at,status,area_id,resident_id,created_at")
           .eq("condo_id", condoId)
+          .neq("status", "cancelada")
           .gte("starts_at", monthStart.toISOString())
           .lt("starts_at", monthEnd.toISOString())
           .order("starts_at", { ascending: true }),
-        supabase.from("common_areas").select("id,name,icon").eq("condo_id", condoId),
+        supabase.from("common_areas").select("id,name").eq("condo_id", condoId).order("name"),
         supabase.from("profiles").select("id,full_name,unit_label").eq("condo_id", condoId),
       ]);
-      const areaMap = new Map<string, { name: string; icon: string | null }>();
-      (areas.data ?? []).forEach((a: any) => areaMap.set(a.id, { name: a.name, icon: a.icon }));
+      const areaList = (areas.data ?? []) as { id: string; name: string }[];
+      const areaMap  = new Map<string, { name: string; colorIdx: number }>();
+      areaList.forEach((a, i) => areaMap.set(a.id, { name: a.name, colorIdx: i }));
       const profileMap = new Map<string, { full_name: string; unit_label: string | null }>();
-      (profiles.data ?? []).forEach((p: any) => profileMap.set(p.id, { full_name: p.full_name, unit_label: p.unit_label }));
-      return { reservations: (resv.data ?? []) as Reservation[], areaMap, profileMap };
+      (profiles.data ?? []).forEach((p: any) => profileMap.set(p.id, p));
+      return { reservations: (resv.data ?? []) as Reservation[], areaMap, areaList, profileMap };
     },
-    refetchInterval: 30000, // ao vivo
+    refetchInterval: 30_000,
   });
 
   const byDay = useMemo(() => {
@@ -60,148 +79,139 @@ export function ReservationsCalendar({ condoId, compact = false }: { condoId: st
     return map;
   }, [data]);
 
-  const grid = useMemo(() => buildMonthGrid(cursor), [cursor]);
+  const grid    = useMemo(() => buildMonthGrid(cursor), [cursor]);
   const todayKey = isoDay(new Date().toISOString());
 
-  const selectedList = selectedDay ? (byDay.get(selectedDay) ?? []) : [];
+  const prevMonth = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1));
+  const nextMonth = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1));
 
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-hero text-primary-foreground shadow-elegant">
-            <CalendarDays className="h-4 w-4" />
+    <div className="rc-wrap">
+      {/* ── Header ── */}
+      <div className="rc-header">
+        <div className="rc-header-left">
+          <span className="rc-header-icon">
+            <CalendarDays size={16} />
           </span>
           <div>
-            <h2 className="text-sm font-semibold">Calendário de reservas</h2>
-            <p className="text-[11px] text-muted-foreground">Atualizado em tempo real · clique em um dia</p>
+            <p className="rc-title">Calendário de reservas</p>
+            <p className="rc-subtitle">Atualizado em tempo real · clique em um dia</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-            className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border hover:bg-muted transition"
-          >
-            <ChevronLeft className="h-4 w-4" />
+        <div className="rc-nav">
+          <button className="rc-nav-btn" onClick={prevMonth} aria-label="Mês anterior">
+            <ChevronLeft size={16} />
           </button>
-          <span className="px-2 text-sm font-medium tabular-nums min-w-[140px] text-center">
+          <button className="rc-month-pill" onClick={() => {}}>
+            <CalendarDays size={13} />
             {MONTH_NAMES[cursor.getMonth()]} {cursor.getFullYear()}
-          </span>
-          <button
-            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-            className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border hover:bg-muted transition"
-          >
-            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button className="rc-nav-btn" onClick={nextMonth} aria-label="Próximo mês">
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>
 
-      <div className="p-4">
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {DAY_NAMES.map((d, i) => (
-            <div key={i} className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground py-1">
-              {d}
-            </div>
-          ))}
+      {/* ── Day headers ── */}
+      <div className="rc-day-headers">
+        {DAY_HEADERS.map((d, i) => (
+          <div key={d} className={`rc-day-header ${i === 0 || i === 6 ? "rc-day-header--weekend" : ""}`}>{d}</div>
+        ))}
+      </div>
+
+      {/* ── Grid ── */}
+      {isLoading ? (
+        <div className="rc-loading">
+          <span className="rc-loading-dot" />
+          <span className="rc-loading-dot" style={{ animationDelay: ".15s" }} />
+          <span className="rc-loading-dot" style={{ animationDelay: ".3s" }} />
         </div>
-        <div className="grid grid-cols-7 gap-1">
+      ) : (
+        <div className="rc-grid">
           {grid.map((cell, i) => {
-            const key = cell ? isoDay(cell.toISOString()) : null;
-            const list = key ? byDay.get(key) ?? [] : [];
-            const inMonth = cell && cell.getMonth() === cursor.getMonth();
+            if (!cell) return <div key={`e${i}`} className="rc-cell rc-cell--empty" />;
+            const key     = isoDay(cell.toISOString());
+            const list    = byDay.get(key) ?? [];
             const isToday = key === todayKey;
-            const isSelected = key === selectedDay;
+            const dow     = cell.getDay();
+            const isWeekend = dow === 0 || dow === 6;
             return (
-              <button
-                key={i}
-                disabled={!cell}
-                onClick={() => key && setSelectedDay(key)}
-                className={`relative aspect-square rounded-lg border text-left p-1.5 transition group ${
-                  !inMonth ? "opacity-30 border-transparent" : ""
-                } ${
-                  isSelected
-                    ? "border-primary bg-primary/10 ring-2 ring-primary/30"
-                    : isToday
-                    ? "border-primary/40 bg-primary/5"
-                    : list.length > 0
-                    ? "border-primary/30 bg-card hover:border-primary/60 hover:bg-primary/5"
-                    : "border-border/50 bg-card hover:border-border"
-                }`}
+              <div
+                key={key}
+                className={`rc-cell ${isToday ? "rc-cell--today" : ""} ${isWeekend ? "rc-cell--weekend" : ""}`}
               >
-                {cell && (
-                  <>
-                    <span className={`text-[11px] font-medium ${isToday ? "text-primary font-bold" : ""}`}>
-                      {cell.getDate()}
-                    </span>
-                    {list.length > 0 && (
-                      <div className="absolute bottom-1 left-1.5 right-1.5 flex items-center gap-0.5">
-                        {list.slice(0, 3).map((_, j) => (
-                          <span key={j} className="h-1.5 flex-1 rounded-full bg-gradient-hero" />
-                        ))}
-                        {list.length > 3 && (
-                          <span className="text-[8px] font-bold text-primary ml-0.5">+{list.length - 3}</span>
-                        )}
+                <span className={`rc-cell-day ${isToday ? "rc-cell-day--today" : isWeekend ? "rc-cell-day--weekend" : ""}`}>
+                  {cell.getDate()}
+                  {isToday && <span className="rc-today-dot" />}
+                </span>
+                <div className="rc-cell-cards">
+                  {list.slice(0, compact ? 1 : 3).map((r) => {
+                    const area = r.area_id ? data?.areaMap.get(r.area_id) : null;
+                    const color = area ? getAreaColor(area.colorIdx) : AREA_COLORS[0];
+                    return (
+                      <div key={r.id} className="rc-card" style={{ "--card-bg": color.bg, "--card-dot": color.dot, "--card-text": color.text, "--card-text-dark": color.dark } as any}>
+                        <span className="rc-card-dot" />
+                        <div className="rc-card-body">
+                          <span className="rc-card-name">{area?.name ?? "Área"}</span>
+                          <span className="rc-card-time">{formatRange(r.starts_at, r.ends_at)}</span>
+                        </div>
                       </div>
-                    )}
-                  </>
-                )}
-              </button>
+                    );
+                  })}
+                  {list.length > (compact ? 1 : 3) && (
+                    <span className="rc-more">+{list.length - (compact ? 1 : 3)} mais</span>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
+      )}
 
-        {isLoading && (
-          <p className="mt-3 text-center text-[11px] text-muted-foreground animate-pulse">Carregando…</p>
-        )}
-      </div>
-
-      {selectedDay && (
-        <div className="border-t border-border bg-muted/30 p-4 animate-fade-in">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold">
-              Reservas de {new Date(selectedDay + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
-            </h3>
-            <button onClick={() => setSelectedDay(null)} className="h-7 w-7 inline-flex items-center justify-center rounded-lg hover:bg-muted transition">
-              <X className="h-3.5 w-3.5" />
-            </button>
+      {/* ── Footer ── */}
+      {(data?.areaList?.length ?? 0) > 0 && (
+        <div className="rc-footer">
+          <div className="rc-legend">
+            {(data?.areaList ?? []).map((a, i) => {
+              const color = getAreaColor(i);
+              return (
+                <span key={a.id} className="rc-legend-item">
+                  <span className="rc-legend-dot" style={{ background: color.dot }} />
+                  {a.name}
+                </span>
+              );
+            })}
           </div>
-          {selectedList.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-4">Nenhuma reserva nesse dia.</p>
+          <button className="rc-list-btn" onClick={() => setListView((v) => !v)}>
+            <List size={14} />
+            Ver lista de reservas
+          </button>
+        </div>
+      )}
+
+      {/* ── List panel ── */}
+      {listView && (
+        <div className="rc-list-panel">
+          <p className="rc-list-title">Reservas — {MONTH_NAMES[cursor.getMonth()]} {cursor.getFullYear()}</p>
+          {(data?.reservations ?? []).length === 0 ? (
+            <p className="rc-list-empty">Nenhuma reserva neste mês.</p>
           ) : (
-            <ul className="space-y-2">
-              {selectedList.map((r) => {
-                const area = r.area_id ? data?.areaMap.get(r.area_id) : null;
+            <ul className="rc-list">
+              {(data?.reservations ?? []).map((r) => {
+                const area     = r.area_id ? data?.areaMap.get(r.area_id) : null;
                 const resident = r.resident_id ? data?.profileMap.get(r.resident_id) : null;
+                const color    = area ? getAreaColor(area.colorIdx) : AREA_COLORS[0];
                 return (
-                  <li key={r.id} className="rounded-xl border border-border bg-card p-3 flex items-start gap-3 hover:border-primary/40 transition">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-                      <CalendarDays className="h-4 w-4" />
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold">{area?.name ?? "Área"}</p>
-                        <StatusChip status={r.status} />
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-                        <span className="inline-flex items-center gap-1">
-                          <User className="h-3 w-3" /> {resident?.full_name ?? "—"}
-                        </span>
-                        {resident?.unit_label && (
-                          <span className="inline-flex items-center gap-1">
-                            <Home className="h-3 w-3" /> {resident.unit_label}
-                          </span>
-                        )}
-                        <span className="inline-flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatRange(r.starts_at, r.ends_at)}
-                        </span>
-                      </div>
-                      {r.created_at && (
-                        <p className="mt-1 text-[10px] text-muted-foreground/70">
-                          Reserva feita em {new Date(r.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      )}
+                  <li key={r.id} className="rc-list-item">
+                    <span className="rc-list-dot" style={{ background: color.dot }} />
+                    <div className="rc-list-info">
+                      <span className="rc-list-area">{area?.name ?? "Área"}</span>
+                      <span className="rc-list-date">
+                        {new Date(r.starts_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} · {formatRange(r.starts_at, r.ends_at)}
+                        {resident?.full_name ? ` · ${resident.full_name}` : ""}
+                      </span>
                     </div>
+                    <StatusChip status={r.status} />
                   </li>
                 );
               })}
@@ -209,9 +219,554 @@ export function ReservationsCalendar({ condoId, compact = false }: { condoId: st
           )}
         </div>
       )}
+
+      <style>{`
+        .rc-wrap {
+          border-radius: 16px;
+          overflow: hidden;
+          border: 1px solid var(--rc-border, rgba(255,255,255,0.08));
+          background: var(--rc-bg, #0f1623);
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        /* Light mode tokens */
+        @media (prefers-color-scheme: light) {
+          .rc-wrap {
+            --rc-bg: #f8fafc;
+            --rc-border: rgba(0,0,0,0.08);
+            --rc-header-bg: #ffffff;
+            --rc-header-border: rgba(0,0,0,0.06);
+            --rc-title-color: #0f172a;
+            --rc-subtitle-color: #64748b;
+            --rc-nav-btn-bg: #f1f5f9;
+            --rc-nav-btn-hover: #e2e8f0;
+            --rc-nav-btn-color: #334155;
+            --rc-pill-bg: #e0f2fe;
+            --rc-pill-color: #0369a1;
+            --rc-day-header-color: #94a3b8;
+            --rc-weekend-color: #3b82f6;
+            --rc-cell-bg: #ffffff;
+            --rc-cell-border: rgba(0,0,0,0.05);
+            --rc-cell-hover: #f8fafc;
+            --rc-cell-today-border: #3b82f6;
+            --rc-cell-today-bg: rgba(59,130,246,0.04);
+            --rc-cell-day-color: #1e293b;
+            --rc-cell-weekend-color: #3b82f6;
+            --rc-cell-today-color: #3b82f6;
+            --rc-today-dot: #3b82f6;
+            --rc-card-text-prop: var(--card-text);
+            --rc-more-color: #64748b;
+            --rc-footer-bg: #ffffff;
+            --rc-footer-border: rgba(0,0,0,0.06);
+            --rc-legend-color: #475569;
+            --rc-list-btn-bg: #e0f2fe;
+            --rc-list-btn-color: #0369a1;
+            --rc-list-btn-hover: #bae6fd;
+            --rc-panel-bg: #f1f5f9;
+            --rc-panel-border: rgba(0,0,0,0.06);
+            --rc-list-title: #0f172a;
+            --rc-list-empty: #64748b;
+            --rc-list-item-border: rgba(0,0,0,0.06);
+            --rc-list-area: #1e293b;
+            --rc-list-date: #64748b;
+            --rc-loading-dot: #3b82f6;
+            --rc-icon-bg: rgba(59,130,246,0.1);
+            --rc-icon-color: #2563eb;
+          }
+        }
+
+        :root[data-theme="light"] .rc-wrap {
+          --rc-bg: #f8fafc;
+          --rc-border: rgba(0,0,0,0.08);
+          --rc-header-bg: #ffffff;
+          --rc-header-border: rgba(0,0,0,0.06);
+          --rc-title-color: #0f172a;
+          --rc-subtitle-color: #64748b;
+          --rc-nav-btn-bg: #f1f5f9;
+          --rc-nav-btn-hover: #e2e8f0;
+          --rc-nav-btn-color: #334155;
+          --rc-pill-bg: #e0f2fe;
+          --rc-pill-color: #0369a1;
+          --rc-day-header-color: #94a3b8;
+          --rc-weekend-color: #3b82f6;
+          --rc-cell-bg: #ffffff;
+          --rc-cell-border: rgba(0,0,0,0.05);
+          --rc-cell-hover: #f8fafc;
+          --rc-cell-today-border: #3b82f6;
+          --rc-cell-today-bg: rgba(59,130,246,0.04);
+          --rc-cell-day-color: #1e293b;
+          --rc-cell-weekend-color: #3b82f6;
+          --rc-cell-today-color: #3b82f6;
+          --rc-today-dot: #3b82f6;
+          --rc-more-color: #64748b;
+          --rc-footer-bg: #ffffff;
+          --rc-footer-border: rgba(0,0,0,0.06);
+          --rc-legend-color: #475569;
+          --rc-list-btn-bg: #e0f2fe;
+          --rc-list-btn-color: #0369a1;
+          --rc-list-btn-hover: #bae6fd;
+          --rc-panel-bg: #f1f5f9;
+          --rc-panel-border: rgba(0,0,0,0.06);
+          --rc-list-title: #0f172a;
+          --rc-list-empty: #64748b;
+          --rc-list-item-border: rgba(0,0,0,0.06);
+          --rc-list-area: #1e293b;
+          --rc-list-date: #64748b;
+          --rc-loading-dot: #3b82f6;
+          --rc-icon-bg: rgba(59,130,246,0.1);
+          --rc-icon-color: #2563eb;
+        }
+
+        /* Dark mode tokens (default) */
+        .rc-wrap {
+          --rc-bg: #0f1623;
+          --rc-border: rgba(255,255,255,0.07);
+          --rc-header-bg: #131d2e;
+          --rc-header-border: rgba(255,255,255,0.06);
+          --rc-title-color: #f1f5f9;
+          --rc-subtitle-color: #64748b;
+          --rc-nav-btn-bg: rgba(255,255,255,0.06);
+          --rc-nav-btn-hover: rgba(255,255,255,0.1);
+          --rc-nav-btn-color: #cbd5e1;
+          --rc-pill-bg: rgba(59,130,246,0.15);
+          --rc-pill-color: #60a5fa;
+          --rc-day-header-color: #475569;
+          --rc-weekend-color: #60a5fa;
+          --rc-cell-bg: #131d2e;
+          --rc-cell-border: rgba(255,255,255,0.04);
+          --rc-cell-hover: #1a2540;
+          --rc-cell-today-border: #3b82f6;
+          --rc-cell-today-bg: rgba(59,130,246,0.06);
+          --rc-cell-day-color: #cbd5e1;
+          --rc-cell-weekend-color: #60a5fa;
+          --rc-cell-today-color: #60a5fa;
+          --rc-today-dot: #3b82f6;
+          --rc-more-color: #475569;
+          --rc-footer-bg: #131d2e;
+          --rc-footer-border: rgba(255,255,255,0.06);
+          --rc-legend-color: #64748b;
+          --rc-list-btn-bg: rgba(59,130,246,0.12);
+          --rc-list-btn-color: #60a5fa;
+          --rc-list-btn-hover: rgba(59,130,246,0.2);
+          --rc-panel-bg: #0c1420;
+          --rc-panel-border: rgba(255,255,255,0.05);
+          --rc-list-title: #e2e8f0;
+          --rc-list-empty: #475569;
+          --rc-list-item-border: rgba(255,255,255,0.05);
+          --rc-list-area: #cbd5e1;
+          --rc-list-date: #475569;
+          --rc-loading-dot: #3b82f6;
+          --rc-icon-bg: rgba(59,130,246,0.12);
+          --rc-icon-color: #60a5fa;
+        }
+
+        :root[data-theme="dark"] .rc-wrap {
+          --rc-bg: #0f1623;
+          --rc-border: rgba(255,255,255,0.07);
+          --rc-header-bg: #131d2e;
+          --rc-header-border: rgba(255,255,255,0.06);
+          --rc-title-color: #f1f5f9;
+          --rc-subtitle-color: #64748b;
+          --rc-nav-btn-bg: rgba(255,255,255,0.06);
+          --rc-nav-btn-hover: rgba(255,255,255,0.1);
+          --rc-nav-btn-color: #cbd5e1;
+          --rc-pill-bg: rgba(59,130,246,0.15);
+          --rc-pill-color: #60a5fa;
+          --rc-day-header-color: #475569;
+          --rc-weekend-color: #60a5fa;
+          --rc-cell-bg: #131d2e;
+          --rc-cell-border: rgba(255,255,255,0.04);
+          --rc-cell-hover: #1a2540;
+          --rc-cell-today-border: #3b82f6;
+          --rc-cell-today-bg: rgba(59,130,246,0.06);
+          --rc-cell-day-color: #cbd5e1;
+          --rc-cell-weekend-color: #60a5fa;
+          --rc-cell-today-color: #60a5fa;
+          --rc-today-dot: #3b82f6;
+          --rc-more-color: #475569;
+          --rc-footer-bg: #131d2e;
+          --rc-footer-border: rgba(255,255,255,0.06);
+          --rc-legend-color: #64748b;
+          --rc-list-btn-bg: rgba(59,130,246,0.12);
+          --rc-list-btn-color: #60a5fa;
+          --rc-list-btn-hover: rgba(59,130,246,0.2);
+          --rc-panel-bg: #0c1420;
+          --rc-panel-border: rgba(255,255,255,0.05);
+          --rc-list-title: #e2e8f0;
+          --rc-list-empty: #475569;
+          --rc-list-item-border: rgba(255,255,255,0.05);
+          --rc-list-area: #cbd5e1;
+          --rc-list-date: #475569;
+          --rc-loading-dot: #3b82f6;
+          --rc-icon-bg: rgba(59,130,246,0.12);
+          --rc-icon-color: #60a5fa;
+        }
+
+        /* ── Components ── */
+
+        .rc-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 16px 20px;
+          background: var(--rc-header-bg);
+          border-bottom: 1px solid var(--rc-header-border);
+          flex-wrap: wrap;
+        }
+        .rc-header-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .rc-header-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          background: var(--rc-icon-bg);
+          color: var(--rc-icon-color);
+          flex-shrink: 0;
+        }
+        .rc-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--rc-title-color);
+          margin: 0;
+        }
+        .rc-subtitle {
+          font-size: 11px;
+          color: var(--rc-subtitle-color);
+          margin: 0;
+        }
+        .rc-nav {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .rc-nav-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          border-radius: 8px;
+          border: 1px solid var(--rc-border);
+          background: var(--rc-nav-btn-bg);
+          color: var(--rc-nav-btn-color);
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .rc-nav-btn:hover { background: var(--rc-nav-btn-hover); }
+        .rc-month-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          height: 34px;
+          padding: 0 14px;
+          border-radius: 8px;
+          background: var(--rc-pill-bg);
+          color: var(--rc-pill-color);
+          font-size: 13px;
+          font-weight: 600;
+          border: none;
+          cursor: default;
+          white-space: nowrap;
+        }
+
+        .rc-day-headers {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          padding: 10px 12px 4px;
+          gap: 4px;
+        }
+        .rc-day-header {
+          text-align: center;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          color: var(--rc-day-header-color);
+          padding: 4px 0;
+          text-transform: uppercase;
+        }
+        .rc-day-header--weekend { color: var(--rc-weekend-color); }
+
+        .rc-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 4px;
+          padding: 4px 12px 12px;
+        }
+        .rc-cell {
+          min-height: 88px;
+          border-radius: 10px;
+          border: 1px solid var(--rc-cell-border);
+          background: var(--rc-cell-bg);
+          padding: 8px 6px 6px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          cursor: pointer;
+          transition: background 0.12s, border-color 0.12s;
+          overflow: hidden;
+        }
+        .rc-cell:hover { background: var(--rc-cell-hover); }
+        .rc-cell--empty {
+          min-height: 88px;
+          border-radius: 10px;
+          background: transparent;
+          border: none;
+          cursor: default;
+        }
+        .rc-cell--today {
+          border-color: var(--rc-cell-today-border) !important;
+          background: var(--rc-cell-today-bg);
+          box-shadow: 0 0 0 1px var(--rc-cell-today-border);
+        }
+        .rc-cell-day {
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--rc-cell-day-color);
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          line-height: 1;
+        }
+        .rc-cell--weekend .rc-cell-day { color: var(--rc-cell-weekend-color); }
+        .rc-cell-day--today { color: var(--rc-cell-today-color) !important; font-weight: 700; }
+        .rc-today-dot {
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--rc-today-dot);
+        }
+
+        .rc-cell-cards {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          flex: 1;
+          overflow: hidden;
+        }
+        .rc-card {
+          display: flex;
+          align-items: flex-start;
+          gap: 5px;
+          border-radius: 6px;
+          padding: 4px 5px;
+          background: var(--card-bg);
+          min-width: 0;
+        }
+        .rc-card-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--card-dot);
+          flex-shrink: 0;
+          margin-top: 3px;
+        }
+        .rc-card-body {
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+          gap: 1px;
+        }
+        .rc-card-name {
+          font-size: 10px;
+          font-weight: 600;
+          color: var(--card-text);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          line-height: 1.2;
+        }
+        .rc-card-time {
+          font-size: 9px;
+          font-variant-numeric: tabular-nums;
+          color: var(--card-text);
+          opacity: 0.75;
+          line-height: 1.2;
+        }
+
+        @media (prefers-color-scheme: dark) {
+          .rc-card-name { color: var(--card-text-dark); }
+          .rc-card-time { color: var(--card-text-dark); }
+        }
+        :root[data-theme="dark"] .rc-card-name { color: var(--card-text-dark); }
+        :root[data-theme="dark"] .rc-card-time { color: var(--card-text-dark); }
+
+        .rc-more {
+          font-size: 9px;
+          color: var(--rc-more-color);
+          font-weight: 600;
+          padding-left: 2px;
+        }
+
+        /* Footer */
+        .rc-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 20px;
+          border-top: 1px solid var(--rc-footer-border);
+          background: var(--rc-footer-bg);
+          flex-wrap: wrap;
+        }
+        .rc-legend {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex-wrap: wrap;
+        }
+        .rc-legend-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 11px;
+          font-weight: 500;
+          color: var(--rc-legend-color);
+          white-space: nowrap;
+        }
+        .rc-legend-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .rc-list-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          height: 32px;
+          padding: 0 14px;
+          border-radius: 8px;
+          background: var(--rc-list-btn-bg);
+          color: var(--rc-list-btn-color);
+          font-size: 12px;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: background 0.15s;
+        }
+        .rc-list-btn:hover { background: var(--rc-list-btn-hover); }
+
+        /* List panel */
+        .rc-list-panel {
+          border-top: 1px solid var(--rc-panel-border);
+          background: var(--rc-panel-bg);
+          padding: 16px 20px;
+        }
+        .rc-list-title {
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--rc-list-title);
+          margin: 0 0 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .rc-list-empty {
+          font-size: 12px;
+          color: var(--rc-list-empty);
+          text-align: center;
+          padding: 16px 0;
+        }
+        .rc-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 240px;
+          overflow-y: auto;
+        }
+        .rc-list-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px solid var(--rc-list-item-border);
+          background: var(--rc-cell-bg);
+        }
+        .rc-list-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .rc-list-info {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .rc-list-area {
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--rc-list-area);
+        }
+        .rc-list-date {
+          font-size: 11px;
+          color: var(--rc-list-date);
+          font-variant-numeric: tabular-nums;
+        }
+
+        /* Loading */
+        .rc-loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 48px 0;
+        }
+        .rc-loading-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: var(--rc-loading-dot);
+          animation: rc-bounce 0.8s infinite ease-in-out;
+        }
+        @keyframes rc-bounce {
+          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+          40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Status chips */
+        .rc-chip {
+          font-size: 10px;
+          font-weight: 600;
+          padding: 2px 7px;
+          border-radius: 20px;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .rc-chip--pendente   { background: rgba(251,191,36,0.15); color: #F59E0B; }
+        .rc-chip--confirmada { background: rgba(34,197,94,0.15);  color: #22C55E; }
+        .rc-chip--execucao   { background: rgba(59,130,246,0.15); color: #3B82F6; }
+        .rc-chip--concluida  { background: rgba(34,197,94,0.1);   color: #16A34A; }
+        .rc-chip--cancelada  { background: rgba(239,68,68,0.15);  color: #EF4444; }
+
+        @media (max-width: 640px) {
+          .rc-cell { min-height: 56px; padding: 5px 4px 4px; }
+          .rc-card { padding: 3px 4px; gap: 3px; }
+          .rc-card-name { font-size: 9px; }
+          .rc-card-time { display: none; }
+          .rc-cell-day { font-size: 11px; }
+          .rc-day-header { font-size: 9px; }
+        }
+      `}</style>
     </div>
   );
 }
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function buildMonthGrid(cursor: Date): (Date | null)[] {
   const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
@@ -229,21 +784,19 @@ function isoDay(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function formatRange(s: string, e: string) {
-  const sd = new Date(s);
-  const ed = new Date(e);
-  const f = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  return `${f(sd)} – ${f(ed)}`;
+function formatRange(s: string, e: string): string {
+  const fmt = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `${fmt(new Date(s))} - ${fmt(new Date(e))}`;
 }
 
 function StatusChip({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    pendente: { label: "Pendente", cls: "bg-warning/20 text-warning-foreground border border-warning/40" },
-    confirmada: { label: "Confirmada", cls: "bg-primary/15 text-primary border border-primary/30" },
-    em_execucao: { label: "Em uso", cls: "bg-primary/15 text-primary border border-primary/30" },
-    concluida: { label: "Concluída", cls: "bg-success/15 text-success border border-success/30" },
-    cancelada: { label: "Cancelada", cls: "bg-destructive/15 text-destructive border border-destructive/30" },
+    pendente:    { label: "Pendente",   cls: "rc-chip--pendente"   },
+    confirmada:  { label: "Confirmada", cls: "rc-chip--confirmada" },
+    em_execucao: { label: "Em uso",     cls: "rc-chip--execucao"   },
+    concluida:   { label: "Concluída",  cls: "rc-chip--concluida"  },
+    cancelada:   { label: "Cancelada",  cls: "rc-chip--cancelada"  },
   };
   const v = map[status] ?? map.pendente;
-  return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${v.cls}`}>{v.label}</span>;
+  return <span className={`rc-chip ${v.cls}`}>{v.label}</span>;
 }
