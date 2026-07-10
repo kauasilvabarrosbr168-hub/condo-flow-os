@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Loader2, Save, MessageSquare, Mail, Bell, Phone, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, Save, MessageSquare, Mail, Bell, Phone, CheckCircle2, CalendarX } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { HOLIDAY_CATALOG } from "@/lib/holidays";
 
 export const Route = createFileRoute("/app/settings")({
   head: () => ({ meta: [{ title: "Configurações · CondoFlow" }] }),
@@ -12,11 +13,42 @@ export const Route = createFileRoute("/app/settings")({
 });
 
 function SettingsPage() {
-  const { profile, condo, refresh } = useAuth();
+  const { profile, condo, primaryRole, refresh } = useAuth();
+  const condoId = condo?.id ?? profile?.condo_id ?? null;
+  const isSindico = primaryRole === "sindico" || primaryRole === "administradora";
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [unit, setUnit] = useState(profile?.unit_label ?? "");
   const [busy, setBusy] = useState(false);
+  const [blockedHolidays, setBlockedHolidays] = useState<Set<string>>(new Set());
+  const [holidaysBusy, setHolidaysBusy] = useState(false);
+
+  useEffect(() => {
+    if (!condoId || !isSindico) return;
+    supabase
+      .from("condo_holiday_rules")
+      .select("holiday_key")
+      .eq("condo_id", condoId)
+      .eq("blocked", true)
+      .then(({ data }) => {
+        setBlockedHolidays(new Set((data ?? []).map((r) => r.holiday_key)));
+      });
+  }, [condoId, isSindico]);
+
+  const toggleHoliday = async (key: string) => {
+    if (!condoId) return;
+    setHolidaysBusy(true);
+    const isBlocked = blockedHolidays.has(key);
+    if (isBlocked) {
+      await supabase.from("condo_holiday_rules").delete().eq("condo_id", condoId).eq("holiday_key", key);
+      setBlockedHolidays((prev) => { const s = new Set(prev); s.delete(key); return s; });
+    } else {
+      await supabase.from("condo_holiday_rules").upsert({ condo_id: condoId, holiday_key: key, blocked: true });
+      setBlockedHolidays((prev) => new Set([...prev, key]));
+    }
+    setHolidaysBusy(false);
+    toast.success(isBlocked ? "Feriado liberado" : "Feriado bloqueado");
+  };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +138,43 @@ function SettingsPage() {
           </div>
         )}
       </section>
+
+      {isSindico && condoId && (
+        <section className="rounded-2xl border border-border bg-card shadow-card p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <CalendarX className="h-4 w-4 text-red-500" />
+            <h2 className="text-sm font-semibold">Feriados bloqueados</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Selecione os feriados em que reservas de áreas comuns não são permitidas. Dias bloqueados aparecem em <span className="text-red-500 font-medium">vermelho</span> no calendário.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {HOLIDAY_CATALOG.map((h) => {
+              const blocked = blockedHolidays.has(h.key);
+              return (
+                <button
+                  key={h.key}
+                  onClick={() => toggleHoliday(h.key)}
+                  disabled={holidaysBusy}
+                  className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition text-sm ${
+                    blocked
+                      ? "border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/40 text-red-600 dark:text-red-400"
+                      : "border-border bg-background hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <span className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${blocked ? "bg-red-500 border-red-500" : "border-muted-foreground"}`}>
+                    {blocked && <svg viewBox="0 0 12 12" fill="none" className="h-3 w-3"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  </span>
+                  <span className="text-xs font-medium">{h.name}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            {blockedHolidays.size === 0 ? "Nenhum feriado bloqueado — todas as datas estão liberadas." : `${blockedHolidays.size} feriado${blockedHolidays.size > 1 ? "s" : ""} bloqueado${blockedHolidays.size > 1 ? "s" : ""}.`}
+          </p>
+        </section>
+      )}
     </div>
   );
 }

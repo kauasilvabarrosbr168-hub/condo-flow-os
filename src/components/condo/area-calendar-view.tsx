@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { scheduleLabel, type WeekSchedule } from "./area-schedule-picker";
+import { buildHolidayMap, toDateKey, type Holiday } from "@/lib/holidays";
 
 type Reservation = {
   id: string;
@@ -68,7 +69,21 @@ export function AreaCalendarView({
   const [loadingRes, setLoadingRes] = useState(true);
   const [newNotice, setNewNotice] = useState("");
   const [postingNotice, setPostingNotice] = useState(false);
+  const [holidayMap, setHolidayMap] = useState<Map<string, Holiday>>(new Map());
   const qc = useQueryClient();
+
+  // Buscar feriados bloqueados do condomínio
+  useEffect(() => {
+    supabase
+      .from("condo_holiday_rules")
+      .select("holiday_key")
+      .eq("condo_id", condoId)
+      .eq("blocked", true)
+      .then(({ data }) => {
+        const keys = new Set((data ?? []).map((r) => r.holiday_key));
+        setHolidayMap(buildHolidayMap([year - 1, year, year + 1], keys));
+      });
+  }, [condoId, year]);
 
   // Fetch reservations for this area / month
   const fetchReservations = async () => {
@@ -272,16 +287,25 @@ export function AreaCalendarView({
                 const active = rsvs.length > 0;
                 const selected = selectedDay === d;
                 const today_ = isToday(d);
+                const dateKey = toDateKey(new Date(year, month, d));
+                const holiday = holidayMap.get(dateKey);
                 return (
                   <button
                     key={d}
                     onClick={() => setSelectedDay(selected ? null : d)}
+                    title={holiday ? `🚫 Feriado bloqueado: ${holiday.name}` : undefined}
                     className={`relative aspect-square rounded-xl flex flex-col items-center justify-center text-sm transition
-                      ${selected ? "bg-primary text-primary-foreground" : today_ ? "bg-primary/10 font-semibold" : "hover:bg-muted"}
+                      ${selected
+                        ? holiday ? "bg-red-500 text-white" : "bg-primary text-primary-foreground"
+                        : holiday ? "bg-red-500/15 text-red-600 dark:text-red-400 font-semibold hover:bg-red-500/25"
+                        : today_ ? "bg-primary/10 font-semibold" : "hover:bg-muted"}
                     `}
                   >
                     {d}
-                    {active && (
+                    {holiday && !selected && (
+                      <span className="absolute bottom-1 h-1 w-1 rounded-full bg-red-500" />
+                    )}
+                    {active && !holiday && (
                       <span className={`absolute bottom-1 h-1 w-1 rounded-full ${selected ? "bg-primary-foreground" : "bg-primary"}`} />
                     )}
                   </button>
@@ -291,8 +315,9 @@ export function AreaCalendarView({
           )}
 
           {/* Legend */}
-          <div className="mt-3 flex items-center gap-4 text-[10px] text-muted-foreground border-t border-border pt-3">
+          <div className="mt-3 flex items-center gap-4 text-[10px] text-muted-foreground border-t border-border pt-3 flex-wrap">
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary inline-block" />Com reservas</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" />Feriado bloqueado</span>
           </div>
         </div>
 
@@ -307,7 +332,17 @@ export function AreaCalendarView({
             {!selectedDay && (
               <p className="text-xs text-muted-foreground">Clique em um dia no calendário para ver as reservas.</p>
             )}
-            {selectedDay && dayReservations.length === 0 && (
+            {selectedDay && holidayMap.get(toDateKey(new Date(year, month, selectedDay))) && (
+              <div className="mb-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 px-3 py-2">
+                <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                  🚫 Feriado bloqueado
+                </p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
+                  {holidayMap.get(toDateKey(new Date(year, month, selectedDay)))!.name} — reservas não permitidas neste dia conforme regra do condomínio.
+                </p>
+              </div>
+            )}
+            {selectedDay && dayReservations.length === 0 && !holidayMap.get(toDateKey(new Date(year, month, selectedDay))) && (
               <p className="text-xs text-muted-foreground">Nenhuma reserva neste dia.</p>
             )}
             <div className="space-y-2">
