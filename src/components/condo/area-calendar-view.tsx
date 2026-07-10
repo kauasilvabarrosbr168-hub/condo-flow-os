@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  ChevronLeft, ChevronRight, Loader2, Trash2, Bell, Clock, Users, MessageSquare, Plus, X,
+  ChevronLeft, ChevronRight, Loader2, Trash2, Bell, Clock, Users, MessageSquare, Plus, X, CalendarPlus,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-auth";
@@ -63,7 +63,8 @@ export function AreaCalendarView({
   const { isAdmin, user, profile } = useAuth();
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth());
-  const [selectedDay, setSelectedDay] = useState<number | null>(new Date().getDate());
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [dayModalOpen, setDayModalOpen] = useState(false);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loadingRes, setLoadingRes] = useState(true);
@@ -254,7 +255,7 @@ export function AreaCalendarView({
         )}
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_320px] gap-5">
+      <div className="grid gap-5">
         {/* Calendar */}
         <div className="rounded-2xl border border-border bg-card p-4">
           {/* Month nav */}
@@ -292,7 +293,7 @@ export function AreaCalendarView({
                 return (
                   <button
                     key={d}
-                    onClick={() => setSelectedDay(selected ? null : d)}
+                    onClick={() => { setSelectedDay(d); setDayModalOpen(true); }}
                     title={holiday ? `🚫 Feriado bloqueado: ${holiday.name}` : undefined}
                     className={`relative aspect-square rounded-xl flex flex-col items-center justify-center text-sm transition
                       ${selected
@@ -320,77 +321,29 @@ export function AreaCalendarView({
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" />Feriado bloqueado</span>
           </div>
         </div>
-
-        {/* Day detail */}
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-border bg-card p-4 min-h-[200px]">
-            <h3 className="text-sm font-semibold mb-3">
-              {selectedDay
-                ? `${selectedDay} de ${MONTH_NAMES[month]}`
-                : "Selecione um dia"}
-            </h3>
-            {!selectedDay && (
-              <p className="text-xs text-muted-foreground">Clique em um dia no calendário para ver as reservas.</p>
-            )}
-            {selectedDay && holidayMap.get(toDateKey(new Date(year, month, selectedDay))) && (
-              <div className="mb-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 px-3 py-2">
-                <p className="text-xs font-semibold text-red-600 dark:text-red-400">
-                  🚫 Feriado bloqueado
-                </p>
-                <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
-                  {holidayMap.get(toDateKey(new Date(year, month, selectedDay)))!.name} — reservas não permitidas neste dia conforme regra do condomínio.
-                </p>
-              </div>
-            )}
-            {selectedDay && dayReservations.length === 0 && !holidayMap.get(toDateKey(new Date(year, month, selectedDay))) && (
-              <p className="text-xs text-muted-foreground">Nenhuma reserva neste dia.</p>
-            )}
-            <div className="space-y-2">
-              {dayReservations.map((r) => (
-                <div key={r.id} className="rounded-xl border border-border bg-background p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full shrink-0 ${statusColor[r.status] ?? "bg-muted"}`} />
-                        <span className="text-xs font-medium">
-                          {fmt(r.starts_at)} – {fmt(r.ends_at)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {r.profiles?.full_name ?? "Morador"}
-                        {r.profiles?.unit_label ? ` · Unid. ${r.profiles.unit_label}` : ""}
-                      </p>
-                      {r.guests ? <p className="text-[11px] text-muted-foreground">{r.guests} convidado(s)</p> : null}
-                      {r.notes && (
-                        <p className="text-[11px] text-muted-foreground mt-1 italic border-l-2 border-primary/30 pl-2">
-                          "{r.notes}"
-                        </p>
-                      )}
-                    </div>
-                    {isAdmin && r.status !== "cancelada" && (
-                      <button
-                        onClick={() => cancelReservation(r.id)}
-                        className="h-7 w-7 rounded-lg hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center shrink-0"
-                        title="Cancelar reserva"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Rules quick view */}
-          {area.rules && (
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Regras de uso</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line line-clamp-6">{area.rules}</p>
-            </div>
-          )}
-        </div>
       </div>
+
+      {/* Day popup modal */}
+      {dayModalOpen && selectedDay && (
+        <DayModal
+          day={selectedDay}
+          month={month}
+          year={year}
+          area={area}
+          condoId={condoId}
+          reservations={byDay.get(selectedDay) ?? []}
+          holiday={holidayMap.get(toDateKey(new Date(year, month, selectedDay))) ?? null}
+          isAdmin={isAdmin}
+          userId={user?.id ?? ""}
+          statusColor={statusColor}
+          onClose={() => setDayModalOpen(false)}
+          onCancelReservation={cancelReservation}
+          onReserved={() => { fetchReservations(); setDayModalOpen(false); }}
+        />
+      )}
+
+      {/* Hint */}
+      <p className="text-xs text-muted-foreground text-center -mt-2">Clique em qualquer dia para ver reservas ou criar uma nova</p>
 
       {/* Notices section */}
       <div className="rounded-2xl border border-border bg-card p-5">
@@ -450,3 +403,164 @@ export function AreaCalendarView({
     </div>
   );
 }
+
+// ─── Day Modal ────────────────────────────────────────────────────────────────
+
+function DayModal({
+  day, month, year, area, condoId, reservations, holiday, isAdmin, userId,
+  statusColor, onClose, onCancelReservation, onReserved,
+}: {
+  day: number; month: number; year: number;
+  area: Area; condoId: string;
+  reservations: Reservation[];
+  holiday: Holiday | null;
+  isAdmin: boolean; userId: string;
+  statusColor: Record<string, string>;
+  onClose: () => void;
+  onCancelReservation: (id: string) => void;
+  onReserved: () => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("12:00");
+  const [guests, setGuests] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const dateLabel = `${day} de ${MONTH_NAMES[month]} de ${year}`;
+  const isPast = new Date(year, month, day) < new Date(new Date().setHours(0,0,0,0));
+
+  const submit = async () => {
+    if (!userId) return;
+    const startsAt = new Date(year, month, day, parseInt(startTime), parseInt(startTime.split(":")[1])).toISOString();
+    const endsAt = new Date(year, month, day, parseInt(endTime), parseInt(endTime.split(":")[1])).toISOString();
+    if (startsAt >= endsAt) { toast.error("Horário de início deve ser antes do término."); return; }
+    setBusy(true);
+    const { error } = await supabase.from("reservations").insert({
+      area_id: area.id,
+      condo_id: condoId,
+      resident_id: userId,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      guests: guests ? parseInt(guests) : null,
+      notes: notes.trim() || null,
+      status: "pendente",
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Reserva solicitada!");
+    onReserved();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-md bg-card rounded-2xl border border-border shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div>
+            <p className="text-xs text-muted-foreground">{area.name}</p>
+            <h3 className="font-semibold">{dateLabel}</h3>
+          </div>
+          <button onClick={onClose} className="h-8 w-8 rounded-lg hover:bg-muted inline-flex items-center justify-center">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Holiday warning */}
+          {holiday && (
+            <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 px-4 py-3">
+              <p className="text-sm font-semibold text-red-600 dark:text-red-400">🚫 Feriado bloqueado</p>
+              <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                {holiday.name} — reservas não permitidas neste dia conforme regra do condomínio.
+              </p>
+            </div>
+          )}
+
+          {/* Existing reservations */}
+          {reservations.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Reservas neste dia</p>
+              <div className="space-y-2">
+                {reservations.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full shrink-0 ${statusColor[r.status] ?? "bg-muted"}`} />
+                      <div>
+                        <p className="text-xs font-medium">{fmt(r.starts_at)} – {fmt(r.ends_at)}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {r.profiles?.full_name ?? "Morador"}{r.profiles?.unit_label ? ` · Unid. ${r.profiles.unit_label}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    {isAdmin && r.status !== "cancelada" && (
+                      <button onClick={() => onCancelReservation(r.id)} className="h-6 w-6 rounded hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reserve form */}
+          {!holiday && !isPast && (
+            <>
+              {!showForm ? (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-gradient-hero text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+                >
+                  <CalendarPlus className="h-4 w-4" />
+                  {reservations.length > 0 ? "Fazer nova reserva" : "Reservar esta data"}
+                </button>
+              ) : (
+                <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nova reserva · {dateLabel}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block">
+                      <span className="text-xs text-muted-foreground">Início</span>
+                      <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputCls} />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs text-muted-foreground">Término</span>
+                      <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputCls} />
+                    </label>
+                  </div>
+                  <label className="block">
+                    <span className="text-xs text-muted-foreground">Convidados (opcional)</span>
+                    <input type="number" min="0" value={guests} onChange={(e) => setGuests(e.target.value)} placeholder="0" className={inputCls} />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs text-muted-foreground">Observações (opcional)</span>
+                    <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Algum detalhe importante…" className={inputCls + " resize-none py-2"} />
+                  </label>
+                  {area.rules && (
+                    <p className="text-[11px] text-muted-foreground border-l-2 border-border pl-2 italic leading-relaxed">{area.rules}</p>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => setShowForm(false)} className="flex-1 h-10 rounded-xl border border-border text-sm hover:bg-muted transition">Cancelar</button>
+                    <button onClick={submit} disabled={busy} className="flex-1 h-10 rounded-xl bg-gradient-hero text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60 transition">
+                      {busy ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Confirmar reserva"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {isPast && !holiday && reservations.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-2">Data passada — não é possível reservar.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const inputCls = "mt-1 w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40";
