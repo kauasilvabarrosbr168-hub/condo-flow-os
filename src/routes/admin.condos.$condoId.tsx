@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/brand";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { getCondoDetails, upsertArea, deleteArea } from "@/lib/admin-condo.functions";
 import { AreaCalendarView } from "@/components/condo/area-calendar-view";
 import { AreaSchedulePicker, EMPTY_SCHEDULE, type WeekSchedule } from "@/components/condo/area-schedule-picker";

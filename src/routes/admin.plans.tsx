@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Package, Loader2, Check } from "lucide-react";
 import { PageHeader } from "@/components/admin/admin-shell";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/plans")({
   head: () => ({ meta: [{ title: "Planos · CondoFlow Admin" }] }),

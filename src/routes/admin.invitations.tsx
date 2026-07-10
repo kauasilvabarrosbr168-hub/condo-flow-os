@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { MailCheck, Loader2 } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Badge } from "@/components/brand";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/invitations")({
   head: () => ({ meta: [{ title: "Convites · CondoFlow Admin" }] }),

@@ -11,7 +11,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { PageHeader, KpiCard, SectionCard, EmptyBlock } from "@/components/admin/admin-shell";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard global · CondoFlow Admin" }] }),

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Building, Plus, Loader2, X, Trash2, CalendarDays, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/empty-state";
 import { AreaCalendarView } from "@/components/condo/area-calendar-view";
 import { scheduleLabel, type WeekSchedule } from "@/components/condo/area-schedule-picker";

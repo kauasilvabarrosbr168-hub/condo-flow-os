@@ -56,6 +56,46 @@ Analise e responda APENAS com JSON válido (sem markdown):
   return { severity: 'warning', analysis: rulesSummary, recommendation: '' }
 }
 
+async function sendWhatsApp(phone: string, message: string): Promise<void> {
+  const sid = process.env.TWILIO_ACCOUNT_SID
+  const token = process.env.TWILIO_AUTH_TOKEN
+  const from = process.env.TWILIO_WHATSAPP_FROM ?? 'whatsapp:+14155238886'
+  if (!sid || !token) return
+
+  const to = phone.startsWith('whatsapp:') ? phone : `whatsapp:${phone}`
+
+  try {
+    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${btoa(`${sid}:${token}`)}`,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ From: from, To: to, Body: message }).toString(),
+    })
+  } catch {
+    // falha silenciosa — notificação não deve travar o fluxo
+  }
+}
+
+function buildWhatsAppMessage(severity: AISeverity, summary: string, recommendation: string, eventType: string): string {
+  const emoji = severity === 'critical' ? '🚨' : '⚠️'
+  const eventLabel: Record<string, string> = {
+    reservation_created: 'Reserva criada',
+    reservation_cancelled: 'Reserva cancelada',
+    task_status_changed: 'Tarefa atualizada',
+    cleaning_requested: 'Limpeza solicitada',
+    service_completed: 'Serviço concluído',
+    incident_reported: 'Incidente reportado',
+  }
+  const label = eventLabel[eventType] ?? eventType
+
+  let msg = `${emoji} *CondoFlow — ${label}*\n\n${summary}`
+  if (recommendation) msg += `\n\n💡 *Recomendação:* ${recommendation}`
+  msg += '\n\n_Acesse o app para mais detalhes._'
+  return msg
+}
+
 export const dispatchAIEvent = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }: { data: AIEventInput }) => {
@@ -67,7 +107,12 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
       .eq('condo_id', data.condoId)
       .maybeSingle()
 
-    const settings: CondoAISettings = settingsRow ?? DEFAULT_SETTINGS
+    const settings: CondoAISettings & {
+      whatsapp_phone?: string | null
+      notify_warning?: boolean
+      notify_critical?: boolean
+    } = settingsRow ?? DEFAULT_SETTINGS
+
     if (!settings.enabled) return { success: true, skipped: true }
 
     const rulesResult = runRulesEngine(data, settings)
@@ -77,6 +122,7 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
     let aiCalled = false
     let finalSeverity = rulesResult.severity
     let finalSummary = rulesResult.summary
+    let finalRecommendation = ''
 
     if (rulesResult.needsAI) {
       aiCalled = true
@@ -84,6 +130,7 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
       aiAnalysis = aiResult.analysis
       finalSeverity = (aiResult.severity ?? finalSeverity) as AISeverity
       finalSummary = aiResult.analysis
+      finalRecommendation = aiResult.recommendation ?? ''
       if (aiResult.recommendation) actionsExecuted.push(`IA: ${aiResult.recommendation}`)
     }
 
@@ -102,6 +149,18 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
       summary: finalSummary,
       actions_taken: actionsExecuted,
     })
+
+    // WhatsApp — só envia para warning/critical se o síndico configurou o número
+    const phone = settings.whatsapp_phone
+    const shouldNotify =
+      phone &&
+      ((finalSeverity === 'warning' && settings.notify_warning !== false) ||
+        (finalSeverity === 'critical' && settings.notify_critical !== false))
+
+    if (shouldNotify) {
+      const msg = buildWhatsAppMessage(finalSeverity, finalSummary, finalRecommendation, data.eventType)
+      void sendWhatsApp(phone, msg)
+    }
 
     return { success: true }
   })

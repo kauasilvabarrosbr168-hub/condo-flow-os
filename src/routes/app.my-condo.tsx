@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Copy, RefreshCw, Check, Sparkles, Plus, X, Phone, Trash2 } from "lucide-react";
 import { CondoEditor } from "@/components/condo/condo-editor";
 import { getMyCondoId, getCondoJoinCode, regenerateCondoJoinCode } from "@/lib/admin-condo.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 type CleaningService = { id: string; name: string; phone: string | null; price_cents: number; notes: string | null };

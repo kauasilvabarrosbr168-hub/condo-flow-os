@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Mail, Plus, Loader2, X, Copy, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { Badge } from "@/components/brand";

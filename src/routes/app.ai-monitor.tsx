@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Brain, Zap, AlertTriangle, CheckCircle2, Info, Loader2, ChevronDown, ChevronRight, ToggleLeft, ToggleRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Brain, Zap, AlertTriangle, CheckCircle2, Loader2, ChevronDown, ChevronRight, ToggleLeft, ToggleRight, MessageCircle, Phone, Save } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 
@@ -32,6 +32,9 @@ type AISettings = {
   can_change_priority: boolean;
   can_create_reminders: boolean;
   can_redistribute_tasks: boolean;
+  whatsapp_phone?: string | null;
+  notify_warning?: boolean;
+  notify_critical?: boolean;
 };
 
 function AIMonitorPage() {
@@ -40,6 +43,8 @@ function AIMonitorPage() {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [settingsBusy, setSettingsBusy] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState("");
+  const [phoneSaving, setPhoneSaving] = useState(false);
 
   const { data: events, isLoading } = useQuery({
     enabled: !!condoId,
@@ -69,6 +74,10 @@ function AIMonitorPage() {
     },
   });
 
+  useEffect(() => {
+    if (settings?.whatsapp_phone) setWhatsappPhone(settings.whatsapp_phone);
+  }, [settings?.whatsapp_phone]);
+
   if (!condoId || !isAdmin) {
     return (
       <div className="p-8">
@@ -82,6 +91,19 @@ function AIMonitorPage() {
   const aiCallsToday = todayEvents.filter((e) => e.ai_called).length;
   const criticalToday = todayEvents.filter((e) => e.severity === "critical").length;
   const totalActionsToday = todayEvents.reduce((acc, e) => acc + (e.actions_taken?.length ?? 0), 0);
+
+  const savePhone = async () => {
+    if (!condoId || !settings) return;
+    setPhoneSaving(true);
+    const phone = whatsappPhone.trim().replace(/\s/g, "");
+    const { error } = await supabase
+      .from("condo_ai_settings")
+      .upsert({ ...settings, condo_id: condoId, whatsapp_phone: phone || null });
+    setPhoneSaving(false);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["condo_ai_settings", condoId] });
+    toast.success(phone ? "WhatsApp salvo! Alertas serão enviados para esse número." : "Número removido.");
+  };
 
   const toggleEnabled = async () => {
     if (!settings) return;
@@ -156,6 +178,44 @@ function AIMonitorPage() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp */}
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <MessageCircle className="h-4 w-4 text-green-500" />
+          <p className="text-sm font-semibold">Notificações via WhatsApp</p>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Alertas de nível <strong>aviso</strong> e <strong>crítico</strong> chegam direto no seu WhatsApp em tempo real.
+        </p>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              value={whatsappPhone}
+              onChange={(e) => setWhatsappPhone(e.target.value)}
+              placeholder="+55 11 99999-9999"
+              className="w-full h-10 rounded-lg border border-input bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+            />
+          </div>
+          <button
+            onClick={savePhone}
+            disabled={phoneSaving}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 disabled:opacity-60 transition"
+          >
+            {phoneSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar
+          </button>
+        </div>
+        {settings?.whatsapp_phone && (
+          <p className="mt-2 text-xs text-green-600 dark:text-green-400">
+            ✓ Ativo — alertas sendo enviados para {settings.whatsapp_phone}
+          </p>
+        )}
+        {!settings?.whatsapp_phone && (
+          <p className="mt-2 text-xs text-muted-foreground">Nenhum número cadastrado — notificações desativadas.</p>
+        )}
+      </div>
 
       {/* Event timeline */}
       <div className="rounded-2xl border border-border bg-card">

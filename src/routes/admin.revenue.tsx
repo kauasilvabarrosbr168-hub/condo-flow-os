@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { DollarSign, TrendingUp } from "lucide-react";
 import { PageHeader, KpiCard, SectionCard, EmptyBlock } from "@/components/admin/admin-shell";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/revenue")({
   head: () => ({ meta: [{ title: "Receita · CondoFlow Admin" }] }),

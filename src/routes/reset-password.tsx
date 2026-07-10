@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, KeyRound, CheckCircle2, XCircle, Eye, EyeOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Logo } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ShieldCheck } from "lucide-react";

@@ -4,7 +4,7 @@ import { Search, Users as UsersIcon, Loader2 } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/brand";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({ meta: [{ title: "Usuários · CondoFlow Admin" }] }),

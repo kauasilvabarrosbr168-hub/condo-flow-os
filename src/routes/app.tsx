@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { useAuth, type Role } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getMyMembershipStatus } from "@/lib/membership.functions";
 import {

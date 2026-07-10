@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Loader2, CreditCard } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Badge } from "@/components/brand";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 

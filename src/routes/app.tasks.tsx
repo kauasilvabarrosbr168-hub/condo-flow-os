@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ListChecks, Check, Loader2, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/brand";
 import { toast } from "sonner";

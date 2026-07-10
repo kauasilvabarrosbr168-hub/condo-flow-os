@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft, ChevronRight, Loader2, Trash2, Bell, Clock, Users, MessageSquare, Plus, X,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { scheduleLabel, type WeekSchedule } from "./area-schedule-picker";

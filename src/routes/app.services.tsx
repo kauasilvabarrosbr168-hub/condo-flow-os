@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ClipboardCheck, Loader2, Camera, CheckCircle2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";

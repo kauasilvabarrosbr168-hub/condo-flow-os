@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { CalendarPlus, Building, Loader2, X, Trash2, Check, Clock, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/brand";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
