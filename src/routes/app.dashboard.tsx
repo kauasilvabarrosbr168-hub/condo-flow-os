@@ -339,7 +339,7 @@ function ResidentHome({ condoId, userId, userName }: { condoId: string; userId: 
           .eq("resident_id", userId)
           .order("starts_at", { ascending: false })
           .limit(10),
-        supabase.from("common_areas").select("id,name,description,icon").eq("condo_id", condoId).eq("active", true).limit(6),
+        supabase.from("common_areas").select("id,name,description,cover_url,capacity").eq("condo_id", condoId).eq("active", true).limit(6),
       ]);
       return { mine: myReservations.data ?? [], areas: areas.data ?? [] };
     },
@@ -399,25 +399,46 @@ function ResidentHome({ condoId, userId, userName }: { condoId: string; userId: 
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card shadow-card">
+        <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
           <div className="p-5 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-semibold">Áreas comuns</h2>
-            <Link to="/app/reservations" className="text-xs text-primary font-medium">Reservar</Link>
+            <Link to="/app/areas" className="text-xs text-primary font-medium inline-flex items-center gap-1 hover:underline">
+              Ver todas <ArrowRight className="h-3 w-3" />
+            </Link>
           </div>
-          <div className="p-5">
+          <div className="p-4">
             {(data?.areas ?? []).length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Nenhuma área comum disponível ainda.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {(data?.areas ?? []).map((a) => (
+              <div className="grid grid-cols-2 gap-2.5">
+                {(data?.areas ?? []).map((a: any) => (
                   <Link
                     key={a.id}
-                    to="/app/reservations"
-                    className="rounded-xl border border-border/60 p-3 hover:border-primary/40 hover:bg-primary/5 transition"
+                    to="/app/areas"
+                    className="group rounded-xl border border-border/60 overflow-hidden hover:border-primary/40 hover:shadow-elegant transition"
                   >
-                    <Building className="h-4 w-4 text-primary" />
-                    <p className="mt-2 text-sm font-medium truncate">{a.name}</p>
-                    {a.description && <p className="text-[11px] text-muted-foreground line-clamp-2">{a.description}</p>}
+                    <div className="relative h-24 w-full bg-muted overflow-hidden">
+                      {a.cover_url ? (
+                        <img
+                          src={a.cover_url}
+                          alt={a.name}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center">
+                          <Building className="h-7 w-7 text-primary/40" />
+                        </div>
+                      )}
+                      {a.capacity && (
+                        <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          Cap. {a.capacity}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-2.5">
+                      <p className="text-xs font-semibold truncate">{a.name}</p>
+                      {a.description && <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{a.description}</p>}
+                    </div>
                   </Link>
                 ))}
               </div>

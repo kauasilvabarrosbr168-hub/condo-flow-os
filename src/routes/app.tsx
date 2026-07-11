@@ -323,6 +323,20 @@ function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* AI monitor badge — fixed bottom-right corner */}
+      <Link
+        to="/app/ai-monitor"
+        className="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/90 backdrop-blur-sm px-3.5 py-2 text-xs font-semibold text-primary shadow-elegant hover:bg-primary/10 transition group"
+        title="Ver painel de IA"
+      >
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+        </span>
+        Monitorado por IA
+        <Brain className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition" />
+      </Link>
     </div>
   );
 }
