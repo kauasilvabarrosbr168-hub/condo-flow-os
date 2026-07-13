@@ -5,9 +5,8 @@ import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import type { Role } from "@/hooks/use-auth";
 
 function getAdminClient() {
-  const url = (import.meta.env?.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL) as string;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
-  return createClient(url, key);
+  return createClient('https://jqcipbecgxssbjayusci.supabase.co', key);
 }
 
 export const changeUserRole = createServerFn({ method: "POST" })
@@ -17,7 +16,7 @@ export const changeUserRole = createServerFn({ method: "POST" })
     context: any;
   }) => {
     const adminSb = getAdminClient();
-    const callerId = context.user.id;
+    const callerId = context.userId;
     const { targetUserId, condoId, newRole } = data;
 
     // Verifica se o caller é síndico do condo OU super admin da plataforma
