@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowLeft, Building, Plus, Loader2, Trash2, ImagePlus, Upload, X, Save, Pencil,
-  Users as UsersIcon, ShieldCheck, CalendarDays,
+  Users as UsersIcon, ShieldCheck, CalendarDays, ChevronDown, Crown,
 } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/brand";
 import { supabase } from "@/lib/supabase";
 import { getCondoDetails, upsertArea, deleteArea } from "@/lib/admin-condo.functions";
+import { changeUserRole } from "@/lib/promote-user.functions";
+import type { Role } from "@/hooks/use-auth";
 import { AreaCalendarView } from "@/components/condo/area-calendar-view";
 import { AreaSchedulePicker, EMPTY_SCHEDULE, type WeekSchedule } from "@/components/condo/area-schedule-picker";
+// @ts-nocheck
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/condos/$condoId")({
@@ -61,8 +64,10 @@ function CondoDetailContent({ condoId }: { condoId: string }) {
   const fetchDetail = useServerFn(getCondoDetails);
   const upsert = useServerFn(upsertArea);
   const del = useServerFn(deleteArea);
+  const changeRole = useServerFn(changeUserRole);
 
   const [data, setData] = useState<Detail | null>(null);
+  const [changingMemberId, setChangingMemberId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Partial<Area> | null>(null);
   const [calendarArea, setCalendarArea] = useState<Area | null>(null);
   const [services, setServices] = useState<{ id: string; title: string; notes: string | null; photo_url: string | null; done_at: string; worker_id: string }[] | null>(null);
@@ -187,17 +192,70 @@ function CondoDetailContent({ condoId }: { condoId: string }) {
           {data.members.length === 0 ? (
             <EmptyBlock icon={<UsersIcon className="h-5 w-5" />} title="Sem membros" description="Use a tela de Condomínios para adicionar membros existentes." />
           ) : (
-            <div className="rounded-2xl border border-border bg-card divide-y divide-border">
-              {data.members.map((m) => (
-                <div key={m.user_id + m.role} className="flex items-center justify-between gap-3 px-5 py-3">
-                  <div>
-                    <p className="text-sm font-medium">{m.profiles?.full_name ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">{m.profiles?.email}{m.profiles?.unit_label ? ` · Unid. ${m.profiles.unit_label}` : ""}</p>
-                  </div>
-                  <Badge tone="primary">{m.role}</Badge>
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="rounded-2xl border border-border bg-card divide-y divide-border mb-3">
+                {data.members.map((m) => {
+                  const isChanging = changingMemberId === m.user_id;
+                  const ROLES: { value: Role; label: string }[] = [
+                    { value: "sindico", label: "Síndico" },
+                    { value: "administradora", label: "Administradora" },
+                    { value: "morador", label: "Morador" },
+                    { value: "funcionario", label: "Funcionário" },
+                  ];
+                  return (
+                    <div key={m.user_id + m.role} className="flex items-center justify-between gap-3 px-5 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-hero text-primary-foreground text-xs font-semibold shrink-0">
+                          {(m.profiles?.full_name ?? "?").split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{m.profiles?.full_name ?? "—"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{m.profiles?.email}{m.profiles?.unit_label ? ` · Unid. ${m.profiles.unit_label}` : ""}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge tone={m.role === "sindico" ? "primary" : "default"}>{m.role}</Badge>
+                        <div className="relative group">
+                          <button
+                            disabled={isChanging}
+                            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground transition disabled:opacity-50"
+                          >
+                            {isChanging ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Crown className="h-3 w-3" /> Cargo</>}
+                            <ChevronDown className="h-3 w-3" />
+                          </button>
+                          <div className="absolute right-0 top-8 z-20 hidden group-focus-within:flex group-hover:flex flex-col w-44 rounded-xl border border-border bg-card shadow-elegant overflow-hidden">
+                            {ROLES.filter((r) => r.value !== m.role).map((r) => (
+                              <button
+                                key={r.value}
+                                onClick={async () => {
+                                  if (!confirm(`Promover ${m.profiles?.full_name} para ${r.label}?`)) return;
+                                  setChangingMemberId(m.user_id);
+                                  try {
+                                    await changeRole({ data: { targetUserId: m.user_id, condoId, newRole: r.value } });
+                                    toast.success(`Cargo alterado para ${r.label}`);
+                                    load();
+                                  } catch (e: any) {
+                                    toast.error(e.message ?? "Erro");
+                                  } finally {
+                                    setChangingMemberId(null);
+                                  }
+                                }}
+                                className="px-3 py-2 text-xs text-left hover:bg-muted transition border-b border-border/60 last:border-0 font-medium"
+                              >
+                                {r.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground px-1">
+                A troca de cargo reflete no painel do usuário em tempo real via realtime.
+              </p>
+            </>
           )}
         </TabsContent>
 

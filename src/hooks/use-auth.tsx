@@ -117,6 +117,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Realtime: quando a role do usuário muda no banco → recarrega contexto
+  useEffect(() => {
+    if (!session?.user) return;
+    const uid = session.user.id;
+    const channel = supabase
+      .channel(`user-roles-${uid}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${uid}` }, () => {
+        loadContext(uid);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [session?.user?.id]);
+
   const refresh = async () => {
     if (session?.user) await loadContext(session.user.id);
   };
