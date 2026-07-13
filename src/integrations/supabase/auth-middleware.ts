@@ -9,22 +9,10 @@ import type { Database } from './types'
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
 
-    // import.meta.env.VITE_* is inlined at build time by Vite into both the client
-    // and server bundles, so it is ALWAYS the same project the browser client uses.
-    // This prevents a mismatch when the deployment platform (Lovable) overrides
-    // runtime process.env vars with a different project than what was compiled in.
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
-    const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
-
-    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      const missing = [
-        ...(!SUPABASE_URL ? ['SUPABASE_URL / VITE_SUPABASE_URL'] : []),
-        ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY / VITE_SUPABASE_PUBLISHABLE_KEY'] : []),
-      ];
-      const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
-      console.error(`[Supabase] ${message}`);
-      throw new Error(message);
-    }
+    // Hardcoded para garantir que sempre usamos o projeto correto (jqcipbecgxssbjayusci).
+    // Lovable sobrescreve VITE_SUPABASE_URL na build com o projeto deles — não usar env vars aqui.
+    const SUPABASE_URL = 'https://jqcipbecgxssbjayusci.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxY2lwYmVjZ3hzc2JqYXl1c2NpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NjIzOTEsImV4cCI6MjA5NTAzODM5MX0.OiC94pzx9aL8STwoQSOLyqq-cxv07DM2fZ01TK6F0nY';
 
     const request = getRequest();
 
