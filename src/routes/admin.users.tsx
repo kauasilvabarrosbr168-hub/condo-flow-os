@@ -195,18 +195,23 @@ function UsersPage() {
                             <ChevronDown className="h-3 w-3" />
                           </button>
 
-                          {/* Dropdown abre para CIMA */}
+                          {/* Dropdown abre para CIMA — só Síndico */}
                           <div className="absolute left-0 bottom-full mb-1 z-30 hidden group-focus-within:flex group-hover:flex flex-col w-48 rounded-xl border border-border bg-card shadow-elegant overflow-hidden">
-                            {ROLE_OPTIONS.filter((o) => o.value !== r.role).map((o) => (
+                            {r.role !== "sindico" && (
                               <button
-                                key={o.value}
-                                onClick={() => promote(r, o.value)}
-                                className="flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-muted transition border-b border-border/60 last:border-0"
+                                onClick={() => promote(r, "sindico")}
+                                className="flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-primary/10 transition"
                               >
-                                {o.value === "sindico" && <Crown className="h-3.5 w-3.5 text-primary shrink-0" />}
-                                <span className="font-medium">{o.label}</span>
+                                <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <div>
+                                  <p className="font-semibold text-primary">Síndico</p>
+                                  <p className="text-[10px] text-muted-foreground">Acesso total ao painel de gestão</p>
+                                </div>
                               </button>
-                            ))}
+                            )}
+                            {r.role === "sindico" && (
+                              <div className="px-3 py-2.5 text-xs text-muted-foreground">Já é síndico</div>
+                            )}
                           </div>
                         </div>
                       ) : (
