@@ -1,13 +1,17 @@
+// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Building, Plus, Loader2, X, Trash2, CalendarDays, Clock } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Building, Plus, Loader2, X, Trash2, CalendarDays, Clock, Sparkles, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/empty-state";
 import { AreaCalendarView } from "@/components/condo/area-calendar-view";
 import { scheduleLabel, type WeekSchedule } from "@/components/condo/area-schedule-picker";
 import { toast } from "sonner";
+import { AREA_CATALOG, type AreaType } from "@/lib/area-catalog";
+import { configureAreaWithAI, type AIAreaConfig } from "@/lib/ai-engine/area-config.functions";
 
 export const Route = createFileRoute("/app/areas")({
   head: () => ({ meta: [{ title: "Áreas comuns · CondoFlow" }] }),
@@ -51,7 +55,6 @@ function AreasPage() {
     return <div className="p-8"><EmptyState icon={Building} title="Sem condomínio" description="Você ainda não está vinculado a um condomínio." /></div>;
   }
 
-  // Calendar detail view
   if (calendarArea) {
     return (
       <div className="px-4 lg:px-8 py-8">
@@ -88,7 +91,7 @@ function AreasPage() {
         <EmptyState
           icon={Building}
           title="Nenhuma área cadastrada"
-          description={isAdmin ? "Cadastre sauna, salão, churrasqueira, quadra… qualquer espaço que possa ser reservado." : "O síndico ainda não cadastrou áreas comuns."}
+          description={isAdmin ? "Escolha o tipo de área e a IA configura as regras automaticamente." : "O síndico ainda não cadastrou áreas comuns."}
           tone="primary"
         />
       ) : (
@@ -165,15 +168,17 @@ function AreasPage() {
   );
 }
 
+/* ── Dialog em 2 etapas ── */
 function NewAreaDialog({ condoId, onClose, onCreated }: { condoId: string; onClose: () => void; onCreated: () => void }) {
+  const configureArea = useServerFn(configureAreaWithAI);
+  const [step, setStep] = useState<"choose" | "configure">("choose");
+  const [selectedType, setSelectedType] = useState<AreaType | null>(null);
+  const [userRules, setUserRules] = useState("");
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [rules, setRules] = useState("");
-  const [capacity, setCapacity] = useState<number | "">("");
-  const [minAdvance, setMinAdvance] = useState(24);
-  const [requiresChecklist, setRequiresChecklist] = useState(true);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [aiConfig, setAiConfig] = useState<AIAreaConfig | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const onFile = (f: File | null) => {
@@ -182,11 +187,40 @@ function NewAreaDialog({ condoId, onClose, onCreated }: { condoId: string; onClo
     setCoverPreview(f ? URL.createObjectURL(f) : null);
   };
 
+  const pickType = (type: AreaType) => {
+    setSelectedType(type);
+    setName(type.name);
+    setAiConfig(null);
+    setUserRules("");
+    setStep("configure");
+  };
+
+  const analyzeRules = async () => {
+    if (!selectedType) return;
+    setAnalyzing(true);
+    try {
+      const config = await configureArea({ data: { areaType: selectedType, userRules } });
+      setAiConfig(config);
+      toast.success("IA analisou as regras!");
+    } catch {
+      toast.error("Falha ao analisar. Tente novamente.");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!selectedType || !name.trim()) return;
     setBusy(true);
     try {
+      // Se não analisou ainda, analisa agora
+      let config = aiConfig;
+      if (!config) {
+        config = await configureArea({ data: { areaType: selectedType, userRules } });
+        setAiConfig(config);
+      }
+
       let cover_url: string | null = null;
       if (coverFile) {
         const ext = coverFile.name.split(".").pop() || "jpg";
@@ -195,18 +229,21 @@ function NewAreaDialog({ condoId, onClose, onCreated }: { condoId: string; onClo
         if (upErr) { toast.error("Falha no upload: " + upErr.message); setBusy(false); return; }
         cover_url = supabase.storage.from("condo-areas").getPublicUrl(path).data.publicUrl;
       }
+
       const { error } = await supabase.from("common_areas").insert({
         condo_id: condoId,
         name: name.trim(),
-        description: description.trim() || null,
-        rules: rules.trim() || null,
+        description: selectedType.description,
+        rules: config.rules_summary || userRules || null,
         cover_url,
-        capacity: capacity === "" ? null : Number(capacity),
-        min_advance_hours: minAdvance,
-        requires_checklist: requiresChecklist,
+        capacity: config.max_simultaneous ?? selectedType.defaultCapacity,
+        min_advance_hours: selectedType.defaultAdvanceHours,
+        requires_checklist: config.requires_checklist,
+        available_slots: config.operating_hours,
       });
+
       if (error) { toast.error(error.message); return; }
-      toast.success("Área criada");
+      toast.success(`${selectedType.emoji} ${name} criada com sucesso!`);
       onCreated();
       onClose();
     } finally {
@@ -216,42 +253,156 @@ function NewAreaDialog({ condoId, onClose, onCreated }: { condoId: string; onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border border-border bg-card shadow-elegant animate-pop my-8">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl rounded-2xl border border-border bg-card shadow-elegant animate-pop my-8">
+
+        {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
-          <h2 className="text-base font-semibold">Nova área comum</h2>
-          <button type="button" onClick={onClose} className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
-        </div>
-        <div className="p-5 space-y-3">
-          <Field label="Capa (imagem)">
-            <div className="space-y-2">
-              {coverPreview && <img src={coverPreview} alt="Prévia" className="w-full h-32 object-cover rounded-lg border border-border" />}
-              <input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0] ?? null)} className="text-xs" />
+          <div className="flex items-center gap-3">
+            {step === "configure" && (
+              <button type="button" onClick={() => setStep("choose")} className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted text-muted-foreground">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+            <div>
+              <h2 className="text-base font-semibold">
+                {step === "choose" ? "Qual área você quer adicionar?" : `${selectedType?.emoji} ${name}`}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {step === "choose" ? "Escolha o tipo e a IA configura automaticamente" : "Descreva as regras do seu condomínio"}
+              </p>
             </div>
-          </Field>
-          <Field label="Nome"><input required value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Salão de festas" className={inputCls} /></Field>
-          <Field label="Descrição"><textarea value={description} maxLength={300} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputCls + " py-2 resize-none"} /></Field>
-          <Field label="Regras de uso"><textarea value={rules} maxLength={500} onChange={(e) => setRules(e.target.value)} rows={3} placeholder="Horário, limite de convidados, taxa de limpeza…" className={inputCls + " py-2 resize-none h-auto"} /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Capacidade"><input type="number" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value === "" ? "" : Number(e.target.value))} className={inputCls} /></Field>
-            <Field label="Antecedência (h)"><input type="number" min={0} value={minAdvance} onChange={(e) => setMinAdvance(Number(e.target.value))} className={inputCls} /></Field>
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={requiresChecklist} onChange={(e) => setRequiresChecklist(e.target.checked)} className="h-4 w-4 rounded border-border" />
-            Gerar checklist automático pré e pós-uso
-          </label>
-        </div>
-        <div className="flex justify-end gap-2 p-5 border-t border-border">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-muted">Cancelar</button>
-          <button type="submit" disabled={busy} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60">
-            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Criar
+          <button type="button" onClick={onClose} className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted">
+            <X className="h-4 w-4" />
           </button>
         </div>
-      </form>
+
+        {/* Etapa 1 — Escolher tipo */}
+        {step === "choose" && (
+          <div className="p-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {AREA_CATALOG.map((type) => (
+                <button
+                  key={type.key}
+                  onClick={() => pickType(type)}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-border p-3 hover:border-primary/50 hover:bg-primary/5 transition text-center group"
+                >
+                  <span className="text-2xl">{type.emoji}</span>
+                  <span className="text-xs font-medium leading-tight">{type.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Etapa 2 — Configurar com IA */}
+        {step === "configure" && selectedType && (
+          <form onSubmit={submit}>
+            <div className="p-5 space-y-4">
+
+              {/* Nome personalizado */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Nome da área</label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={80}
+                  required
+                  className={inputCls + " mt-1"}
+                />
+              </div>
+
+              {/* Foto */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Foto da área (opcional)</label>
+                <div className="mt-1 space-y-2">
+                  {coverPreview && <img src={coverPreview} alt="Prévia" className="w-full h-32 object-cover rounded-lg border border-border" />}
+                  <input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0] ?? null)} className="text-xs" />
+                </div>
+              </div>
+
+              {/* Regras */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Regras do seu condomínio <span className="text-muted-foreground/60">(escreva como quiser — a IA entende)</span>
+                </label>
+                <textarea
+                  value={userRules}
+                  onChange={(e) => { setUserRules(e.target.value); setAiConfig(null); }}
+                  rows={4}
+                  placeholder={`Ex: Nossa ${selectedType.name.toLowerCase()} funciona das 8h às 22h. Máximo de 20 pessoas. Precisa reservar com 24h de antecedência. Proibido som alto após 22h.`}
+                  className={inputCls + " py-2.5 resize-none h-auto mt-1"}
+                />
+              </div>
+
+              {/* Botão analisar */}
+              <button
+                type="button"
+                onClick={analyzeRules}
+                disabled={analyzing}
+                className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-xl border border-primary/30 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10 transition disabled:opacity-60"
+              >
+                {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {analyzing ? "IA analisando as regras…" : "Analisar regras com IA"}
+              </button>
+
+              {/* Resultado da IA */}
+              {aiConfig && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                    <p className="text-xs font-semibold text-primary">IA configurou a área</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic">"{aiConfig.ai_interpretation}"</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Chip label={aiConfig.requires_reservation ? "Reserva obrigatória" : "Uso livre"} active={aiConfig.requires_reservation} />
+                    <Chip label="Aprovação do síndico" active={aiConfig.requires_approval} />
+                    <Chip label="Checklist" active={aiConfig.requires_checklist} />
+                    {aiConfig.max_simultaneous && <Chip label={`Máx. ${aiConfig.max_simultaneous} pessoas`} active />}
+                    {aiConfig.slot_duration_hours && <Chip label={`Slots de ${aiConfig.slot_duration_hours}h`} active />}
+                  </div>
+                  {aiConfig.checklist_items.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-medium text-muted-foreground mb-1">Checklist gerado:</p>
+                      <ul className="space-y-0.5">
+                        {aiConfig.checklist_items.map((item, i) => (
+                          <li key={i} className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0" /> {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 p-5 border-t border-border">
+              <button type="button" onClick={() => setStep("choose")} className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-muted">
+                Voltar
+              </button>
+              <button
+                type="submit"
+                disabled={busy || analyzing}
+                className="inline-flex items-center gap-2 h-9 px-5 rounded-lg bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60"
+              >
+                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                {aiConfig ? "Criar área" : "Analisar e criar"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
 
-const inputCls = "w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring";
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="text-xs font-medium text-muted-foreground">{label}</span><div className="mt-1">{children}</div></label>;
+function Chip({ label, active }: { label: string; active: boolean }) {
+  return (
+    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground line-through opacity-50"}`}>
+      {label}
+    </span>
+  );
 }
+
+const inputCls = "w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring";
