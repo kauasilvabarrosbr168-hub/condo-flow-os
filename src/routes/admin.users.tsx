@@ -2,12 +2,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, Users as UsersIcon, Loader2, Crown, ChevronDown } from "lucide-react";
+import { Search, Users as UsersIcon, Loader2, Crown, ChevronDown, Trash2 } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/brand";
 import { supabase } from "@/lib/supabase";
 import { changeUserRole } from "@/lib/promote-user.functions";
+import { deleteUser } from "@/lib/admin-members.functions";
 import { toast } from "sonner";
 import type { Role } from "@/hooks/use-auth";
 
@@ -44,7 +45,9 @@ function UsersPage() {
   const [rows, setRows]       = useState<Row[] | null>(null);
   const [q, setQ]             = useState("");
   const [changingId, setChangingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const changeRole = useServerFn(changeUserRole);
+  const delUser = useServerFn(deleteUser);
 
   const load = async () => {
     const [{ data: profs }, { data: condos }, { data: roles }] = await Promise.all([
@@ -75,6 +78,20 @@ function UsersPage() {
     ),
     [rows, q],
   );
+
+  const remove = async (row: Row) => {
+    if (!confirm(`Excluir permanentemente "${row.full_name}"? Esta ação não pode ser desfeita.`)) return;
+    setDeletingId(row.id);
+    try {
+      await delUser({ data: { userId: row.id } });
+      toast.success(`${row.full_name} excluído`);
+      await load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao excluir");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const promote = async (row: Row, newRole: Role) => {
     if (!row.condo_id) {
@@ -121,7 +138,8 @@ function UsersPage() {
                 <th className="text-left px-5 py-3 font-medium">Cargo atual</th>
                 <th className="text-left px-5 py-3 font-medium">Condomínio</th>
                 <th className="text-left px-5 py-3 font-medium">Unidade</th>
-                <th className="text-left px-5 py-3 font-medium">Ação</th>
+                <th className="text-left px-5 py-3 font-medium">Promover</th>
+                <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -161,7 +179,7 @@ function UsersPage() {
                       {r.unit_label ?? "—"}
                     </td>
 
-                    {/* Ação */}
+                    {/* Promover */}
                     <td className="px-5 py-3">
                       {hasCondo ? (
                         <div className="relative group inline-block">
@@ -177,8 +195,8 @@ function UsersPage() {
                             <ChevronDown className="h-3 w-3" />
                           </button>
 
-                          {/* Dropdown de cargos */}
-                          <div className="absolute left-0 top-9 z-20 hidden group-focus-within:flex group-hover:flex flex-col w-48 rounded-xl border border-border bg-card shadow-elegant overflow-hidden">
+                          {/* Dropdown abre para CIMA */}
+                          <div className="absolute left-0 bottom-full mb-1 z-30 hidden group-focus-within:flex group-hover:flex flex-col w-48 rounded-xl border border-border bg-card shadow-elegant overflow-hidden">
                             {ROLE_OPTIONS.filter((o) => o.value !== r.role).map((o) => (
                               <button
                                 key={o.value}
@@ -192,8 +210,23 @@ function UsersPage() {
                           </div>
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground">Sem condomínio</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
+                    </td>
+
+                    {/* Excluir */}
+                    <td className="px-3 py-3">
+                      <button
+                        onClick={() => remove(r)}
+                        disabled={deletingId === r.id}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:border-destructive hover:bg-destructive/10 hover:text-destructive transition disabled:opacity-40"
+                        title="Excluir usuário"
+                      >
+                        {deletingId === r.id
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <Trash2 className="h-3.5 w-3.5" />
+                        }
+                      </button>
                     </td>
                   </tr>
                 );

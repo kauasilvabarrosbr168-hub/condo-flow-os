@@ -42,6 +42,15 @@ export const bootstrapPlatformAdmin = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const deleteUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }: { data: { userId: string }; context: any }) => {
+    await assertPlatformAdmin(context.userId, context.claims?.email as string | undefined);
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const assignMemberToCondo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => AssignSchema.parse(input))
