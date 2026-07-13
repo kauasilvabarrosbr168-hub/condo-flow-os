@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const TokenSchema = z.object({ token: z.string().trim().min(24).max(128) });

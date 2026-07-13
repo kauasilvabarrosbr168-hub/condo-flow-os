@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import { notifyMembershipApproved, notifyMembershipRejected, notifyNewMembershipRequest } from "@/lib/notify.server";
 
 const requestSchema = z.object({

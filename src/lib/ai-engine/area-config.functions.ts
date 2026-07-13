@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import type { WeekSchedule } from "@/components/condo/area-schedule-picker";
 import type { AreaType } from "@/lib/area-catalog";
 

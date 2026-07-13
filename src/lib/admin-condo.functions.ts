@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const SUPER_ADMIN_EMAILS = ['admin@condoflow.com'];
