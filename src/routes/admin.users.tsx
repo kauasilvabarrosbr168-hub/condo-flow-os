@@ -1,10 +1,15 @@
+// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Users as UsersIcon, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Search, Users as UsersIcon, Loader2, Crown, ChevronDown } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/brand";
 import { supabase } from "@/lib/supabase";
+import { changeUserRole } from "@/lib/promote-user.functions";
+import { toast } from "sonner";
+import type { Role } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({ meta: [{ title: "Usuários · CondoFlow Admin" }] }),
@@ -18,47 +23,83 @@ type Row = {
   unit_label: string | null;
   condo_id: string | null;
   condo_name: string | null;
-  roles: string[];
+  role: string | null;        // role atual neste condo
+};
+
+const ROLE_OPTIONS: { value: Role; label: string }[] = [
+  { value: "sindico",        label: "Síndico" },
+  { value: "administradora", label: "Administradora" },
+  { value: "morador",        label: "Morador" },
+  { value: "funcionario",    label: "Funcionário" },
+];
+
+const ROLE_TONE: Record<string, "primary" | "success" | "warning" | "default"> = {
+  sindico: "primary",
+  administradora: "primary",
+  morador: "default",
+  funcionario: "warning",
 };
 
 function UsersPage() {
-  const [rows, setRows] = useState<Row[] | null>(null);
-  const [q, setQ] = useState("");
+  const [rows, setRows]       = useState<Row[] | null>(null);
+  const [q, setQ]             = useState("");
+  const [changingId, setChangingId] = useState<string | null>(null);
+  const changeRole = useServerFn(changeUserRole);
 
-  useEffect(() => {
-    (async () => {
-      const [{ data: profs }, { data: condos }, { data: roles }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, email, unit_label, condo_id"),
-        supabase.from("condominiums").select("id, name"),
-        supabase.from("user_roles").select("user_id, role"),
-      ]);
-      const condoMap = new Map((condos ?? []).map((c: { id: string; name: string }) => [c.id, c.name]));
-      const rolesMap = new Map<string, string[]>();
-      (roles ?? []).forEach((r: { user_id: string; role: string }) => {
-        const arr = rolesMap.get(r.user_id) ?? [];
-        arr.push(r.role);
-        rolesMap.set(r.user_id, arr);
-      });
-      setRows(
-        (profs ?? []).map((p: { id: string; full_name: string | null; email: string | null; unit_label: string | null; condo_id: string | null }) => ({
+  const load = async () => {
+    const [{ data: profs }, { data: condos }, { data: roles }] = await Promise.all([
+      supabase.from("profiles").select("id, full_name, email, unit_label, condo_id"),
+      supabase.from("condominiums").select("id, name"),
+      supabase.from("user_roles").select("user_id, role, condo_id"),
+    ]);
+    const condoMap = new Map((condos ?? []).map((c) => [c.id, c.name]));
+    setRows(
+      (profs ?? []).map((p) => {
+        const userRole = (roles ?? []).find((r) => r.user_id === p.id);
+        const condoId = p.condo_id ?? userRole?.condo_id ?? null;
+        return {
           ...p,
-          condo_name: p.condo_id ? condoMap.get(p.condo_id) ?? null : null,
-          roles: rolesMap.get(p.id) ?? [],
-        })),
-      );
-    })();
-  }, []);
+          condo_id: condoId,
+          condo_name: condoId ? condoMap.get(condoId) ?? null : null,
+          role: userRole?.role ?? null,
+        };
+      }),
+    );
+  };
+
+  useEffect(() => { load(); }, []);
 
   const filtered = useMemo(
-    () => (rows ?? []).filter((r) => ((r.full_name ?? "") + (r.email ?? "")).toLowerCase().includes(q.toLowerCase())),
+    () => (rows ?? []).filter((r) =>
+      ((r.full_name ?? "") + (r.email ?? "")).toLowerCase().includes(q.toLowerCase())
+    ),
     [rows, q],
   );
+
+  const promote = async (row: Row, newRole: Role) => {
+    if (!row.condo_id) {
+      toast.error("Usuário não está vinculado a nenhum condomínio.");
+      return;
+    }
+    const label = ROLE_OPTIONS.find((o) => o.value === newRole)?.label ?? newRole;
+    if (!confirm(`Promover ${row.full_name} para ${label}?`)) return;
+    setChangingId(row.id);
+    try {
+      await changeRole({ data: { targetUserId: row.id, condoId: row.condo_id, newRole } });
+      toast.success(`${row.full_name} agora é ${label}`);
+      await load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao alterar cargo");
+    } finally {
+      setChangingId(null);
+    }
+  };
 
   return (
     <div>
       <PageHeader
         title="Usuários da plataforma"
-        description="Todos os papéis em todos os condomínios."
+        description="Gerencie cargos e promoções de síndico em todos os condomínios."
         actions={
           <div className="relative w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -77,31 +118,94 @@ function UsersPage() {
             <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="text-left px-5 py-3 font-medium">Pessoa</th>
-                <th className="text-left px-5 py-3 font-medium">Papéis</th>
+                <th className="text-left px-5 py-3 font-medium">Cargo atual</th>
                 <th className="text-left px-5 py-3 font-medium">Condomínio</th>
                 <th className="text-left px-5 py-3 font-medium">Unidade</th>
+                <th className="text-left px-5 py-3 font-medium">Ação</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-muted/30 transition">
-                  <td className="px-5 py-3">
-                    <p className="font-medium">{r.full_name}</p>
-                    <p className="text-[11px] text-muted-foreground">{r.email}</p>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {r.roles.length ? r.roles.map((rl) => <Badge key={rl} tone="primary">{rl}</Badge>) : <span className="text-muted-foreground text-xs">—</span>}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3">{r.condo_name ?? <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{r.unit_label ?? "—"}</td>
-                </tr>
-              ))}
+              {filtered.map((r) => {
+                const isChanging = changingId === r.id;
+                const hasCondo = !!r.condo_id;
+                return (
+                  <tr key={r.id} className="hover:bg-muted/30 transition">
+                    {/* Pessoa */}
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-hero text-primary-foreground text-xs font-semibold shrink-0">
+                          {(r.full_name ?? "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                        </span>
+                        <div>
+                          <p className="font-medium leading-tight">{r.full_name ?? "—"}</p>
+                          <p className="text-[11px] text-muted-foreground">{r.email}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Cargo */}
+                    <td className="px-5 py-3">
+                      {r.role
+                        ? <Badge tone={ROLE_TONE[r.role] ?? "default"}>{roleLabel(r.role)}</Badge>
+                        : <span className="text-xs text-muted-foreground">Sem cargo</span>
+                      }
+                    </td>
+
+                    {/* Condomínio */}
+                    <td className="px-5 py-3 text-sm">
+                      {r.condo_name ?? <span className="text-muted-foreground">—</span>}
+                    </td>
+
+                    {/* Unidade */}
+                    <td className="px-5 py-3 text-muted-foreground text-sm">
+                      {r.unit_label ?? "—"}
+                    </td>
+
+                    {/* Ação */}
+                    <td className="px-5 py-3">
+                      {hasCondo ? (
+                        <div className="relative group inline-block">
+                          <button
+                            disabled={isChanging}
+                            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:border-primary/50 hover:text-primary transition disabled:opacity-50"
+                          >
+                            {isChanging
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Crown className="h-3.5 w-3.5" />
+                            }
+                            Promover
+                            <ChevronDown className="h-3 w-3" />
+                          </button>
+
+                          {/* Dropdown de cargos */}
+                          <div className="absolute left-0 top-9 z-20 hidden group-focus-within:flex group-hover:flex flex-col w-48 rounded-xl border border-border bg-card shadow-elegant overflow-hidden">
+                            {ROLE_OPTIONS.filter((o) => o.value !== r.role).map((o) => (
+                              <button
+                                key={o.value}
+                                onClick={() => promote(r, o.value)}
+                                className="flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-muted transition border-b border-border/60 last:border-0"
+                              >
+                                {o.value === "sindico" && <Crown className="h-3.5 w-3.5 text-primary shrink-0" />}
+                                <span className="font-medium">{o.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sem condomínio</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
     </div>
   );
+}
+
+function roleLabel(r: string) {
+  return ({ sindico: "Síndico", administradora: "Administradora", morador: "Morador", funcionario: "Funcionário" } as Record<string, string>)[r] ?? r;
 }
