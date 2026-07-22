@@ -3,7 +3,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, Users as UsersIcon, Loader2, Crown, ChevronDown, Trash2, AlertTriangle } from "lucide-react";
+import { Search, Users as UsersIcon, Loader2, Crown, Trash2, AlertTriangle } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/brand";
@@ -38,12 +38,11 @@ const ROLE_TONE: Record<string, "primary" | "success" | "warning" | "default"> =
 };
 
 function UsersPage() {
-  const [rows, setRows]             = useState<Row[] | null>(null);
-  const [q, setQ]                   = useState("");
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [changingId, setChangingId] = useState<string | null>(null);
+  const [rows, setRows]         = useState<Row[] | null>(null);
+  const [q, setQ]               = useState("");
+  const [promotingId, setPromotingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
-  const [deleting, setDeleting]     = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const changeRole = useServerFn(changeUserRole);
   const delUser    = useServerFn(deleteUser);
 
@@ -70,13 +69,6 @@ function UsersPage() {
 
   useEffect(() => { load(); }, []);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handler = () => setOpenMenuId(null);
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, []);
-
   const filtered = useMemo(
     () => (rows ?? []).filter((r) =>
       ((r.full_name ?? "") + (r.email ?? "")).toLowerCase().includes(q.toLowerCase())
@@ -86,8 +78,8 @@ function UsersPage() {
 
   const promote = async (row: Row) => {
     if (!row.condo_id) { toast.error("Usuário não está vinculado a nenhum condomínio."); return; }
-    setChangingId(row.id);
-    setOpenMenuId(null);
+    if (!confirm(`Promover ${row.full_name} para Síndico?`)) return;
+    setPromotingId(row.id);
     try {
       await changeRole({ data: { targetUserId: row.id, condoId: row.condo_id, newRole: "sindico" } });
       toast.success(`${row.full_name} agora é Síndico`);
@@ -95,7 +87,7 @@ function UsersPage() {
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao promover");
     } finally {
-      setChangingId(null);
+      setPromotingId(null);
     }
   };
 
@@ -145,8 +137,7 @@ function UsersPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((r) => {
-                const isChanging = changingId === r.id;
-                const menuOpen   = openMenuId === r.id;
+                const isPromoting = promotingId === r.id;
                 return (
                   <tr key={r.id} className="hover:bg-muted/30 transition">
                     {/* Pessoa */}
@@ -166,8 +157,7 @@ function UsersPage() {
                     <td className="px-5 py-3">
                       {r.role
                         ? <Badge tone={ROLE_TONE[r.role] ?? "default"}>{roleLabel(r.role)}</Badge>
-                        : <span className="text-xs text-muted-foreground">Sem cargo</span>
-                      }
+                        : <span className="text-xs text-muted-foreground">Sem cargo</span>}
                     </td>
 
                     {/* Condomínio */}
@@ -180,67 +170,35 @@ function UsersPage() {
                       {r.unit_label ?? "—"}
                     </td>
 
-                    {/* Ações — dropdown com Promover + Excluir */}
+                    {/* Ações — botões inline, sem dropdown */}
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Dropdown de ações */}
-                        <div className="relative">
+                        {/* Promover a síndico */}
+                        {r.condo_id && r.role !== "sindico" && (
                           <button
-                            disabled={isChanging}
-                            onClick={(e) => { e.stopPropagation(); setOpenMenuId(menuOpen ? null : r.id); }}
-                            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:border-primary/50 hover:text-primary transition disabled:opacity-50"
+                            onClick={() => promote(r)}
+                            disabled={isPromoting}
+                            title="Promover a Síndico"
+                            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition disabled:opacity-50"
                           >
-                            {isChanging
+                            {isPromoting
                               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              : <Crown className="h-3.5 w-3.5" />
-                            }
-                            Ações
-                            <ChevronDown className="h-3 w-3" />
+                              : <Crown className="h-3.5 w-3.5" />}
+                            Síndico
                           </button>
+                        )}
+                        {r.role === "sindico" && (
+                          <span className="text-[11px] text-primary font-medium px-2">Síndico ✓</span>
+                        )}
 
-                          {menuOpen && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute right-0 bottom-full mb-1 z-50 flex flex-col w-52 rounded-xl border border-border bg-card shadow-elegant overflow-hidden"
-                            >
-                              {/* Promover a síndico */}
-                              {r.condo_id && r.role !== "sindico" && (
-                                <button
-                                  onClick={() => promote(r)}
-                                  className="flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-primary/10 transition"
-                                >
-                                  <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
-                                  <div>
-                                    <p className="font-semibold text-primary">Promover a Síndico</p>
-                                    <p className="text-[10px] text-muted-foreground">Acesso total ao painel de gestão</p>
-                                  </div>
-                                </button>
-                              )}
-                              {r.role === "sindico" && (
-                                <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
-                                  Já é síndico
-                                </div>
-                              )}
-                              {!r.condo_id && (
-                                <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
-                                  Sem condomínio vinculado
-                                </div>
-                              )}
-
-                              {/* Separador + Excluir */}
-                              <button
-                                onClick={() => { setDeleteTarget(r); setOpenMenuId(null); }}
-                                className="flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-destructive/10 text-destructive transition border-t border-border"
-                              >
-                                <Trash2 className="h-3.5 w-3.5 shrink-0" />
-                                <div>
-                                  <p className="font-semibold">Excluir usuário</p>
-                                  <p className="text-[10px] opacity-70">Remove permanentemente da plataforma</p>
-                                </div>
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        {/* Excluir conta */}
+                        <button
+                          onClick={() => setDeleteTarget(r)}
+                          title="Excluir usuário permanentemente"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border text-muted-foreground hover:border-destructive hover:bg-destructive/10 hover:text-destructive transition"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -261,13 +219,11 @@ function UsersPage() {
             </DialogTitle>
             <DialogDescription>
               Tem certeza que deseja excluir permanentemente <strong>"{deleteTarget?.full_name}"</strong>?
-              Esta ação não pode ser desfeita.
+              Isso remove a conta da plataforma e não pode ser desfeito.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
             <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Excluir definitivamente

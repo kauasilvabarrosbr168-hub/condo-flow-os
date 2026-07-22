@@ -3,12 +3,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Users, Loader2, ChevronDown } from "lucide-react";
+import { Users, Loader2, Crown, UserMinus, AlertTriangle } from "lucide-react";
 import { useAuth, type Role } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/brand";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { changeUserRole } from "@/lib/promote-user.functions";
+import { removeMemberFromCondo } from "@/lib/membership.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/team")({
@@ -34,8 +37,12 @@ function TeamPage() {
   const { condo, profile, isAdmin, user } = useAuth();
   const condoId = condo?.id ?? profile?.condo_id ?? null;
   const qc = useQueryClient();
-  const changeRole = useServerFn(changeUserRole);
+  const changeRole   = useServerFn(changeUserRole);
+  const removeMember = useServerFn(removeMemberFromCondo);
+
   const [changingId, setChangingId] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; full_name: string } | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   const { data, isLoading } = useQuery({
     enabled: !!condoId && isAdmin,
@@ -68,6 +75,21 @@ function TeamPage() {
     }
   };
 
+  const confirmRemove = async () => {
+    if (!removeTarget || !condoId) return;
+    setRemoving(true);
+    try {
+      await removeMember({ data: { targetUserId: removeTarget.id, condoId } });
+      toast.success(`${removeTarget.full_name} removido do condomínio`);
+      setRemoveTarget(null);
+      qc.invalidateQueries({ queryKey: ["team", condoId] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao remover membro");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   if (!isAdmin) {
     return <div className="p-8"><EmptyState icon={Users} title="Acesso restrito" description="Apenas síndicos e administradoras podem ver a equipe." /></div>;
   }
@@ -88,7 +110,7 @@ function TeamPage() {
       ) : (
         <div className="rounded-2xl border border-border bg-card shadow-card divide-y divide-border/60">
           {data!.map((p) => {
-            const isSelf = p.id === user?.id;
+            const isSelf    = p.id === user?.id;
             const isChanging = changingId === p.id;
             return (
               <div key={p.id} className="flex items-center gap-4 px-5 py-4">
@@ -107,33 +129,35 @@ function TeamPage() {
                   </p>
                 </div>
 
-                {/* Role badge + dropdown */}
+                {/* Cargo + botões de ação */}
                 <div className="flex items-center gap-2 shrink-0">
                   <Badge tone={ROLE_TONE[p.role] ?? "default"}>{roleLabel(p.role)}</Badge>
 
                   {!isSelf && (
-                    <div className="relative group">
-                      <button
+                    <>
+                      {/* Promover — select inline */}
+                      <select
                         disabled={isChanging}
-                        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground transition disabled:opacity-50"
+                        value={p.role}
+                        onChange={(e) => promote(p.id, e.target.value as Role, p.full_name)}
+                        className="h-7 rounded-lg border border-border bg-card px-2 text-xs text-muted-foreground hover:border-primary/40 transition disabled:opacity-50 cursor-pointer"
+                        title="Alterar cargo"
                       >
-                        {isChanging ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronDown className="h-3 w-3" />}
-                        Alterar
-                      </button>
-                      {/* Dropdown */}
-                      <div className="absolute right-0 top-8 z-20 hidden group-focus-within:flex group-hover:flex flex-col w-52 rounded-xl border border-border bg-card shadow-elegant overflow-hidden">
-                        {ROLE_OPTIONS.filter((o) => o.value !== p.role).map((o) => (
-                          <button
-                            key={o.value}
-                            onClick={() => promote(p.id, o.value, p.full_name)}
-                            className="flex flex-col items-start px-3 py-2.5 text-left hover:bg-muted transition border-b border-border/60 last:border-0"
-                          >
-                            <span className="text-xs font-semibold">{o.label}</span>
-                            <span className="text-[10px] text-muted-foreground">{o.desc}</span>
-                          </button>
+                        {ROLE_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
                         ))}
-                      </div>
-                    </div>
+                      </select>
+                      {isChanging && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+
+                      {/* Remover do condomínio */}
+                      <button
+                        onClick={() => setRemoveTarget({ id: p.id, full_name: p.full_name })}
+                        title="Remover do condomínio"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted-foreground hover:border-destructive hover:bg-destructive/10 hover:text-destructive transition"
+                      >
+                        <UserMinus className="h-3.5 w-3.5" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -142,13 +166,35 @@ function TeamPage() {
         </div>
       )}
 
-      {/* Aviso sobre eleição */}
       <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
         <p className="text-xs text-primary font-medium">Troca de síndico</p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Ao promover um morador para síndico, o painel dele muda automaticamente em tempo real. O cargo anterior continua ativo até que você o altere.
+          Ao promover um morador para síndico, o painel dele muda automaticamente em tempo real.
         </p>
       </div>
+
+      {/* Dialog de confirmação de remoção */}
+      <Dialog open={!!removeTarget} onOpenChange={(v) => { if (!v && !removing) setRemoveTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Remover do condomínio
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja remover <strong>"{removeTarget?.full_name}"</strong> do condomínio?
+              O usuário perderá o acesso mas a conta dele continuará existindo na plataforma.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setRemoveTarget(null)} disabled={removing}>Cancelar</Button>
+            <Button variant="destructive" onClick={confirmRemove} disabled={removing}>
+              {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}
+              Remover do condomínio
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

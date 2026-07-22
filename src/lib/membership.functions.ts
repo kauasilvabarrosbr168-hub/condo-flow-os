@@ -142,6 +142,40 @@ export const getMyMembershipStatus = createServerFn({ method: "POST" })
     return data;
   });
 
+// Remove um membro do condomínio (sem excluir a conta).
+// Pode ser chamado pelo síndico do condo ou por platform admin.
+export const removeMemberFromCondo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }: { data: { targetUserId: string; condoId: string }; context: any }) => {
+    const { supabase, userId } = context;
+    const { targetUserId, condoId } = data;
+
+    // Verifica se caller é síndico/administradora deste condo
+    const { data: callerRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("condo_id", condoId)
+      .maybeSingle();
+
+    const isSindico = callerRole?.role === "sindico" || callerRole?.role === "administradora";
+
+    // Ou platform admin
+    const { data: pa } = await supabase.from("platform_admins").select("id").eq("user_id", userId).maybeSingle();
+
+    if (!isSindico && !pa) throw new Error("Sem permissão para remover membros.");
+    if (targetUserId === userId) throw new Error("Você não pode se remover do condomínio.");
+
+    // Remove role do condo
+    await supabase.from("user_roles").delete().eq("user_id", targetUserId).eq("condo_id", condoId);
+    // Desvincula perfil do condo
+    await supabase.from("profiles").update({ condo_id: null }).eq("id", targetUserId).eq("condo_id", condoId);
+    // Cancela solicitação pendente, se houver
+    await supabase.from("membership_requests").delete().eq("user_id", targetUserId).eq("condo_id", condoId);
+
+    return { ok: true };
+  });
+
 const SUPER_ADMIN_EMAILS = ['admin@condoflow.com'];
 
 export const listPendingRequests = createServerFn({ method: "POST" })
