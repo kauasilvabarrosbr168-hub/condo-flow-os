@@ -1,12 +1,14 @@
 // @ts-nocheck
-// NÃO REGENERAR — arquivo customizado com delete + promoção de síndico
+// NÃO REGENERAR — arquivo customizado com ações de cargo e exclusão
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, Users as UsersIcon, Loader2, Crown, ChevronDown, Trash2 } from "lucide-react";
+import { Search, Users as UsersIcon, Loader2, Crown, ChevronDown, Trash2, AlertTriangle } from "lucide-react";
 import { PageHeader, EmptyBlock } from "@/components/admin/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/brand";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { changeUserRole } from "@/lib/promote-user.functions";
 import { deleteUser } from "@/lib/admin-members.functions";
@@ -25,15 +27,8 @@ type Row = {
   unit_label: string | null;
   condo_id: string | null;
   condo_name: string | null;
-  role: string | null;        // role atual neste condo
+  role: string | null;
 };
-
-const ROLE_OPTIONS: { value: Role; label: string }[] = [
-  { value: "sindico",        label: "Síndico" },
-  { value: "administradora", label: "Administradora" },
-  { value: "morador",        label: "Morador" },
-  { value: "funcionario",    label: "Funcionário" },
-];
 
 const ROLE_TONE: Record<string, "primary" | "success" | "warning" | "default"> = {
   sindico: "primary",
@@ -43,12 +38,14 @@ const ROLE_TONE: Record<string, "primary" | "success" | "warning" | "default"> =
 };
 
 function UsersPage() {
-  const [rows, setRows]       = useState<Row[] | null>(null);
-  const [q, setQ]             = useState("");
+  const [rows, setRows]             = useState<Row[] | null>(null);
+  const [q, setQ]                   = useState("");
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [changingId, setChangingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
+  const [deleting, setDeleting]     = useState(false);
   const changeRole = useServerFn(changeUserRole);
-  const delUser = useServerFn(deleteUser);
+  const delUser    = useServerFn(deleteUser);
 
   const load = async () => {
     const [{ data: profs }, { data: condos }, { data: roles }] = await Promise.all([
@@ -60,18 +57,25 @@ function UsersPage() {
     setRows(
       (profs ?? []).map((p) => {
         const userRole = (roles ?? []).find((r) => r.user_id === p.id);
-        const condoId = p.condo_id ?? userRole?.condo_id ?? null;
+        const condoId  = p.condo_id ?? userRole?.condo_id ?? null;
         return {
           ...p,
-          condo_id: condoId,
+          condo_id:   condoId,
           condo_name: condoId ? condoMap.get(condoId) ?? null : null,
-          role: userRole?.role ?? null,
+          role:       userRole?.role ?? null,
         };
       }),
     );
   };
 
   useEffect(() => { load(); }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = () => setOpenMenuId(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
 
   const filtered = useMemo(
     () => (rows ?? []).filter((r) =>
@@ -80,36 +84,33 @@ function UsersPage() {
     [rows, q],
   );
 
-  const remove = async (row: Row) => {
-    if (!confirm(`Excluir permanentemente "${row.full_name}"? Esta ação não pode ser desfeita.`)) return;
-    setDeletingId(row.id);
+  const promote = async (row: Row) => {
+    if (!row.condo_id) { toast.error("Usuário não está vinculado a nenhum condomínio."); return; }
+    setChangingId(row.id);
+    setOpenMenuId(null);
     try {
-      await delUser({ data: { userId: row.id } });
-      toast.success(`${row.full_name} excluído`);
+      await changeRole({ data: { targetUserId: row.id, condoId: row.condo_id, newRole: "sindico" } });
+      toast.success(`${row.full_name} agora é Síndico`);
+      await load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao promover");
+    } finally {
+      setChangingId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await delUser({ data: { userId: deleteTarget.id } });
+      toast.success(`${deleteTarget.full_name} excluído`);
+      setDeleteTarget(null);
       await load();
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao excluir");
     } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const promote = async (row: Row, newRole: Role) => {
-    if (!row.condo_id) {
-      toast.error("Usuário não está vinculado a nenhum condomínio.");
-      return;
-    }
-    const label = ROLE_OPTIONS.find((o) => o.value === newRole)?.label ?? newRole;
-    if (!confirm(`Promover ${row.full_name} para ${label}?`)) return;
-    setChangingId(row.id);
-    try {
-      await changeRole({ data: { targetUserId: row.id, condoId: row.condo_id, newRole } });
-      toast.success(`${row.full_name} agora é ${label}`);
-      await load();
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao alterar cargo");
-    } finally {
-      setChangingId(null);
+      setDeleting(false);
     }
   };
 
@@ -139,14 +140,13 @@ function UsersPage() {
                 <th className="text-left px-5 py-3 font-medium">Cargo atual</th>
                 <th className="text-left px-5 py-3 font-medium">Condomínio</th>
                 <th className="text-left px-5 py-3 font-medium">Unidade</th>
-                <th className="text-left px-5 py-3 font-medium">Promover</th>
-                <th className="px-5 py-3 font-medium"></th>
+                <th className="text-right px-5 py-3 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((r) => {
                 const isChanging = changingId === r.id;
-                const hasCondo = !!r.condo_id;
+                const menuOpen   = openMenuId === r.id;
                 return (
                   <tr key={r.id} className="hover:bg-muted/30 transition">
                     {/* Pessoa */}
@@ -180,59 +180,68 @@ function UsersPage() {
                       {r.unit_label ?? "—"}
                     </td>
 
-                    {/* Promover */}
+                    {/* Ações — dropdown com Promover + Excluir */}
                     <td className="px-5 py-3">
-                      {hasCondo ? (
-                        <div className="relative group inline-block">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Dropdown de ações */}
+                        <div className="relative">
                           <button
                             disabled={isChanging}
+                            onClick={(e) => { e.stopPropagation(); setOpenMenuId(menuOpen ? null : r.id); }}
                             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:border-primary/50 hover:text-primary transition disabled:opacity-50"
                           >
                             {isChanging
                               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               : <Crown className="h-3.5 w-3.5" />
                             }
-                            Promover
+                            Ações
                             <ChevronDown className="h-3 w-3" />
                           </button>
 
-                          {/* Dropdown abre para CIMA — só Síndico */}
-                          <div className="absolute left-0 bottom-full mb-1 z-30 hidden group-focus-within:flex group-hover:flex flex-col w-48 rounded-xl border border-border bg-card shadow-elegant overflow-hidden">
-                            {r.role !== "sindico" && (
+                          {menuOpen && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute right-0 bottom-full mb-1 z-50 flex flex-col w-52 rounded-xl border border-border bg-card shadow-elegant overflow-hidden"
+                            >
+                              {/* Promover a síndico */}
+                              {r.condo_id && r.role !== "sindico" && (
+                                <button
+                                  onClick={() => promote(r)}
+                                  className="flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-primary/10 transition"
+                                >
+                                  <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  <div>
+                                    <p className="font-semibold text-primary">Promover a Síndico</p>
+                                    <p className="text-[10px] text-muted-foreground">Acesso total ao painel de gestão</p>
+                                  </div>
+                                </button>
+                              )}
+                              {r.role === "sindico" && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
+                                  Já é síndico
+                                </div>
+                              )}
+                              {!r.condo_id && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
+                                  Sem condomínio vinculado
+                                </div>
+                              )}
+
+                              {/* Separador + Excluir */}
                               <button
-                                onClick={() => promote(r, "sindico")}
-                                className="flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-primary/10 transition"
+                                onClick={() => { setDeleteTarget(r); setOpenMenuId(null); }}
+                                className="flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-destructive/10 text-destructive transition border-t border-border"
                               >
-                                <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <Trash2 className="h-3.5 w-3.5 shrink-0" />
                                 <div>
-                                  <p className="font-semibold text-primary">Síndico</p>
-                                  <p className="text-[10px] text-muted-foreground">Acesso total ao painel de gestão</p>
+                                  <p className="font-semibold">Excluir usuário</p>
+                                  <p className="text-[10px] opacity-70">Remove permanentemente da plataforma</p>
                                 </div>
                               </button>
-                            )}
-                            {r.role === "sindico" && (
-                              <div className="px-3 py-2.5 text-xs text-muted-foreground">Já é síndico</div>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-
-                    {/* Excluir */}
-                    <td className="px-3 py-3">
-                      <button
-                        onClick={() => remove(r)}
-                        disabled={deletingId === r.id}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:border-destructive hover:bg-destructive/10 hover:text-destructive transition disabled:opacity-40"
-                        title="Excluir usuário"
-                      >
-                        {deletingId === r.id
-                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          : <Trash2 className="h-3.5 w-3.5" />
-                        }
-                      </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -241,6 +250,31 @@ function UsersPage() {
           </table>
         </div>
       )}
+
+      {/* Dialog de confirmação de exclusão */}
+      <Dialog open={!!deleteTarget} onOpenChange={(v) => { if (!v && !deleting) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Excluir usuário
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir permanentemente <strong>"{deleteTarget?.full_name}"</strong>?
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Excluir definitivamente
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
