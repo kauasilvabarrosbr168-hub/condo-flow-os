@@ -58,10 +58,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadContext = async (uid: string) => {
-    const [{ data: prof }, { data: rs }] = await Promise.all([
+    const [{ data: p }, { data: rs }] = await Promise.all([
       supabase.from("profiles").select("id,condo_id,full_name,email,phone,unit_label,avatar_url").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role,condo_id").eq("user_id", uid),
     ]);
+
+    // B-04: profile pode ainda não existir logo após Google OAuth (trigger async)
+    let prof = p;
+    if (!prof) {
+      for (let i = 0; i < 8; i++) {
+        await new Promise((r) => setTimeout(r, 250));
+        const { data: retried } = await supabase.from("profiles").select("id,condo_id,full_name,email,phone,unit_label,avatar_url").eq("id", uid).maybeSingle();
+        if (retried) { prof = retried; break; }
+      }
+    }
+
     setProfile((prof as Profile) ?? null);
     const rls = ((rs ?? []) as { role: Role; condo_id: string }[]).map((r) => r.role);
     setRoles(rls);

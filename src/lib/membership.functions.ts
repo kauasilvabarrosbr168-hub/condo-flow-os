@@ -194,7 +194,8 @@ export const listPendingRequests = createServerFn({ method: "POST" })
       .from("membership_requests")
       .select("*")
       .in("status", ["pending", "sindico_approved"])
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(100);
 
     if (!isAdmin) {
       const { data: condos } = await context.supabase

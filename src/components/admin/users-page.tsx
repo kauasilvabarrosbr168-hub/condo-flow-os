@@ -7,9 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/brand";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
 import { changeUserRole } from "@/lib/promote-user.functions";
-import { deleteUser } from "@/lib/admin-members.functions";
+import { deleteUser, listAllUsers } from "@/lib/admin-members.functions";
 import { toast } from "sonner";
 import type { Role } from "@/hooks/use-auth";
 
@@ -40,28 +39,18 @@ export function AdminUsersPage() {
   const [promotingId, setPromotingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleting, setDeleting]       = useState(false);
-  const changeRole = useServerFn(changeUserRole);
-  const delUser    = useServerFn(deleteUser);
+  const changeRole  = useServerFn(changeUserRole);
+  const delUser     = useServerFn(deleteUser);
+  const fetchUsers  = useServerFn(listAllUsers);
 
+  // B-02: usa server function com service role — nunca anon client no browser
   const load = async () => {
-    const [{ data: profs }, { data: condos }, { data: roles }] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, email, unit_label, condo_id"),
-      supabase.from("condominiums").select("id, name"),
-      supabase.from("user_roles").select("user_id, role, condo_id"),
-    ]);
-    const condoMap = new Map((condos ?? []).map((c) => [c.id, c.name]));
-    setRows(
-      (profs ?? []).map((p) => {
-        const userRole = (roles ?? []).find((r) => r.user_id === p.id);
-        const condoId  = p.condo_id ?? userRole?.condo_id ?? null;
-        return {
-          ...p,
-          condo_id:   condoId,
-          condo_name: condoId ? condoMap.get(condoId) ?? null : null,
-          role:       userRole?.role ?? null,
-        };
-      }),
-    );
+    try {
+      const data = await fetchUsers();
+      setRows(data as Row[]);
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao carregar usuários");
+    }
   };
 
   useEffect(() => { load(); }, []);

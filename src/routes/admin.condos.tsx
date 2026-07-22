@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-auth";
 import { useServerFn } from "@tanstack/react-start";
-import { assignMemberToCondo, bootstrapPlatformAdmin } from "@/lib/admin-members.functions";
+import { assignMemberToCondo, bootstrapPlatformAdmin, listAllUsers } from "@/lib/admin-members.functions";
+import { createCondo, deleteCondo, toggleCondoSuspend } from "@/lib/admin-condo.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/condos")({
@@ -53,8 +54,11 @@ function CondosListPage() {
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
-  const assignMemberFn = useServerFn(assignMemberToCondo);
-  const bootstrapFn = useServerFn(bootstrapPlatformAdmin);
+  const assignMemberFn    = useServerFn(assignMemberToCondo);
+  const bootstrapFn       = useServerFn(bootstrapPlatformAdmin);
+  const createCondoFn     = useServerFn(createCondo);
+  const deleteCondoFn     = useServerFn(deleteCondo);
+  const toggleSuspendFn   = useServerFn(toggleCondoSuspend);
 
   const handleBootstrap = async () => {
     setBootstrapping(true);
@@ -106,22 +110,12 @@ function CondosListPage() {
     [rows, q],
   );
 
-  const deleteCondo = async () => {
+  // C-03: operações via server function (service role) em vez de anon client
+  const handleDeleteCondo = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const id = deleteTarget.id;
-      // Clear condo_id from profiles (don't delete users)
-      await supabase.from("profiles").update({ condo_id: null }).eq("condo_id", id);
-      // Delete related records in order (children first)
-      await supabase.from("reservations").delete().eq("condo_id", id);
-      await supabase.from("common_areas").delete().eq("condo_id", id);
-      await supabase.from("membership_requests").delete().eq("condo_id", id);
-      await supabase.from("user_roles").delete().eq("condo_id", id);
-      await supabase.from("invitations").delete().eq("condo_id", id);
-      await supabase.from("subscriptions").delete().eq("condo_id", id);
-      const { error } = await supabase.from("condominiums").delete().eq("id", id);
-      if (error) throw new Error(error.message);
+      await deleteCondoFn({ data: { condoId: deleteTarget.id } });
       toast.success(`"${deleteTarget.name}" excluído com sucesso.`);
       setDeleteTarget(null);
       load();
@@ -133,47 +127,29 @@ function CondosListPage() {
   };
 
   const toggleSuspend = async (id: string, current: string | null) => {
-    const next = current === "suspended" ? "active" : "suspended";
-    const { error } = await supabase.from("subscriptions").update({ status: next }).eq("condo_id", id);
-    if (error) return toast.error(error.message);
-    toast.success(next === "suspended" ? "Condomínio suspenso" : "Condomínio reativado");
-    load();
+    try {
+      const { newStatus } = await toggleSuspendFn({ data: { condoId: id, currentStatus: current } });
+      toast.success(newStatus === "suspended" ? "Condomínio suspenso" : "Condomínio reativado");
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao alterar status.");
+    }
   };
 
-  const createCondo = async (e: React.FormEvent) => {
+  const handleCreateCondo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return toast.error("Sessão administrativa não encontrada.");
     setCreating(true);
     setCreatedInvite(null);
     try {
-      const { data: condo, error: condoError } = await supabase
-        .from("condominiums")
-        .insert({ name: form.condoName.trim(), address: form.address.trim() || null, created_by: user.id })
-        .select("id, join_code")
-        .single();
-      if (condoError || !condo) throw new Error(condoError?.message ?? "Falha ao criar condomínio.");
-
-      const { data: starter } = await supabase.from("plans").select("id").eq("code", "starter").maybeSingle();
-      if (starter?.id) {
-        await supabase.from("subscriptions").insert({ condo_id: condo.id, plan_id: starter.id, status: "trialing" });
-      }
-
-      const { data: invite, error: inviteError } = await supabase
-        .from("invitations")
-        .insert({
-          condo_id: condo.id,
-          email: form.sindicoEmail.trim().toLowerCase(),
-          full_name: form.sindicoName.trim(),
-          role: "sindico",
-          invited_by: user.id,
-        })
-        .select("token")
-        .single();
-      if (inviteError || !invite) throw new Error(inviteError?.message ?? "Falha ao criar convite do síndico.");
-
-      const inviteUrl = `${window.location.origin}/login?mode=signup&invite=${invite.token}`;
+      const result = await createCondoFn({ data: {
+        condoName:    form.condoName.trim(),
+        address:      form.address.trim() || undefined,
+        sindicoName:  form.sindicoName.trim(),
+        sindicoEmail: form.sindicoEmail.trim().toLowerCase(),
+      }});
+      const inviteUrl = `${window.location.origin}/login?mode=signup&invite=${result.inviteToken}`;
       setCreatedInvite(inviteUrl);
-      setCreatedJoinCode((condo as { id: string; join_code?: string }).join_code ?? null);
+      setCreatedJoinCode(result.joinCode);
       setForm({ condoName: "", address: "", sindicoName: "", sindicoEmail: "" });
       toast.success("Condomínio criado e convite do síndico gerado.");
       load();
@@ -206,7 +182,7 @@ function CondosListPage() {
       />
 
       {showCreate && (
-        <form onSubmit={createCondo} className="mb-6 rounded-2xl border border-border bg-card shadow-card overflow-hidden animate-fade-in">
+        <form onSubmit={handleCreateCondo} className="mb-6 rounded-2xl border border-border bg-card shadow-card overflow-hidden animate-fade-in">
           <div className="border-b border-border px-5 py-4">
             <p className="text-sm font-semibold">Cadastrar condomínio e síndico</p>
             <p className="text-xs text-muted-foreground mt-0.5">O síndico recebe um convite exclusivo e entra no app normal do condomínio.</p>
@@ -376,7 +352,7 @@ function CondosListPage() {
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
-            <Button variant="destructive" onClick={deleteCondo} disabled={deleting}>
+            <Button variant="destructive" onClick={handleDeleteCondo} disabled={deleting}>
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Excluir definitivamente
             </Button>
@@ -389,6 +365,7 @@ function CondosListPage() {
         onClose={() => setMemberCondo(null)}
         onAssigned={() => { load(); }}
         assignFn={assignMemberFn}
+        listUsersFn={useServerFn(listAllUsers)}
       />
     </div>
   );
@@ -409,11 +386,13 @@ function MembersDialog({
   onClose,
   onAssigned,
   assignFn,
+  listUsersFn,
 }: {
   condo: Row | null;
   onClose: () => void;
   onAssigned: () => void;
   assignFn: (args: { data: { condoId: string; userId: string; role: Role; unitLabel?: string | null } }) => Promise<unknown>;
+  listUsersFn: () => Promise<UserOption[]>;
 }) {
   const open = !!condo;
   const [users, setUsers] = useState<UserOption[] | null>(null);
@@ -425,17 +404,8 @@ function MembersDialog({
 
   useEffect(() => {
     if (!open) return;
-    (async () => {
-      const [{ data: profs }, { data: condos }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, email, condo_id"),
-        supabase.from("condominiums").select("id, name"),
-      ]);
-      const cmap = new Map((condos ?? []).map((c: { id: string; name: string }) => [c.id, c.name]));
-      setUsers((profs ?? []).map((p: { id: string; full_name: string | null; email: string | null; condo_id: string | null }) => ({
-        ...p,
-        condo_name: p.condo_id ? cmap.get(p.condo_id) ?? null : null,
-      })));
-    })();
+    // B-02: usa server function (service role) em vez de anon client
+    listUsersFn().then((data) => setUsers(data as UserOption[])).catch(console.error);
   }, [open]);
 
   const filtered = useMemo(() => {

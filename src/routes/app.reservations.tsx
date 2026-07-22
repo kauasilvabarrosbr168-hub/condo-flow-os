@@ -9,6 +9,7 @@ import { Badge } from "@/components/brand";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
+import { createReservation, updateReservationStatus } from "@/lib/reservations.functions";
 
 export const Route = createFileRoute("/app/reservations")({
   head: () => ({ meta: [{ title: "Reservas · CondoFlow" }] }),
@@ -32,7 +33,8 @@ function ReservationsPage() {
   const { profile, condo, user, isAdmin } = useAuth();
   const qc = useQueryClient();
   const condoId = condo?.id ?? profile?.condo_id ?? null;
-  const dispatchFn = useServerFn(dispatchAIEvent);
+  const dispatchFn       = useServerFn(dispatchAIEvent);
+  const updateStatusFn   = useServerFn(updateReservationStatus);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "mine" | "upcoming">("upcoming");
 
@@ -180,8 +182,10 @@ function ReservationsPage() {
                         {isAdmin && r.status === "pendente" && (
                           <button
                             onClick={async () => {
-                              const { error } = await supabase.from("reservations").update({ status: "confirmada" }).eq("id", r.id);
-                              if (error) toast.error(error.message); else toast.success("Reserva confirmada");
+                              try {
+                                await updateStatusFn({ data: { reservationId: r.id, status: "confirmada" } });
+                                toast.success("Reserva confirmada");
+                              } catch (e: any) { toast.error(e.message ?? "Erro ao confirmar"); }
                             }}
                             className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-success/30 text-success hover:bg-success/10"
                           >
@@ -191,10 +195,11 @@ function ReservationsPage() {
                         <button
                           onClick={async () => {
                             if (!confirm("Cancelar esta reserva?")) return;
-                            const { error } = await supabase.from("reservations").update({ status: "cancelada" }).eq("id", r.id);
-                            if (error) { toast.error(error.message); return; }
-                            toast.success("Reserva cancelada");
-                            void dispatchFn({ data: { condoId: condoId!, eventType: "reservation_cancelled", entityType: "reservation", entityId: r.id, context: { areaName: area?.name ?? "área" } } });
+                            try {
+                              await updateStatusFn({ data: { reservationId: r.id, status: "cancelada" } });
+                              toast.success("Reserva cancelada");
+                              void dispatchFn({ data: { condoId: condoId!, eventType: "reservation_cancelled", entityType: "reservation", entityId: r.id, context: { areaName: area?.name ?? "área" } } });
+                            } catch (e: any) { toast.error(e.message ?? "Erro ao cancelar"); }
                           }}
                           className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted"
                         >
@@ -219,6 +224,7 @@ function ReservationsPage() {
           onClose={() => setOpen(false)}
           onCreated={() => qc.invalidateQueries({ queryKey: ["reservations", condoId] })}
           dispatchFn={dispatchFn}
+          createReservationFn={useServerFn(createReservation)}
         />
       )}
     </div>
@@ -233,6 +239,7 @@ function NewReservationDialog({
   onClose,
   onCreated,
   dispatchFn,
+  createReservationFn,
 }: {
   areas: Area[];
   cleaningServices: CleaningService[];
@@ -242,6 +249,8 @@ function NewReservationDialog({
   onCreated: () => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dispatchFn: (args: any) => Promise<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createReservationFn: (args: any) => Promise<{ id: string }>;
 }) {
   const [areaId, setAreaId] = useState(areas[0]?.id ?? "");
   const [date, setDate] = useState(() => new Date(Date.now() + 86400000).toLocaleDateString("sv"));
@@ -268,37 +277,31 @@ function NewReservationDialog({
       setBusy(false);
       return;
     }
-    const { data: resData, error } = await supabase.from("reservations").insert({
-      condo_id: condoId,
-      area_id: areaId,
-      resident_id: userId,
-      starts_at: starts,
-      ends_at: ends,
-      guests,
-      notes: notes || null,
-      cleaning_service_id: cleaningServiceId,
-    }).select("id").single();
-    if (error) { toast.error(error.message); setBusy(false); return; }
-
-    if (cleaningServiceId && resData?.id) {
-      const areaName = areas.find((a) => a.id === areaId)?.name ?? "Área";
-      await supabase.from("tasks").insert({
-        condo_id: condoId,
-        reservation_id: resData.id,
-        title: `Limpeza pós-evento — ${areaName}`,
-        description: selectedCleaning ? `Prestador: ${selectedCleaning.name}${selectedCleaning.phone ? ` · ${selectedCleaning.phone}` : ""}` : null,
-        kind: "pos_checklist",
-        status: "pendente",
-        due_at: ends,
-      });
+    // C-04: cria via server function (verifica condo, conflito de horário, etc.)
+    let resId: string;
+    try {
+      const result = await createReservationFn({ data: {
+        condoId,
+        areaId,
+        startsAt: starts,
+        endsAt:   ends,
+        guests,
+        notes:    notes || null,
+        cleaningServiceId: cleaningServiceId || null,
+      }});
+      resId = result.id;
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao criar reserva");
+      setBusy(false);
+      return;
     }
 
     setBusy(false);
     toast.success("Reserva criada! O fluxo automático foi iniciado.");
     const areaName = areas.find((a) => a.id === areaId)?.name ?? "área";
-    void dispatchFn({ data: { condoId, eventType: "reservation_created", entityType: "reservation", entityId: resData?.id ?? "", context: { areaName, cleaningServiceId, guests } } });
-    if (cleaningServiceId && resData?.id) {
-      void dispatchFn({ data: { condoId, eventType: "cleaning_requested", entityType: "reservation", entityId: resData.id, context: { serviceName: selectedCleaning?.name, areaName } } });
+    void dispatchFn({ data: { condoId, eventType: "reservation_created", entityType: "reservation", entityId: resId, context: { areaName, cleaningServiceId, guests } } });
+    if (cleaningServiceId) {
+      void dispatchFn({ data: { condoId, eventType: "cleaning_requested", entityType: "reservation", entityId: resId, context: { serviceName: selectedCleaning?.name, areaName } } });
     }
     onCreated();
     onClose();

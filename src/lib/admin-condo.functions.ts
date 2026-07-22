@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 async function assertCanManageCondo(
@@ -230,4 +231,77 @@ export const regenerateCondoJoinCode = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { joinCode: newCode as string };
+  });
+
+// ── C-03: operações de plataforma via service role ───────────────────────────
+
+async function assertIsPlatformAdmin(userId: string) {
+  const { data } = await supabaseAdmin.from("platform_admins").select("id").eq("user_id", userId).maybeSingle();
+  if (!data) throw new Error("forbidden");
+}
+
+export const createCondo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoName: string; address?: string; sindicoName: string; sindicoEmail: string }) =>
+    z.object({
+      condoName:    z.string().trim().min(2).max(120),
+      address:      z.string().trim().max(300).optional(),
+      sindicoName:  z.string().trim().min(1).max(120),
+      sindicoEmail: z.string().email().trim().toLowerCase(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertIsPlatformAdmin(context.userId);
+
+    const { data: condo, error: condoErr } = await supabaseAdmin
+      .from("condominiums")
+      .insert({ name: data.condoName, address: data.address || null, created_by: context.userId })
+      .select("id, join_code")
+      .single();
+    if (condoErr || !condo) throw new Error(condoErr?.message ?? "Falha ao criar condomínio.");
+
+    const { data: starter } = await supabaseAdmin.from("plans").select("id").eq("code", "starter").maybeSingle();
+    if (starter?.id) {
+      await supabaseAdmin.from("subscriptions").insert({ condo_id: condo.id, plan_id: starter.id, status: "trialing" });
+    }
+
+    const { data: invite, error: inviteErr } = await supabaseAdmin
+      .from("invitations")
+      .insert({ condo_id: condo.id, email: data.sindicoEmail, full_name: data.sindicoName, role: "sindico", invited_by: context.userId })
+      .select("token")
+      .single();
+    if (inviteErr || !invite) throw new Error(inviteErr?.message ?? "Falha ao criar convite.");
+
+    return { condoId: condo.id, joinCode: (condo as any).join_code ?? null, inviteToken: invite.token };
+  });
+
+export const deleteCondo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertIsPlatformAdmin(context.userId);
+    const id = data.condoId;
+    await supabaseAdmin.from("profiles").update({ condo_id: null }).eq("condo_id", id);
+    await supabaseAdmin.from("reservations").delete().eq("condo_id", id);
+    await supabaseAdmin.from("common_areas").delete().eq("condo_id", id);
+    await supabaseAdmin.from("membership_requests").delete().eq("condo_id", id);
+    await supabaseAdmin.from("user_roles").delete().eq("condo_id", id);
+    await supabaseAdmin.from("invitations").delete().eq("condo_id", id);
+    await supabaseAdmin.from("subscriptions").delete().eq("condo_id", id);
+    const { error } = await supabaseAdmin.from("condominiums").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const toggleCondoSuspend = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoId: string; currentStatus: string | null }) =>
+    z.object({ condoId: z.string().uuid(), currentStatus: z.string().nullable() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertIsPlatformAdmin(context.userId);
+    const next = data.currentStatus === "suspended" ? "active" : "suspended";
+    const { error } = await supabaseAdmin.from("subscriptions").update({ status: next }).eq("condo_id", data.condoId);
+    if (error) throw new Error(error.message);
+    return { newStatus: next };
   });

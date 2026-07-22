@@ -50,6 +50,32 @@ export const deleteUser = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// B-02: listagem de usuários via service role — nunca via anon client no browser
+export const listAllUsers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertPlatformAdmin(context.userId);
+    const [{ data: profs }, { data: condos }, { data: roles }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("id, full_name, email, unit_label, condo_id").order("full_name", { ascending: true }).limit(500),
+      supabaseAdmin.from("condominiums").select("id, name"),
+      supabaseAdmin.from("user_roles").select("user_id, role, condo_id"),
+    ]);
+    const condoMap = new Map((condos ?? []).map((c) => [c.id, c.name]));
+    return (profs ?? []).map((p) => {
+      const userRole = (roles ?? []).find((r) => r.user_id === p.id);
+      const condoId = p.condo_id ?? userRole?.condo_id ?? null;
+      return {
+        id: p.id,
+        full_name: p.full_name,
+        email: p.email,
+        unit_label: p.unit_label,
+        condo_id: condoId,
+        condo_name: condoId ? (condoMap.get(condoId) ?? null) : null,
+        role: userRole?.role ?? null,
+      };
+    });
+  });
+
 export const assignMemberToCondo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => AssignSchema.parse(input))

@@ -10,7 +10,8 @@ export const getInvitationByToken = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { data: invitation, error } = await supabaseAdmin
       .from("invitations")
-      .select("id, condo_id, email, full_name, unit_label, role, expires_at, accepted_at")
+      // C-01: não retornar email/full_name — esses campos são PII e o token já é o segredo
+      .select("id, condo_id, unit_label, role, expires_at, accepted_at")
       .eq("token", data.token)
       .maybeSingle();
 
