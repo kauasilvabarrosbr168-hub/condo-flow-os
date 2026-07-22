@@ -86,8 +86,12 @@ export const requestMembership = createServerFn({ method: "POST" })
 
 export const joinCondoByCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { code: string; unitLabel?: string }) =>
-    z.object({ code: z.string().min(1).max(20), unitLabel: z.string().trim().max(40).optional() }).parse(d),
+  .inputValidator((d: { code: string; unitLabel?: string; requestedRole?: string }) =>
+    z.object({
+      code: z.string().min(1).max(20),
+      unitLabel: z.string().trim().max(40).optional(),
+      requestedRole: z.enum(["morador", "funcionario"]).optional().default("morador"),
+    }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -114,7 +118,7 @@ export const joinCondoByCode = createServerFn({ method: "POST" })
       .insert({
         user_id: userId,
         condo_id: condo.id,
-        requested_role: "morador",
+        requested_role: data.requestedRole ?? "morador",
         unit_label: data.unitLabel?.trim() || null,
         status: "pending",
       })
