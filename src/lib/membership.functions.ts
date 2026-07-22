@@ -146,7 +146,10 @@ export const getMyMembershipStatus = createServerFn({ method: "POST" })
 // Pode ser chamado pelo síndico do condo ou por platform admin.
 export const removeMemberFromCondo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data, context }: { data: { targetUserId: string; condoId: string }; context: any }) => {
+  .inputValidator((d: { targetUserId: string; condoId: string }) =>
+    z.object({ targetUserId: z.string().uuid(), condoId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { targetUserId, condoId } = data;
 
@@ -176,18 +179,16 @@ export const removeMemberFromCondo = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-const SUPER_ADMIN_EMAILS = ['admin@condoflow.com'];
-
 export const listPendingRequests = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const userId = context.userId;
-    const email = context.claims?.email as string | undefined;
-    const isSuperAdmin = email && SUPER_ADMIN_EMAILS.includes(email);
 
-    const { data: isAdmin } = isSuperAdmin
-      ? { data: { id: 'super' } }
-      : await context.supabase.from("platform_admins").select("id").eq("user_id", userId).maybeSingle();
+    const { data: isAdmin } = await context.supabase
+      .from("platform_admins")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
 
     let query = context.supabase
       .from("membership_requests")
@@ -241,30 +242,36 @@ export const decideMembership = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const userId = context.userId;
-    const email = context.claims?.email as string | undefined;
-    const isSuperAdmin = email && SUPER_ADMIN_EMAILS.includes(email);
 
-    if (!isSuperAdmin) {
-      const { data: isAdmin } = await context.supabase
-        .from("platform_admins")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
-      const { data: isSindico } = await context.supabase
+    const { data: isAdmin } = await context.supabase
+      .from("platform_admins")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    let sindicoCondo: string | null = null;
+    if (!isAdmin) {
+      const { data: sindicoRole } = await context.supabase
         .from("user_roles")
-        .select("id")
+        .select("condo_id")
         .eq("user_id", userId)
         .in("role", ["sindico", "administradora"])
         .maybeSingle();
-      if (!isAdmin && !isSindico) throw new Error("Sem permissão para aprovar solicitações.");
+      if (!sindicoRole) throw new Error("Sem permissão para aprovar solicitações.");
+      sindicoCondo = sindicoRole.condo_id;
     }
 
-    // Fetch request details before deciding (needed for notifications)
+    // Fetch request details before deciding (needed for C-05 check + notifications)
     const { data: req } = await context.supabase
       .from("membership_requests")
       .select("user_id, condo_id, proposed_condo_name, requested_role")
       .eq("id", data.requestId)
       .maybeSingle();
+
+    // C-05: síndico só pode aprovar requests do seu próprio condomínio
+    if (!isAdmin && req?.condo_id !== sindicoCondo) {
+      throw new Error("Sem permissão para aprovar este pedido.");
+    }
 
     const { data: row, error } = await context.supabase.rpc("decide_membership_request", {
       p_request_id: data.requestId,

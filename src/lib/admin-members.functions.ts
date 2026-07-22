@@ -12,10 +12,7 @@ const AssignSchema = z.object({
   unitLabel: z.string().trim().max(40).optional().nullable(),
 });
 
-const SUPER_ADMIN_EMAILS = ['admin@condoflow.com'];
-
-async function assertPlatformAdmin(userId: string, email?: string) {
-  if (email && SUPER_ADMIN_EMAILS.includes(email)) return;
+async function assertPlatformAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
     .from("platform_admins")
     .select("id")
@@ -30,12 +27,13 @@ async function assertPlatformAdmin(userId: string, email?: string) {
 export const bootstrapPlatformAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { count } = await context.supabase
+    // C-02: usa supabaseAdmin para bypass da RLS — garante contagem real
+    const { count } = await supabaseAdmin
       .from("platform_admins")
       .select("id", { count: "exact", head: true });
     if ((count ?? 0) > 0) return { ok: false, reason: "already_has_admin" };
     const email = (context.claims?.email as string | undefined) ?? "";
-    const { error } = await context.supabase
+    const { error } = await supabaseAdmin
       .from("platform_admins")
       .insert({ user_id: context.userId, email });
     if (error) throw new Error(error.message);
@@ -44,8 +42,9 @@ export const bootstrapPlatformAdmin = createServerFn({ method: "POST" })
 
 export const deleteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data, context }: { data: { userId: string }; context: any }) => {
-    await assertPlatformAdmin(context.userId, context.claims?.email as string | undefined);
+  .inputValidator((d: { userId: string }) => z.object({ userId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertPlatformAdmin(context.userId);
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -55,6 +54,8 @@ export const assignMemberToCondo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => AssignSchema.parse(input))
   .handler(async ({ data, context }) => {
+    // B-01: verifica que caller é platform_admin antes de atribuir membro
+    await assertPlatformAdmin(context.userId);
     // Uses SECURITY DEFINER RPC so the operation runs in the same Supabase
     // project as the client — no service role key required.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

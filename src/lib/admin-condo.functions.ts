@@ -4,15 +4,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const SUPER_ADMIN_EMAILS = ['admin@condoflow.com'];
-
 async function assertCanManageCondo(
   supabase: SupabaseClient,
   userId: string,
   condoId: string,
-  email?: string,
 ) {
-  if (email && SUPER_ADMIN_EMAILS.includes(email)) return;
   const { data: isAdmin } = await supabase
     .from("platform_admins")
     .select("id")
@@ -33,7 +29,7 @@ export const getCondoDetails = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId);
     const [{ data: condo }, { data: areas }, { data: roleRows }, { data: sub }] = await Promise.all([
       context.supabase.from("condominiums").select("*").eq("id", data.condoId).single(),
       context.supabase
@@ -91,7 +87,7 @@ export const upsertArea = createServerFn({ method: "POST" })
     z.object({ condoId: z.string().uuid(), area: areaSchema }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId);
     const payload = {
       condo_id: data.condoId,
       name: data.area.name,
@@ -111,6 +107,7 @@ export const upsertArea = createServerFn({ method: "POST" })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .update(payload as any)
         .eq("id", data.area.id)
+        .eq("condo_id", data.condoId)  // C-06: garante que só atualiza área do próprio condo
         .select()
         .single();
       if (error) throw new Error(error.message);
@@ -136,7 +133,7 @@ export const deleteArea = createServerFn({ method: "POST" })
       .eq("id", data.areaId)
       .single();
     if (!area) throw new Error("not_found");
-    await assertCanManageCondo(context.supabase, context.userId, area.condo_id, context.claims?.email as string | undefined);
+    await assertCanManageCondo(context.supabase, context.userId, area.condo_id);
     const { error } = await context.supabase.from("common_areas").delete().eq("id", data.areaId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -167,7 +164,7 @@ export const updateCondo = createServerFn({ method: "POST" })
     z.object({ condoId: z.string().uuid(), patch: condoUpdateSchema }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const patch: any = {
       name: data.patch.name,
@@ -213,7 +210,7 @@ export const getCondoJoinCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId);
     const { data: condo, error } = await context.supabase
       .from("condominiums")
       .select("join_code")
@@ -227,7 +224,7 @@ export const regenerateCondoJoinCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertCanManageCondo(context.supabase, context.userId, data.condoId, context.claims?.email as string | undefined);
+    await assertCanManageCondo(context.supabase, context.userId, data.condoId);
     const { data: newCode, error } = await context.supabase.rpc("regenerate_condo_join_code", {
       p_condo_id: data.condoId,
     });

@@ -1,15 +1,22 @@
 // @ts-nocheck
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Role } from "@/hooks/use-auth";
 
+const RoleEnum = z.enum(["sindico", "administradora", "morador", "funcionario"]);
+
 export const changeUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data, context }: {
-    data: { targetUserId: string; condoId: string; newRole: Role };
-    context: any;
-  }) => {
+  .inputValidator((d: { targetUserId: string; condoId: string; newRole: string }) =>
+    z.object({
+      targetUserId: z.string().uuid(),
+      condoId: z.string().uuid(),
+      newRole: RoleEnum,
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
     const callerId = context.userId;
     const { targetUserId, condoId, newRole } = data;
 
@@ -58,12 +65,14 @@ export const changeUserRole = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
 
-    // Registra na timeline
-    await supabaseAdmin.from("activity_events").insert({
-      condo_id: condoId,
-      title: `Cargo alterado para ${newRole}`,
-      kind: "system",
-    });
+    // Registra na timeline — falha silenciosa para não bloquear a promoção
+    try {
+      await supabaseAdmin.from("activity_events").insert({
+        condo_id: condoId,
+        title: `Cargo alterado para ${newRole}`,
+        kind: "system",
+      });
+    } catch { /* log opcional */ }
 
     return { success: true };
   });
