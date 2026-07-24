@@ -18,8 +18,8 @@ async function assertPlatformAdmin(userId: string) {
     .select("id")
     .eq("user_id", userId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("forbidden");
+  if (error) throw new Error(`db_error: ${error.message}`);
+  if (!data) throw new Error(`forbidden:uid=${userId}`);
 }
 
 // One-time bootstrap: adds the caller as platform admin only when the table is empty.
