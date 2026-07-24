@@ -125,9 +125,7 @@ function LoginPage() {
     setMode("signup");
     fetchInvitation({ data: { token: invite } }).then((data) => {
       if (data) {
-        setInvitation({ full_name: data.full_name, email: data.email, role: data.role, condo_id: data.condo_id });
-        setEmail(data.email);
-        setFullName(data.full_name);
+        setInvitation({ full_name: "", email: "", role: data.role, condo_id: data.condo_id });
       }
     });
   }, [invite, fetchInvitation]);
