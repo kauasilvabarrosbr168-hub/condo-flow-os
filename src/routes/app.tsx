@@ -70,7 +70,7 @@ const NAV: (NavItem | NavGroup)[] = [
     items: [
       { to: "/app/my-condo", label: "Meu condomínio", icon: Building, roles: ["sindico", "administradora"] },
       { to: "/app/areas", label: "Áreas comuns", icon: Building, roles: ["sindico", "administradora"] },
-      { to: "/app/tasks", label: "Tarefas", icon: ListChecks, roles: ["funcionario"] },
+      { to: "/app/tasks", label: "Tarefas", icon: ListChecks, roles: ["sindico", "administradora", "funcionario"] },
       { to: "/app/services", label: "Serviços", icon: ListChecks, roles: ["funcionario"] },
       { to: "/app/ai-monitor", label: "IA Operacional", icon: Brain, roles: ["sindico", "administradora"] },
       { to: "/app/timeline", label: "Timeline", icon: Activity },
