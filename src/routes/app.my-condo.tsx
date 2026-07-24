@@ -3,14 +3,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Copy, RefreshCw, Check, Sparkles, Plus, X, Phone, Trash2, Brush, ExternalLink } from "lucide-react";
+import {
+  Loader2, Copy, RefreshCw, Check, Sparkles, Plus, X, Phone, Trash2,
+  ExternalLink, Settings2, CheckCircle2,
+} from "lucide-react";
 import { CondoEditor } from "@/components/condo/condo-editor";
 import { getMyCondoId, getCondoJoinCode, regenerateCondoJoinCode } from "@/lib/admin-condo.functions";
+import { getCleaningData, saveCleaningConfig } from "@/lib/cleaning.functions";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { Link } from "@tanstack/react-router";
 
 type CleaningService = { id: string; name: string; phone: string | null; price_cents: number; notes: string | null };
+type Profile = { id: string; full_name: string | null; email?: string | null };
+type Config = { internal_enabled: boolean; price_cents: number; worker_id: string | null };
 
 export const Route = createFileRoute("/app/my-condo")({
   head: () => ({ meta: [{ title: "Meu condomínio · CondoFlow" }] }),
@@ -18,16 +23,22 @@ export const Route = createFileRoute("/app/my-condo")({
 });
 
 function MyCondoPage() {
-  const fetchId = useServerFn(getMyCondoId);
-  const fetchCode = useServerFn(getCondoJoinCode);
-  const regenCode = useServerFn(regenerateCondoJoinCode);
+  const fetchId    = useServerFn(getMyCondoId);
+  const fetchCode  = useServerFn(getCondoJoinCode);
+  const regenCode  = useServerFn(regenerateCondoJoinCode);
+  const fetchClean = useServerFn(getCleaningData);
+  const saveCfg    = useServerFn(saveCleaningConfig);
   const qc = useQueryClient();
 
-  const [condoId, setCondoId] = useState<string | null | undefined>(undefined);
-  const [joinCode, setJoinCode] = useState<string | null>(null);
+  const [condoId, setCondoId]     = useState<string | null | undefined>(undefined);
+  const [joinCode, setJoinCode]   = useState<string | null>(null);
   const [regenBusy, setRegenBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied]       = useState(false);
   const [openCleaning, setOpenCleaning] = useState(false);
+
+  // Limpeza interna
+  const [cleanConfig, setCleanConfig] = useState<Config | null>(null);
+  const [workers, setWorkers]         = useState<Profile[]>([]);
 
   const { data: cleaningServices } = useQuery({
     enabled: !!condoId,
@@ -50,7 +61,11 @@ function MyCondoPage() {
   useEffect(() => {
     if (!condoId) return;
     fetchCode({ data: { condoId } }).then((r) => setJoinCode(r.joinCode)).catch(() => {});
-  }, [condoId, fetchCode]);
+    fetchClean({ data: { condoId } }).then((r) => {
+      setCleanConfig(r.config as Config);
+      setWorkers(r.workers as Profile[]);
+    }).catch(() => {});
+  }, [condoId, fetchCode, fetchClean]);
 
   const handleCopy = () => {
     if (!joinCode) return;
@@ -85,6 +100,7 @@ function MyCondoPage() {
       </div>
     );
   }
+
   return (
     <div>
       <div className="mb-6">
@@ -92,7 +108,7 @@ function MyCondoPage() {
         <p className="text-sm text-muted-foreground mt-1">Edite identidade visual, estrutura, áreas, regras e contatos do seu condomínio.</p>
       </div>
 
-      {/* Código de entrada — visível só para síndico/admin */}
+      {/* Código de entrada */}
       <div className="mb-6 rounded-2xl border border-border bg-card p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -106,20 +122,12 @@ function MyCondoPage() {
           <div className="flex-1 font-mono text-2xl font-bold tracking-[0.25em] text-foreground bg-muted rounded-xl px-4 py-3 select-all">
             {joinCode ?? "········"}
           </div>
-          <button
-            onClick={handleCopy}
-            disabled={!joinCode}
-            title="Copiar código"
-            className="h-12 w-12 inline-flex items-center justify-center rounded-xl border border-border hover:bg-muted transition disabled:opacity-40"
-          >
+          <button onClick={handleCopy} disabled={!joinCode} title="Copiar código"
+            className="h-12 w-12 inline-flex items-center justify-center rounded-xl border border-border hover:bg-muted transition disabled:opacity-40">
             {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
           </button>
-          <button
-            onClick={handleRegen}
-            disabled={regenBusy}
-            title="Gerar novo código"
-            className="h-12 w-12 inline-flex items-center justify-center rounded-xl border border-border hover:bg-muted transition disabled:opacity-40"
-          >
+          <button onClick={handleRegen} disabled={regenBusy} title="Gerar novo código"
+            className="h-12 w-12 inline-flex items-center justify-center rounded-xl border border-border hover:bg-muted transition disabled:opacity-40">
             {regenBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </button>
         </div>
@@ -132,16 +140,36 @@ function MyCondoPage() {
       <div className="mb-6 rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Prestadores de limpeza</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Diaristas e empresas que os moradores podem solicitar ao fazer uma reserva.</p>
+            <p className="text-sm font-semibold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" /> Prestadores de limpeza
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Diaristas e empresas cadastradas. Os moradores veem essa lista ao fazer reservas.
+            </p>
           </div>
-          <button onClick={() => setOpenCleaning(true)} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-border text-xs font-medium hover:bg-muted transition">
-            <Plus className="h-3.5 w-3.5" /> Adicionar
-          </button>
+          <div className="flex gap-2">
+            <a
+              href="https://www.google.com/maps/search/empresa+de+limpeza"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Buscar no Google Maps"
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> Google Maps
+            </a>
+            <button
+              onClick={() => setOpenCleaning(true)}
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-border text-xs font-medium hover:bg-muted transition"
+            >
+              <Plus className="h-3.5 w-3.5" /> Adicionar
+            </button>
+          </div>
         </div>
 
         {(cleaningServices?.length ?? 0) === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4 rounded-xl border border-dashed border-border">Nenhum prestador cadastrado ainda.</p>
+          <p className="text-sm text-muted-foreground text-center py-4 rounded-xl border border-dashed border-border">
+            Nenhum prestador cadastrado ainda.
+          </p>
         ) : (
           <div className="space-y-2">
             {cleaningServices!.map((s) => (
@@ -177,21 +205,16 @@ function MyCondoPage() {
         )}
       </div>
 
-      {/* Link para a página de Limpeza completa */}
-      <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-5 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold flex items-center gap-2"><Brush className="h-4 w-4 text-primary" /> Limpeza do condomínio</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Configure o serviço de limpeza interno, defina o preço, atribua um colaborador e veja todos os prestadores externos.
-          </p>
-        </div>
-        <Link
-          to="/app/cleaning"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-gradient-hero text-xs font-medium text-primary-foreground hover:opacity-90 transition shrink-0"
-        >
-          <ExternalLink className="h-3.5 w-3.5" /> Abrir
-        </Link>
-      </div>
+      {/* Limpeza interna — colaborador do condomínio */}
+      {cleanConfig !== null && (
+        <InternalCleaningConfig
+          condoId={condoId}
+          config={cleanConfig}
+          workers={workers}
+          saveFn={saveCfg}
+          onSaved={(cfg) => setCleanConfig(cfg)}
+        />
+      )}
 
       <CondoEditor condoId={condoId} variant="sindico" />
 
@@ -206,17 +229,118 @@ function MyCondoPage() {
   );
 }
 
+// ─── Limpeza interna ──────────────────────────────────────────────────────────
+
+function InternalCleaningConfig({ condoId, config, workers, saveFn, onSaved }: {
+  condoId: string;
+  config: Config;
+  workers: Profile[];
+  saveFn: (a: any) => Promise<any>;
+  onSaved: (cfg: Config) => void;
+}) {
+  const [enabled, setEnabled]   = useState(config.internal_enabled);
+  const [price, setPrice]       = useState(config.price_cents > 0 ? (config.price_cents / 100).toFixed(2) : "");
+  const [workerId, setWorkerId] = useState<string>(config.worker_id ?? "");
+  const [busy, setBusy]         = useState(false);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const priceCents = price === "" ? 0 : Math.round(Number(price) * 100);
+      await saveFn({ data: { condoId, enabled, priceCents, workerId: workerId || null } });
+      toast.success("Configuração de limpeza salva!");
+      onSaved({ internal_enabled: enabled, price_cents: priceCents, worker_id: workerId || null });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mb-6 rounded-2xl border border-border bg-card p-5 space-y-4">
+      <div>
+        <p className="text-sm font-semibold flex items-center gap-2">
+          <Settings2 className="h-4 w-4 text-primary" /> Limpeza interna — colaborador do condomínio
+        </p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Quando ativado, moradores podem solicitar limpeza diretamente pelo app. O colaborador recebe o pedido e a taxa como renda extra.
+        </p>
+      </div>
+
+      {/* Toggle ativo/inativo */}
+      <label className="flex items-center gap-3 cursor-pointer select-none">
+        <div
+          onClick={() => setEnabled((v) => !v)}
+          className={`relative h-5 w-9 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-muted-foreground/30"}`}
+        >
+          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`} />
+        </div>
+        <span className="text-sm font-medium">
+          {enabled
+            ? <span className="flex items-center gap-1 text-primary"><CheckCircle2 className="h-3.5 w-3.5" /> Serviço ativado</span>
+            : <span className="text-muted-foreground">Serviço desativado</span>}
+        </span>
+      </label>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Preço fixo por sessão (R$)</label>
+          <input
+            type="number"
+            min={0}
+            step={0.01}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="Deixe vazio para 'A combinar'"
+            className="mt-1 w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">O colaborador recebe esse valor por sessão de limpeza.</p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Colaborador responsável</label>
+          <select
+            value={workerId}
+            onChange={(e) => setWorkerId(e.target.value)}
+            className="mt-1 w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          >
+            <option value="">— Nenhum atribuído —</option>
+            {workers.map((w) => (
+              <option key={w.id} value={w.id}>{w.full_name ?? w.email ?? w.id}</option>
+            ))}
+          </select>
+          {workers.length === 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1">Cadastre um funcionário na equipe para atribuir a limpeza.</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={save}
+          disabled={busy}
+          className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60 transition"
+        >
+          {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Salvar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Dialog de novo prestador ─────────────────────────────────────────────────
+
 const inputCls = "w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring";
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block"><span className="text-xs font-medium text-muted-foreground">{label}</span><div className="mt-1">{children}</div></label>;
 }
 
 function NewCleaningServiceDialog({ condoId, onClose, onCreated }: { condoId: string; onClose: () => void; onCreated: () => void }) {
-  const [name, setName] = useState("");
+  const [name, setName]   = useState("");
   const [phone, setPhone] = useState("");
   const [price, setPrice] = useState<number | "">("");
   const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy]   = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,15 +365,36 @@ function NewCleaningServiceDialog({ condoId, onClose, onCreated }: { condoId: st
       <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl border border-border bg-card shadow-elegant animate-pop">
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="text-base font-semibold">Novo prestador de limpeza</h2>
-          <button type="button" onClick={onClose} className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <div className="p-5 space-y-3">
-          <Field label="Nome / Empresa"><input required value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Ex: Limpeza Express, Dona Maria…" className={inputCls} /></Field>
-          <Field label="Telefone / WhatsApp"><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" className={inputCls} /></Field>
-          <Field label="Valor da diária (R$)">
-            <input type="number" min={0} step={0.01} value={price} onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))} placeholder="Deixe vazio para 'A combinar'" className={inputCls} />
+        <div className="px-5 py-3">
+          <a
+            href="https://www.google.com/maps/search/empresa+de+limpeza"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+          >
+            <ExternalLink className="h-3 w-3" /> Encontrar empresa no Google Maps
+          </a>
+        </div>
+        <div className="px-5 pb-3 space-y-3">
+          <Field label="Nome / Empresa *">
+            <input required value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Ex: Limpeza Express, Dona Maria…" className={inputCls} />
           </Field>
-          <Field label="Observações"><textarea value={notes} maxLength={300} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Horários disponíveis, especialidades…" className={inputCls + " py-2 resize-none h-auto"} /></Field>
+          <Field label="Telefone / WhatsApp">
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" className={inputCls} />
+          </Field>
+          <Field label="Valor da diária (R$)">
+            <input type="number" min={0} step={0.01} value={price}
+              onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
+              placeholder="Deixe vazio para 'A combinar'" className={inputCls} />
+          </Field>
+          <Field label="Observações">
+            <textarea value={notes} maxLength={300} onChange={(e) => setNotes(e.target.value)} rows={2}
+              placeholder="Horários disponíveis, especialidades…" className={inputCls + " py-2 resize-none h-auto"} />
+          </Field>
         </div>
         <div className="flex justify-end gap-2 p-5 border-t border-border">
           <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-muted">Cancelar</button>
