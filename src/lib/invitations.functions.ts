@@ -45,9 +45,16 @@ export const acceptInvitation = createServerFn({ method: "POST" })
       .eq("id", userId);
     if (profileError) throw new Error(profileError.message);
 
-    const { error: roleError } = await supabaseAdmin
+    const { data: existingRole } = await supabaseAdmin
       .from("user_roles")
-      .upsert({ user_id: userId, condo_id: invitation.condo_id, role: invitation.role }, { onConflict: "user_id,condo_id,role" });
+      .select("id")
+      .eq("user_id", userId)
+      .eq("condo_id", invitation.condo_id)
+      .maybeSingle();
+
+    const { error: roleError } = existingRole
+      ? await supabaseAdmin.from("user_roles").update({ role: invitation.role }).eq("user_id", userId).eq("condo_id", invitation.condo_id)
+      : await supabaseAdmin.from("user_roles").insert({ user_id: userId, condo_id: invitation.condo_id, role: invitation.role });
     if (roleError) throw new Error(roleError.message);
 
     const { error: inviteError } = await supabaseAdmin
