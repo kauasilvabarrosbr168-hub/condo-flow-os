@@ -30,6 +30,7 @@ import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppCommunicationRouteImport } from './routes/app.communication'
 import { Route as AppAreasRouteImport } from './routes/app.areas'
 import { Route as AppAnalyticsRouteImport } from './routes/app.analytics'
+import { Route as AppAiMonitorRouteImport } from './routes/app.ai-monitor'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminTicketsRouteImport } from './routes/admin.tickets'
 import { Route as AdminSubscriptionsRouteImport } from './routes/admin.subscriptions'
@@ -152,6 +153,11 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAiMonitorRoute = AppAiMonitorRouteImport.update({
+  id: '/ai-monitor',
+  path: '/ai-monitor',
+  getParentRoute: () => AppRoute,
+} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/tickets': typeof AdminTicketsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/app/ai-monitor': typeof AppAiMonitorRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
   '/app/communication': typeof AppCommunicationRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByTo {
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/tickets': typeof AdminTicketsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/app/ai-monitor': typeof AppAiMonitorRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
   '/app/communication': typeof AppCommunicationRoute
@@ -331,6 +339,7 @@ export interface FileRoutesById {
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/tickets': typeof AdminTicketsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/app/ai-monitor': typeof AppAiMonitorRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
   '/app/communication': typeof AppCommunicationRoute
@@ -372,6 +381,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/tickets'
     | '/admin/users'
+    | '/app/ai-monitor'
     | '/app/analytics'
     | '/app/areas'
     | '/app/communication'
@@ -410,6 +420,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/tickets'
     | '/admin/users'
+    | '/app/ai-monitor'
     | '/app/analytics'
     | '/app/areas'
     | '/app/communication'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/tickets'
     | '/admin/users'
+    | '/app/ai-monitor'
     | '/app/analytics'
     | '/app/areas'
     | '/app/communication'
@@ -624,6 +636,13 @@ declare module '@tanstack/react-router' {
       path: '/analytics'
       fullPath: '/app/analytics'
       preLoaderRoute: typeof AppAnalyticsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ai-monitor': {
+      id: '/app/ai-monitor'
+      path: '/ai-monitor'
+      fullPath: '/app/ai-monitor'
+      preLoaderRoute: typeof AppAiMonitorRouteImport
       parentRoute: typeof AppRoute
     }
     '/admin/users': {
@@ -803,6 +822,7 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AppRouteChildren {
+  AppAiMonitorRoute: typeof AppAiMonitorRoute
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAreasRoute: typeof AppAreasRoute
   AppCommunicationRoute: typeof AppCommunicationRoute
@@ -821,6 +841,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAiMonitorRoute: AppAiMonitorRoute,
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppAreasRoute: AppAreasRoute,
   AppCommunicationRoute: AppCommunicationRoute,
@@ -850,3 +871,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
