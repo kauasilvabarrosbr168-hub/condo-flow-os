@@ -1,3 +1,7 @@
+-- Adiciona novos valores ao ENUM task_kind
+ALTER TYPE public.task_kind ADD VALUE IF NOT EXISTS 'limpeza';
+ALTER TYPE public.task_kind ADD VALUE IF NOT EXISTS 'verificacao';
+
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS urgency text NOT NULL DEFAULT 'normal'
   CHECK (urgency IN ('baixa','normal','urgente'));
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS ai_generated boolean NOT NULL DEFAULT false;
