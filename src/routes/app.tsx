@@ -27,6 +27,8 @@ import {
   ShieldCheck,
   XCircle,
   Brain,
+  CreditCard,
+  Brush,
 } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { useAuth, type Role } from "@/hooks/use-auth";
@@ -63,6 +65,8 @@ type NavGroup = {
 const NAV: (NavItem | NavGroup)[] = [
   { to: "/app/dashboard", label: "Início", icon: LayoutDashboard },
   { to: "/app/reservations", label: "Reservas", icon: CalendarDays },
+  { to: "/app/cleaning", label: "Limpeza", icon: Brush },
+  { to: "/app/charges", label: "Cobranças", icon: CreditCard, roles: ["sindico", "administradora", "morador"] },
   {
     label: "Operações",
     items: [

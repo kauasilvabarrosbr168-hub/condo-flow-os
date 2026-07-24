@@ -3,11 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Copy, RefreshCw, Check, Sparkles, Plus, X, Phone, Trash2 } from "lucide-react";
+import { Loader2, Copy, RefreshCw, Check, Sparkles, Plus, X, Phone, Trash2, Brush, ExternalLink } from "lucide-react";
 import { CondoEditor } from "@/components/condo/condo-editor";
 import { getMyCondoId, getCondoJoinCode, regenerateCondoJoinCode } from "@/lib/admin-condo.functions";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { Link } from "@tanstack/react-router";
 
 type CleaningService = { id: string; name: string; phone: string | null; price_cents: number; notes: string | null };
 
@@ -174,6 +175,22 @@ function MyCondoPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Link para a página de Limpeza completa */}
+      <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-5 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold flex items-center gap-2"><Brush className="h-4 w-4 text-primary" /> Limpeza do condomínio</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Configure o serviço de limpeza interno, defina o preço, atribua um colaborador e veja todos os prestadores externos.
+          </p>
+        </div>
+        <Link
+          to="/app/cleaning"
+          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-gradient-hero text-xs font-medium text-primary-foreground hover:opacity-90 transition shrink-0"
+        >
+          <ExternalLink className="h-3.5 w-3.5" /> Abrir
+        </Link>
       </div>
 
       <CondoEditor condoId={condoId} variant="sindico" />
