@@ -19,6 +19,7 @@ export const Route = createFileRoute("/app/reservations")({
 
 type Area = { id: string; name: string; description: string | null; min_advance_hours: number };
 type CleaningService = { id: string; name: string; phone: string | null; price_cents: number };
+type CleaningConfig = { internal_enabled: boolean; price_cents: number; worker_id: string | null; worker_name?: string | null };
 type Reservation = {
   id: string;
   area_id: string;
@@ -28,6 +29,8 @@ type Reservation = {
   guests: number | null;
   notes: string | null;
   status: string;
+  cleaning_type: string | null;
+  cleaning_service_id: string | null;
 };
 
 function ReservationsPage() {
@@ -66,13 +69,29 @@ function ReservationsPage() {
     },
   });
 
+  const { data: cleaningConfig } = useQuery({
+    enabled: !!condoId,
+    queryKey: ["cleaning_config", condoId],
+    queryFn: async () => {
+      const { data: cfg } = await supabase
+        .from("condo_cleaning_config")
+        .select("internal_enabled, price_cents, worker_id")
+        .eq("condo_id", condoId!)
+        .maybeSingle();
+      if (!cfg) return null;
+      if (!cfg.worker_id) return cfg as CleaningConfig;
+      const { data: worker } = await supabase.from("profiles").select("full_name").eq("id", cfg.worker_id).maybeSingle();
+      return { ...cfg, worker_name: worker?.full_name ?? null } as CleaningConfig;
+    },
+  });
+
   const { data: reservations, isLoading } = useQuery({
     enabled: !!condoId,
     queryKey: ["reservations", condoId],
     queryFn: async () => {
       const { data } = await supabase
         .from("reservations")
-        .select("id,area_id,resident_id,starts_at,ends_at,guests,notes,status")
+        .select("id,area_id,resident_id,starts_at,ends_at,guests,notes,status,cleaning_type,cleaning_service_id")
         .eq("condo_id", condoId!)
         .neq("status", "cancelada")
         .order("starts_at", { ascending: true });
@@ -176,6 +195,14 @@ function ReservationsPage() {
                     <StatusBadge status={r.status} />
                   </div>
                   {r.notes && <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{r.notes}</p>}
+                  {(r.cleaning_type === "external" || r.cleaning_type === "internal") && (
+                    <p className="mt-2 text-[11px] text-primary flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      {r.cleaning_type === "internal"
+                        ? "Limpeza: colaborador do condomínio"
+                        : `Limpeza: ${cleaningServices?.find((s) => s.id === r.cleaning_service_id)?.name ?? "Prestador externo"}`}
+                    </p>
+                  )}
                   <div className="mt-4 flex items-center justify-between gap-2">
                     <span className="text-[11px] text-muted-foreground">{r.guests ?? 0} convidados</span>
                     {(isMine || isAdmin) && r.status !== "cancelada" && (
@@ -220,6 +247,7 @@ function ReservationsPage() {
         <NewReservationDialog
           areas={areas!}
           cleaningServices={cleaningServices ?? []}
+          cleaningConfig={cleaningConfig ?? null}
           condoId={condoId}
           userId={user!.id}
           onClose={() => setOpen(false)}
@@ -232,9 +260,16 @@ function ReservationsPage() {
   );
 }
 
+type CleaningChoice = "none" | "internal" | string; // string = cleaning_service_id
+
+function fmtPrice(cents: number) {
+  return cents === 0 ? "A combinar" : `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
+}
+
 function NewReservationDialog({
   areas,
   cleaningServices,
+  cleaningConfig,
   condoId,
   userId,
   onClose,
@@ -244,6 +279,7 @@ function NewReservationDialog({
 }: {
   areas: Area[];
   cleaningServices: CleaningService[];
+  cleaningConfig: CleaningConfig | null;
   condoId: string;
   userId: string;
   onClose: () => void;
@@ -259,10 +295,11 @@ function NewReservationDialog({
   const [endTime, setEndTime] = useState("22:00");
   const [guests, setGuests] = useState(0);
   const [notes, setNotes] = useState("");
-  const [cleaningServiceId, setCleaningServiceId] = useState<string | null>(null);
+  const [cleaning, setCleaning] = useState<CleaningChoice>("none");
   const [busy, setBusy] = useState(false);
 
-  const selectedCleaning = cleaningServices.find((s) => s.id === cleaningServiceId) ?? null;
+  const hasCleaningOptions = cleaningServices.length > 0 || (cleaningConfig?.internal_enabled ?? false);
+  const selectedExternal = cleaningServices.find((s) => s.id === cleaning) ?? null;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -278,7 +315,10 @@ function NewReservationDialog({
       setBusy(false);
       return;
     }
-    // C-04: cria via server function (verifica condo, conflito de horário, etc.)
+
+    const cleaningType = cleaning === "none" ? "none" : cleaning === "internal" ? "internal" : "external";
+    const cleaningServiceId = cleaningType === "external" ? cleaning : null;
+
     let resId: string;
     try {
       const result = await createReservationFn({ data: {
@@ -288,7 +328,8 @@ function NewReservationDialog({
         endsAt:   ends,
         guests,
         notes:    notes || null,
-        cleaningServiceId: cleaningServiceId || null,
+        cleaningServiceId,
+        cleaningType,
       }});
       resId = result.id;
     } catch (e: any) {
@@ -300,9 +341,9 @@ function NewReservationDialog({
     setBusy(false);
     toast.success("Reserva criada! O fluxo automático foi iniciado.");
     const areaName = areas.find((a) => a.id === areaId)?.name ?? "área";
-    void dispatchFn({ data: { condoId, eventType: "reservation_created", entityType: "reservation", entityId: resId, context: { areaName, cleaningServiceId, guests } } });
-    if (cleaningServiceId) {
-      void dispatchFn({ data: { condoId, eventType: "cleaning_requested", entityType: "reservation", entityId: resId, context: { serviceName: selectedCleaning?.name, areaName } } });
+    void dispatchFn({ data: { condoId, eventType: "reservation_created", entityType: "reservation", entityId: resId, context: { areaName, cleaningType, guests } } });
+    if (cleaningType !== "none") {
+      void dispatchFn({ data: { condoId, eventType: "cleaning_requested", entityType: "reservation", entityId: resId, context: { serviceName: selectedExternal?.name ?? "colaborador interno", areaName } } });
     }
     onCreated();
     onClose();
@@ -344,27 +385,47 @@ function NewReservationDialog({
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} rows={3} className={inputCls + " py-2 resize-none"} placeholder="Algo que o síndico ou funcionário deva saber..." />
           </Field>
 
-          {cleaningServices.length > 0 && (
+          {/* Limpeza pós-evento — prestadores externos + colaborador interno */}
+          {hasCleaningOptions && (
             <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
-              <p className="text-xs font-semibold flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> Serviço de limpeza pós-evento (opcional)</p>
+              <p className="text-xs font-semibold flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-primary" /> Limpeza pós-evento (opcional)
+              </p>
               <div className="space-y-1.5">
+                {/* Sem limpeza */}
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="radio" name="cleaning" checked={cleaningServiceId === null} onChange={() => setCleaningServiceId(null)} className="h-4 w-4" />
+                  <input type="radio" name="cleaning" checked={cleaning === "none"} onChange={() => setCleaning("none")} className="h-4 w-4" />
                   <span className="text-muted-foreground">Sem limpeza</span>
                 </label>
+
+                {/* Colaborador interno */}
+                {cleaningConfig?.internal_enabled && (
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="cleaning" checked={cleaning === "internal"} onChange={() => setCleaning("internal")} className="h-4 w-4" />
+                    <span className="flex-1">
+                      {cleaningConfig.worker_name
+                        ? `${cleaningConfig.worker_name} (colaborador do condomínio)`
+                        : "Colaborador do condomínio"}
+                    </span>
+                    <span className="text-xs text-primary font-medium">{fmtPrice(cleaningConfig.price_cents)}</span>
+                  </label>
+                )}
+
+                {/* Prestadores externos */}
                 {cleaningServices.map((s) => (
                   <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" name="cleaning" checked={cleaningServiceId === s.id} onChange={() => setCleaningServiceId(s.id)} className="h-4 w-4" />
+                    <input type="radio" name="cleaning" checked={cleaning === s.id} onChange={() => setCleaning(s.id)} className="h-4 w-4" />
                     <span className="flex-1">{s.name}</span>
-                    <span className="text-xs text-primary font-medium">
-                      {s.price_cents === 0 ? "A combinar" : `R$ ${(s.price_cents / 100).toFixed(2).replace(".", ",")}`}
-                    </span>
+                    <span className="text-xs text-primary font-medium">{fmtPrice(s.price_cents)}</span>
                   </label>
                 ))}
               </div>
-              {selectedCleaning && (
+
+              {cleaning !== "none" && (
                 <p className="text-[11px] text-muted-foreground pt-1 border-t border-border">
-                  Uma tarefa de limpeza será criada automaticamente para {selectedCleaning.name}.
+                  {cleaning === "internal"
+                    ? "O colaborador receberá o pedido de limpeza automaticamente."
+                    : `Uma tarefa de limpeza será criada automaticamente para ${selectedExternal?.name}.`}
                 </p>
               )}
             </div>
