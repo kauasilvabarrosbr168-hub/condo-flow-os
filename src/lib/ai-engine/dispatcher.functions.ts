@@ -98,7 +98,8 @@ function buildWhatsAppMessage(severity: AISeverity, summary: string, recommendat
 
 export const dispatchAIEvent = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }: { data: AIEventInput }) => {
+  .inputValidator((input: AIEventInput) => input)
+  .handler(async ({ data }) => {
     const adminSb = getAdminClient()
 
     const { data: settingsRow } = await adminSb
