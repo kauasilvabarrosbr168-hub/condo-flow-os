@@ -58,10 +58,13 @@ export const changeUserRole = createServerFn({ method: "POST" })
       }
     }
 
-    // Upsert: atualiza ou cria a role do usuário neste condo
-    const { error } = await supabaseAdmin
-      .from("user_roles")
-      .upsert({ user_id: targetUserId, condo_id: condoId, role: newRole }, { onConflict: "user_id,condo_id" });
+    // Atualiza role existente ou insere se não tiver
+    const { data: existing } = await supabaseAdmin
+      .from("user_roles").select("id").eq("user_id", targetUserId).eq("condo_id", condoId).maybeSingle();
+
+    const { error } = existing
+      ? await supabaseAdmin.from("user_roles").update({ role: newRole }).eq("user_id", targetUserId).eq("condo_id", condoId)
+      : await supabaseAdmin.from("user_roles").insert({ user_id: targetUserId, condo_id: condoId, role: newRole });
 
     if (error) throw new Error(error.message);
 
