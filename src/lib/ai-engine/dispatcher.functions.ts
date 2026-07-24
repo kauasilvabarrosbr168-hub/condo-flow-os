@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createServerFn } from '@tanstack/react-start'
-import { createClient } from '@supabase/supabase-js'
 import { requireSupabaseAuth } from '@/lib/supabase-auth-middleware'
+import { supabaseAdmin } from '@/integrations/supabase/client.server'
 import { runRulesEngine } from './rules-engine'
 import type { AIEventInput, CondoAISettings, AISeverity } from './types'
 
@@ -11,12 +11,6 @@ const DEFAULT_SETTINGS: CondoAISettings = {
   can_change_priority: true,
   can_create_reminders: true,
   can_redistribute_tasks: false,
-}
-
-function getAdminClient() {
-  const url = (import.meta.env?.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL) as string
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY as string
-  return createClient(url, key)
 }
 
 async function callAI(event: AIEventInput, rulesSummary: string): Promise<{ severity: AISeverity; analysis: string; recommendation: string }> {
@@ -99,8 +93,8 @@ function buildWhatsAppMessage(severity: AISeverity, summary: string, recommendat
 export const dispatchAIEvent = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: AIEventInput) => input)
-  .handler(async ({ data }) => {
-    const adminSb = getAdminClient()
+  .handler(async ({ data }: { data: AIEventInput }) => {
+    const adminSb = supabaseAdmin
 
     const { data: settingsRow } = await adminSb
       .from('condo_ai_settings')

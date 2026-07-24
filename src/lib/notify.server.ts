@@ -40,7 +40,7 @@ export async function sendSms(to: string, body: string): Promise<void> {
   }
   try {
     await client.messages.create({ from, to, body });
-    console.info(`[notify] SMS sent to ${to}`);
+    console.info("[notify] SMS sent");
   } catch (err) {
     console.error("[notify] SMS failed:", err);
   }
@@ -56,7 +56,7 @@ export async function sendWhatsApp(to: string, body: string): Promise<void> {
   const waTo = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
   try {
     await client.messages.create({ from, to: waTo, body });
-    console.info(`[notify] WhatsApp sent to ${to}`);
+    console.info("[notify] WhatsApp sent");
   } catch (err) {
     console.error("[notify] WhatsApp failed:", err);
   }
@@ -71,7 +71,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   }
   try {
     await resend.emails.send({ from, to, subject, react: undefined, html });
-    console.info(`[notify] Email sent to ${to}`);
+    console.info("[notify] Email sent");
   } catch (err) {
     console.error("[notify] Email failed:", err);
   }

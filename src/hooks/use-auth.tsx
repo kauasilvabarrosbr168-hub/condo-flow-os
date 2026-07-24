@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabase";
@@ -56,32 +56,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [condo, setCondo] = useState<Condo | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadContextInFlight = useRef(false);
 
   const loadContext = async (uid: string) => {
-    const [{ data: p }, { data: rs }] = await Promise.all([
-      supabase.from("profiles").select("id,condo_id,full_name,email,phone,unit_label,avatar_url").eq("id", uid).maybeSingle(),
-      supabase.from("user_roles").select("role,condo_id").eq("user_id", uid),
-    ]);
+    if (loadContextInFlight.current) return;
+    loadContextInFlight.current = true;
+    try {
+      const [{ data: p }, { data: rs }] = await Promise.all([
+        supabase.from("profiles").select("id,condo_id,full_name,email,phone,unit_label,avatar_url").eq("id", uid).maybeSingle(),
+        supabase.from("user_roles").select("role,condo_id").eq("user_id", uid),
+      ]);
 
-    // B-04: profile pode ainda não existir logo após Google OAuth (trigger async)
-    let prof = p;
-    if (!prof) {
-      for (let i = 0; i < 8; i++) {
-        await new Promise((r) => setTimeout(r, 250));
-        const { data: retried } = await supabase.from("profiles").select("id,condo_id,full_name,email,phone,unit_label,avatar_url").eq("id", uid).maybeSingle();
-        if (retried) { prof = retried; break; }
+      // B-04: profile pode ainda não existir logo após Google OAuth (trigger async)
+      let prof = p;
+      if (!prof) {
+        for (let i = 0; i < 8; i++) {
+          await new Promise((r) => setTimeout(r, 250));
+          const { data: retried } = await supabase.from("profiles").select("id,condo_id,full_name,email,phone,unit_label,avatar_url").eq("id", uid).maybeSingle();
+          if (retried) { prof = retried; break; }
+        }
       }
-    }
 
-    setProfile((prof as Profile) ?? null);
-    const rls = ((rs ?? []) as { role: Role; condo_id: string }[]).map((r) => r.role);
-    setRoles(rls);
-    const cid = prof?.condo_id ?? rs?.[0]?.condo_id ?? null;
-    if (cid) {
-      const { data: c } = await supabase.from("condominiums").select("id,name,address").eq("id", cid).maybeSingle();
-      setCondo((c as Condo) ?? null);
-    } else {
-      setCondo(null);
+      setProfile((prof as Profile) ?? null);
+      const rls = ((rs ?? []) as { role: Role; condo_id: string }[]).map((r) => r.role);
+      setRoles(rls);
+      const cid = prof?.condo_id ?? rs?.[0]?.condo_id ?? null;
+      if (cid) {
+        const { data: c } = await supabase.from("condominiums").select("id,name,address").eq("id", cid).maybeSingle();
+        setCondo((c as Condo) ?? null);
+      } else {
+        setCondo(null);
+      }
+    } finally {
+      loadContextInFlight.current = false;
     }
   };
 

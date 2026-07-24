@@ -8,10 +8,16 @@ import type { Database } from './types';
 function createSupabaseAdminClient() {
   // URL hardcoded — Lovable sobrescreve process.env.SUPABASE_URL com o projeto deles.
   const SUPABASE_URL = 'https://jqcipbecgxssbjayusci.supabase.co';
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // CF_SUPABASE_SERVICE_KEY é o nome customizado — o Lovable sobrescreve SUPABASE_SERVICE_ROLE_KEY
+  // com a chave do projeto deles (unpaytnhbyccpimscscj), causando "Invalid API key".
+  // No Lovable: Secrets → adicionar CF_SUPABASE_SERVICE_KEY = <sua service role key>
+  // No .env.local: CF_SUPABASE_SERVICE_KEY=<sua service role key>
+  const SUPABASE_SERVICE_ROLE_KEY =
+    process.env.CF_SUPABASE_SERVICE_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable.');
+    throw new Error('Missing CF_SUPABASE_SERVICE_KEY environment variable.');
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
