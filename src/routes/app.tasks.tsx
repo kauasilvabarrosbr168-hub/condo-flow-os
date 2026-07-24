@@ -1,115 +1,473 @@
+// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ListChecks, Check, Loader2, Clock } from "lucide-react";
+import {
+  ListChecks, Check, Loader2, Clock, Plus, Sparkles,
+  X, AlertTriangle, ChevronDown, Brain, Bell,
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/brand";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
+import { createWorkerTask, generateAITasks, listCondoCollaborators } from "@/lib/worker-tasks.functions";
 
 export const Route = createFileRoute("/app/tasks")({
   head: () => ({ meta: [{ title: "Tarefas · CondoFlow" }] }),
   component: TasksPage,
 });
 
+type Task = {
+  id: string; title: string | null; description: string | null;
+  due_at: string | null; status: string | null; kind: string | null;
+  urgency: string; ai_generated: boolean; notify_immediately: boolean;
+  assignee_id: string | null;
+};
+
+type Worker = { id: string; full_name: string | null; email: string | null };
+
+const URGENCY_STYLE: Record<string, { label: string; bar: string; badge: string }> = {
+  urgente: { label: "Urgente",  bar: "bg-destructive", badge: "text-destructive bg-destructive/10 border-destructive/30" },
+  normal:  { label: "Normal",   bar: "bg-primary",     badge: "text-primary bg-primary/10 border-primary/30" },
+  baixa:   { label: "Baixa",    bar: "bg-muted-foreground/40", badge: "text-muted-foreground bg-muted border-border" },
+};
+
 function TasksPage() {
-  const { condo, profile, user, isAdmin } = useAuth();
+  const { condo, profile, user, isAdmin, primaryRole } = useAuth();
   const condoId = condo?.id ?? profile?.condo_id ?? null;
   const qc = useQueryClient();
-  const [scope, setScope] = useState<"mine" | "all">(isAdmin ? "all" : "mine");
+  const isSindico = isAdmin;
+  const isWorker  = primaryRole === "funcionario";
+  const [scope, setScope]     = useState<"mine" | "all" | "ai">(isSindico ? "all" : "mine");
+  const [newOpen, setNewOpen] = useState(false);
+  const [aiBusy, setAiBusy]   = useState(false);
 
-  const dispatchFn = useServerFn(dispatchAIEvent);
+  const dispatchFn    = useServerFn(dispatchAIEvent);
+  const createTaskFn  = useServerFn(createWorkerTask);
+  const generateAIFn  = useServerFn(generateAITasks);
+  const listWorkersFn = useServerFn(listCondoCollaborators);
+
+  const { data: workers } = useQuery({
+    enabled: !!condoId && isSindico,
+    queryKey: ["workers", condoId],
+    queryFn: () => listWorkersFn({ data: { condoId: condoId! } }) as Promise<Worker[]>,
+  });
 
   const { data: tasks, isLoading } = useQuery({
     enabled: !!condoId,
     queryKey: ["tasks", condoId, scope, user?.id],
     queryFn: async () => {
-      let q = supabase.from("tasks").select("*").eq("condo_id", condoId!).order("due_at", { ascending: true, nullsFirst: false });
-      if (scope === "mine") q = q.eq("assignee_id", user!.id);
+      let q = supabase
+        .from("tasks")
+        .select("id, title, description, due_at, status, kind, urgency, ai_generated, notify_immediately, assignee_id")
+        .eq("condo_id", condoId!)
+        .order("urgency", { ascending: false }) // urgente primeiro (ordem: urgente > normal > baixa)
+        .order("due_at", { ascending: true, nullsFirst: false });
+
+      if (scope === "mine")  q = q.eq("assignee_id", user!.id);
+      if (scope === "ai")    q = q.eq("ai_generated", true);
       const { data } = await q;
-      return data ?? [];
+      return (data ?? []) as Task[];
     },
   });
 
-  if (!condoId) return <div className="p-8"><EmptyState icon={ListChecks} title="Sem condomínio vinculado" description="Aguarde um convite." /></div>;
+  // Realtime — notifica colaborador quando nova tarefa urgente chegar
+  const shownIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!condoId) return;
+    const ch = supabase
+      .channel(`tasks-rt-${condoId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "tasks", filter: `condo_id=eq.${condoId}` }, (payload) => {
+        const t = payload.new as Task;
+        if (shownIds.current.has(t.id)) return;
+        shownIds.current.add(t.id);
+        qc.invalidateQueries({ queryKey: ["tasks"] });
+        if (t.notify_immediately || t.urgency === "urgente") {
+          toast(`🔔 Nova tarefa urgente: ${t.title}`, {
+            description: t.description ?? undefined,
+            duration: 8000,
+            action: { label: "Ver", onClick: () => setScope(isWorker ? "mine" : "all") },
+          });
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [condoId, isWorker, qc]);
 
-  const updateStatus = async (id: string, status: "pendente" | "em_andamento" | "concluida", taskTitle?: string, dueAt?: string | null) => {
-    const { error } = await supabase.from("tasks").update({ status, completed_at: status === "concluida" ? new Date().toISOString() : null }).eq("id", id);
+  const updateStatus = async (t: Task, status: "pendente" | "em_andamento" | "concluida") => {
+    const { error } = await supabase.from("tasks").update({
+      status,
+      completed_at: status === "concluida" ? new Date().toISOString() : null,
+    }).eq("id", t.id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Atualizado");
+    toast.success(status === "concluida" ? "Tarefa concluída!" : "Atualizado");
     qc.invalidateQueries({ queryKey: ["tasks"] });
-    const wasOverdue = dueAt ? new Date(dueAt) < new Date() : false;
-    void dispatchFn({ data: { condoId: condoId!, eventType: "task_status_changed", entityType: "task", entityId: id, context: { title: taskTitle ?? "tarefa", newStatus: status, wasOverdue } } });
+    void dispatchFn({ data: {
+      condoId: condoId!,
+      eventType: "task_status_changed",
+      entityType: "task",
+      entityId: t.id,
+      context: { title: t.title ?? "tarefa", newStatus: status, wasOverdue: t.due_at ? new Date(t.due_at) < new Date() : false },
+    } });
   };
+
+  const handleGenerateAI = async () => {
+    if (!condoId) return;
+    setAiBusy(true);
+    try {
+      const result = await generateAIFn({ data: { condoId } });
+      if (result.created === 0) {
+        toast.info("A IA não identificou novas tarefas necessárias no momento.");
+      } else {
+        toast.success(`${result.created} tarefa${result.created > 1 ? "s" : ""} gerada${result.created > 1 ? "s" : ""} pela IA!`);
+        qc.invalidateQueries({ queryKey: ["tasks"] });
+        setScope("ai");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao gerar tarefas com IA");
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  if (!condoId) return (
+    <div className="p-8">
+      <EmptyState icon={ListChecks} title="Sem condomínio vinculado" description="Aguarde um convite." />
+    </div>
+  );
+
+  const active    = (tasks ?? []).filter((t) => t.status !== "concluida");
+  const done      = (tasks ?? []).filter((t) => t.status === "concluida");
+  const [tab, setTab] = useState<"ativas" | "concluidas">("ativas");
+  const visible   = tab === "ativas" ? active : done;
 
   return (
     <div className="px-4 lg:px-8 py-8 space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Tarefas & checklist</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Geradas automaticamente a partir das reservas e atribuídas aos funcionários.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Tarefas do colaborador</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isSindico
+              ? "Crie tarefas avulsas, gere com IA e acompanhe o trabalho do colaborador."
+              : "Suas tarefas atribuídas. Tarefas urgentes chegam em tempo real."}
+          </p>
+        </div>
+        {isSindico && (
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={handleGenerateAI}
+              disabled={aiBusy}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-primary/30 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-60 transition"
+            >
+              {aiBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+              Gerar com IA
+            </button>
+            <button
+              onClick={() => setNewOpen(true)}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 transition"
+            >
+              <Plus className="h-3.5 w-3.5" /> Nova tarefa
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Filtros de escopo */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
+          {(isSindico
+            ? [{ k: "all", l: "Todas" }, { k: "mine", l: "Atribuídas a mim" }, { k: "ai", l: "Geradas por IA" }]
+            : [{ k: "mine", l: "Minhas" }, { k: "all", l: "Todas" }]
+          ).map(({ k, l }) => (
+            <button key={k} onClick={() => setScope(k as any)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${scope === k ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}>
+              {l}
+            </button>
+          ))}
         </div>
         <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
-          {(["mine", "all"] as const).map((s) => (
-            <button key={s} onClick={() => setScope(s)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${scope === s ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}>
-              {s === "mine" ? "Minhas" : "Todas do condomínio"}
+          {(["ativas", "concluidas"] as const).map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${tab === t ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}>
+              {t === "ativas" ? `Ativas ${active.length > 0 ? `(${active.length})` : ""}` : "Concluídas"}
             </button>
           ))}
         </div>
       </div>
 
+      {/* Lista */}
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-      ) : (tasks?.length ?? 0) === 0 ? (
+      ) : visible.length === 0 ? (
         <EmptyState
           icon={ListChecks}
-          title="Nenhuma tarefa por aqui"
-          description="As tarefas aparecem automaticamente quando um morador cria uma reserva ou o síndico abre uma manutenção."
+          title={tab === "ativas" ? "Nenhuma tarefa ativa" : "Nenhuma tarefa concluída"}
+          description={
+            tab === "ativas" && isSindico
+              ? "Clique em \"Gerar com IA\" para criar tarefas com base nas regras e reservas do condomínio, ou em \"Nova tarefa\" para adicionar manualmente."
+              : "As tarefas aparecem automaticamente conforme as reservas e o síndico criar."
+          }
         />
       ) : (
         <ul className="space-y-2">
-          {tasks!.map((t) => (
-            <li key={t.id} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-card hover:shadow-elegant transition">
-              <button
-                onClick={() => updateStatus(t.id, t.status === "concluida" ? "pendente" : "concluida", t.title ?? undefined, t.due_at)}
-                className={`mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md border transition ${
-                  t.status === "concluida" ? "bg-success border-success text-success-foreground" : "border-border hover:border-primary"
-                }`}
-              >
-                {t.status === "concluida" && <Check className="h-3.5 w-3.5" />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className={`text-sm font-medium ${t.status === "concluida" ? "line-through text-muted-foreground" : ""}`}>{t.title}</p>
-                  <Badge tone={kindTone(t.kind ?? "")}>{kindLabel(t.kind ?? "")}</Badge>
-                  {t.status === "em_andamento" && <Badge tone="primary">Em andamento</Badge>}
+          {visible.map((t) => {
+            const urgStyle = URGENCY_STYLE[t.urgency] ?? URGENCY_STYLE.normal;
+            const isUrgent = t.urgency === "urgente";
+            return (
+              <li key={t.id} className={`flex items-stretch gap-0 rounded-xl border bg-card shadow-card hover:shadow-elegant transition overflow-hidden ${isUrgent ? "border-destructive/40" : "border-border"}`}>
+                {/* Barra lateral de urgência */}
+                <div className={`w-1 shrink-0 ${urgStyle.bar}`} />
+                <div className="flex items-start gap-3 p-4 flex-1 min-w-0">
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => updateStatus(t, t.status === "concluida" ? "pendente" : "concluida")}
+                    className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition ${
+                      t.status === "concluida" ? "bg-success border-success text-success-foreground" : "border-border hover:border-primary"
+                    }`}
+                  >
+                    {t.status === "concluida" && <Check className="h-3.5 w-3.5" />}
+                  </button>
+
+                  {/* Conteúdo */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className={`text-sm font-medium ${t.status === "concluida" ? "line-through text-muted-foreground" : ""}`}>
+                        {t.title}
+                      </p>
+                      {/* Urgência */}
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium ${urgStyle.badge}`}>
+                        {isUrgent && <AlertTriangle className="h-2.5 w-2.5" />}
+                        {urgStyle.label}
+                      </span>
+                      {/* Tipo */}
+                      <Badge tone={kindTone(t.kind ?? "")}>{kindLabel(t.kind ?? "")}</Badge>
+                      {/* IA */}
+                      {t.ai_generated && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-violet-300/40 bg-violet-500/10 text-violet-600 dark:text-violet-400 text-[10px] font-medium">
+                          <Sparkles className="h-2.5 w-2.5" /> IA
+                        </span>
+                      )}
+                      {/* Notificação imediata */}
+                      {t.notify_immediately && t.status === "pendente" && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-destructive animate-pulse">
+                          <Bell className="h-2.5 w-2.5" /> Notificado
+                        </span>
+                      )}
+                    </div>
+                    {t.description && <p className="text-xs text-muted-foreground mt-1">{t.description}</p>}
+                    {t.due_at && (
+                      <p className="text-[11px] text-muted-foreground mt-1 inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(t.due_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        {new Date(t.due_at) < new Date() && t.status !== "concluida" && (
+                          <span className="text-destructive font-medium ml-1">— Atrasada</span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Ações */}
+                  {t.status !== "concluida" && (
+                    <div className="flex gap-1 shrink-0">
+                      {t.status !== "em_andamento" && (
+                        <button
+                          onClick={() => updateStatus(t, "em_andamento")}
+                          className="text-xs px-2 py-1 rounded-md border border-border hover:bg-muted transition"
+                        >
+                          Iniciar
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {t.description && <p className="text-xs text-muted-foreground mt-1">{t.description}</p>}
-                {t.due_at && (
-                  <p className="text-[11px] text-muted-foreground mt-1 inline-flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> {new Date(t.due_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                )}
-              </div>
-              {t.status !== "concluida" && t.status !== "em_andamento" && (
-                <button onClick={() => updateStatus(t.id, "em_andamento", t.title ?? undefined, t.due_at)} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-muted">Iniciar</button>
-              )}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
+      )}
+
+      {/* Dialog nova tarefa */}
+      {newOpen && condoId && (
+        <NewTaskDialog
+          condoId={condoId}
+          workers={workers ?? []}
+          createFn={createTaskFn}
+          dispatchFn={dispatchFn}
+          onClose={() => setNewOpen(false)}
+          onCreated={() => { qc.invalidateQueries({ queryKey: ["tasks"] }); setNewOpen(false); }}
+        />
       )}
     </div>
   );
 }
 
+// ─── Dialog nova tarefa (síndico) ─────────────────────────────────────────────
+
+function NewTaskDialog({ condoId, workers, createFn, dispatchFn, onClose, onCreated }: {
+  condoId: string;
+  workers: Worker[];
+  createFn: (a: any) => Promise<{ id: string }>;
+  dispatchFn: (a: any) => Promise<any>;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [title, setTitle]         = useState("");
+  const [description, setDesc]    = useState("");
+  const [kind, setKind]           = useState("manutencao");
+  const [urgency, setUrgency]     = useState("normal");
+  const [assigneeId, setAssignee] = useState("");
+  const [dueAt, setDueAt]         = useState("");
+  const [busy, setBusy]           = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setBusy(true);
+    try {
+      const result = await createFn({ data: {
+        condoId,
+        title: title.trim(),
+        description: description.trim() || null,
+        kind,
+        urgency,
+        assigneeId: assigneeId || null,
+        dueAt: dueAt || null,
+      } });
+      toast.success(
+        urgency === "urgente"
+          ? "Tarefa urgente criada — colaborador notificado!"
+          : "Tarefa criada com sucesso!"
+      );
+      void dispatchFn({ data: {
+        condoId, eventType: "task_created", entityType: "task", entityId: result.id,
+        context: { title: title.trim(), kind, urgency },
+      } });
+      onCreated();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const inputCls = "w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <form onSubmit={submit} onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-border bg-card shadow-elegant animate-pop">
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <div>
+            <h2 className="text-base font-semibold">Nova tarefa para colaborador</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Tarefas urgentes notificam o colaborador imediatamente.</p>
+          </div>
+          <button type="button" onClick={onClose} className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          {/* Urgência — destaque visual */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Urgência</label>
+            <div className="mt-1 grid grid-cols-3 gap-2">
+              {(["baixa", "normal", "urgente"] as const).map((u) => (
+                <button
+                  key={u} type="button" onClick={() => setUrgency(u)}
+                  className={`h-10 rounded-lg border text-xs font-medium transition capitalize ${
+                    urgency === u
+                      ? u === "urgente" ? "border-destructive bg-destructive/10 text-destructive"
+                        : u === "normal" ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-muted text-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  {u === "urgente" && <AlertTriangle className="h-3 w-3 inline mr-1" />}
+                  {u.charAt(0).toUpperCase() + u.slice(1)}
+                </button>
+              ))}
+            </div>
+            {urgency === "urgente" && (
+              <p className="text-[11px] text-destructive mt-1 flex items-center gap-1">
+                <Bell className="h-3 w-3" /> O colaborador receberá notificação imediata no app.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Título da tarefa *</label>
+            <input required value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ex: Verificar bomba da piscina, Limpar área gourmet…"
+              className={inputCls + " mt-1"} />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Descrição / detalhes</label>
+            <textarea value={description} maxLength={500} onChange={(e) => setDesc(e.target.value)}
+              rows={2} placeholder="O que exatamente precisa ser feito? Onde? Com o quê?"
+              className={inputCls + " mt-1 py-2 resize-none h-auto"} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+              <select value={kind} onChange={(e) => setKind(e.target.value)} className={inputCls + " mt-1"}>
+                <option value="manutencao">Manutenção</option>
+                <option value="limpeza">Limpeza</option>
+                <option value="verificacao">Verificação</option>
+                <option value="pre_checklist">Pré-uso</option>
+                <option value="pos_checklist">Pós-uso</option>
+                <option value="incidente">Incidente</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Prazo</label>
+              <input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className={inputCls + " mt-1"} />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Atribuir a</label>
+            <select value={assigneeId} onChange={(e) => setAssignee(e.target.value)} className={inputCls + " mt-1"}>
+              <option value="">— Sem atribuição específica —</option>
+              {workers.map((w) => (
+                <option key={w.id} value={w.id}>{w.full_name ?? w.email ?? w.id}</option>
+              ))}
+            </select>
+            {workers.length === 0 && (
+              <p className="text-[11px] text-muted-foreground mt-1">Cadastre um funcionário na equipe para atribuir.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 p-5 border-t border-border">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-muted">Cancelar</button>
+          <button type="submit" disabled={busy}
+            className={`inline-flex items-center gap-2 h-9 px-5 rounded-xl text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60 transition ${urgency === "urgente" ? "bg-destructive" : "bg-gradient-hero"}`}>
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : urgency === "urgente" ? <Bell className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {urgency === "urgente" ? "Criar e notificar agora" : "Criar tarefa"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function kindLabel(k: string) {
-  return ({ pre_checklist: "Pré-uso", pos_checklist: "Pós-uso", manutencao: "Manutenção", incidente: "Incidente" } as Record<string, string>)[k] ?? k;
+  return ({
+    pre_checklist: "Pré-uso", pos_checklist: "Pós-uso",
+    manutencao: "Manutenção", incidente: "Incidente",
+    limpeza: "Limpeza", verificacao: "Verificação",
+  } as Record<string, string>)[k] ?? k;
 }
 function kindTone(k: string): "default" | "primary" | "warning" | "destructive" {
-  if (k === "manutencao") return "warning";
+  if (k === "manutencao" || k === "verificacao") return "warning";
   if (k === "incidente") return "destructive";
   return "primary";
 }
