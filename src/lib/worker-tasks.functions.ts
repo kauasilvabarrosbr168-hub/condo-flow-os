@@ -103,12 +103,13 @@ export const generateAITasks = createServerFn({ method: "POST" })
     const now = new Date();
     const in7days = new Date(now.getTime() + 7 * 86400_000).toISOString();
 
-    const [condoRes, areasRes, reservationsRes, pendingTasksRes, cleaningRes] = await Promise.all([
+    const [condoRes, areasRes, reservationsRes, pendingTasksRes, cleaningRes, serviceRulesRes] = await Promise.all([
       supabaseAdmin.from("condominiums").select("name, description").eq("id", data.condoId).maybeSingle(),
-      supabaseAdmin.from("common_areas").select("name, rules_summary, requires_checklist").eq("condo_id", data.condoId).eq("active", true).limit(10),
+      supabaseAdmin.from("common_areas").select("id, name, rules_summary, requires_checklist").eq("condo_id", data.condoId).eq("active", true).limit(10),
       supabaseAdmin.from("reservations").select("starts_at, ends_at, area_id, cleaning_type").eq("condo_id", data.condoId).neq("status", "cancelada").gte("starts_at", now.toISOString()).lte("starts_at", in7days).order("starts_at", { ascending: true }).limit(10),
       supabaseAdmin.from("tasks").select("title").eq("condo_id", data.condoId).neq("status", "concluida").limit(20),
       supabaseAdmin.from("condo_cleaning_config").select("internal_enabled, price_cents").eq("condo_id", data.condoId).maybeSingle(),
+      supabaseAdmin.from("condo_service_rules").select("title, description, frequency, priority, area_id").eq("condo_id", data.condoId).eq("active", true).order("priority", { ascending: false }).limit(30),
     ]);
 
     const areaMap = Object.fromEntries((areasRes.data ?? []).map((a) => [a.name, a]));
@@ -117,9 +118,26 @@ export const generateAITasks = createServerFn({ method: "POST" })
       return { ...r, area_name: area?.name ?? "área" };
     });
 
-    const prompt = `Você é o assistente operacional do condomínio "${condoRes.data?.name ?? "CondoFlow"}".
+    const serviceRules = serviceRulesRes.data ?? [];
 
-ÁREAS COMUNS E REGRAS:
+    const prompt = `Você é o assistente operacional do condomínio "${condoRes.data?.name ?? "CondoFlow"}".
+SIGA RIGOROSAMENTE AS REGRAS ABAIXO — elas foram definidas pelo síndico e têm prioridade máxima.
+
+REGRAS OPERACIONAIS DO CONDOMÍNIO (definidas pelo síndico):
+${serviceRules.length
+  ? serviceRules.map((r: any) => {
+      const area = areasRes.data?.find((a) => a.id === r.area_id);
+      const parts = [
+        `- [${r.priority === "alta" ? "⚠️ ALTA" : r.priority === "normal" ? "NORMAL" : "BAIXA"}] ${r.title}`,
+        r.description ? `: ${r.description}` : "",
+        r.frequency   ? ` (Frequência: ${r.frequency})` : "",
+        area          ? ` — Área: ${area.name}` : "",
+      ];
+      return parts.join("");
+    }).join("\n")
+  : "Nenhuma regra operacional cadastrada — use boas práticas gerais de condomínio."}
+
+ÁREAS COMUNS E REGRAS ESPECÍFICAS DE CADA ÁREA:
 ${(areasRes.data ?? []).map((a) => `- ${a.name}: ${a.rules_summary ?? "sem regras especiais"}${a.requires_checklist ? " (requer checklist)" : ""}`).join("\n") || "Nenhuma área cadastrada."}
 
 RESERVAS DOS PRÓXIMOS 7 DIAS:

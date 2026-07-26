@@ -28,6 +28,7 @@ import {
   Brain,
   CreditCard,
   StickyNote,
+  ScrollText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/brand";
@@ -83,9 +84,10 @@ const NAV: (NavItem | NavGroup)[] = [
     items: [
       { to: "/app/my-condo",   label: "Meu condomínio", icon: Building,   roles: ["sindico", "administradora"] },
       { to: "/app/areas",      label: "Áreas comuns",   icon: Building,   roles: ["sindico", "administradora"] },
-      { to: "/app/tasks",      label: "Tarefas",         icon: ListChecks },
-      { to: "/app/services",   label: "Serviços",        icon: ListChecks },
-      { to: "/app/ai-monitor", label: "IA Operacional",  icon: Brain,      roles: ["sindico", "administradora"] },
+      { to: "/app/tasks",        label: "Tarefas",            icon: ListChecks },
+      { to: "/app/services",     label: "Serviços",           icon: ListChecks },
+      { to: "/app/ai-monitor",   label: "IA Operacional",     icon: Brain,       roles: ["sindico", "administradora"] },
+      { to: "/app/condo-rules",  label: "Regras Operacionais", icon: ScrollText,  roles: ["sindico", "administradora"] },
     ],
   },
 
