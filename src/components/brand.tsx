@@ -40,16 +40,19 @@ export function MvpBanner() {
 
 export function Logo({ withText = true, className = "" }: { withText?: boolean; className?: string }) {
   return (
-    <Link to="/" className={`inline-flex items-center gap-2 group ${className}`}>
-      <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-hero shadow-elegant">
-        <Building2 className="h-5 w-5 text-primary-foreground" />
-        <span className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/20" />
-      </span>
-      {withText && (
-        <span className="font-semibold text-[17px] tracking-tight">
-          Condo<span className="text-primary">Flow</span>
-        </span>
-      )}
+    <Link to="/" className={`inline-flex items-center group ${className}`}>
+      {/* Modo escuro — logo com texto branco */}
+      <img
+        src="/logo-dark.png"
+        alt="CondoFlow"
+        className="hidden dark:block h-10 w-auto object-contain"
+      />
+      {/* Modo claro — logo com texto escuro */}
+      <img
+        src="/logo-light.png"
+        alt="CondoFlow"
+        className="block dark:hidden h-10 w-auto object-contain"
+      />
     </Link>
   );
 }
