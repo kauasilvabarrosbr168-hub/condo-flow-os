@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -16,7 +16,6 @@ import {
   Building,
   Users,
   Mail,
-  Activity,
   Compass,
   MessageSquare,
   BarChart3,
@@ -28,7 +27,9 @@ import {
   XCircle,
   Brain,
   CreditCard,
+  StickyNote,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Logo } from "@/components/brand";
 import { useAuth, type Role } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -62,33 +63,44 @@ type NavGroup = {
 };
 
 const NAV: (NavItem | NavGroup)[] = [
-  { to: "/app/dashboard", label: "Início", icon: LayoutDashboard },
-  { to: "/app/reservations", label: "Reservas", icon: CalendarDays },
+  { to: "/app/dashboard", label: "Início",     icon: LayoutDashboard },
+
+  // Reservas — non-funcionario pode criar; funcionario vê apenas o calendário
+  { to: "/app/reservations", label: "Reservas",   icon: CalendarDays, roles: ["sindico", "administradora", "morador"] },
+  { to: "/app/reservations", label: "Calendário", icon: CalendarDays, roles: ["funcionario"] },
+
   { to: "/app/charges", label: "Cobranças", icon: CreditCard, roles: ["sindico", "administradora", "morador"] },
+
+  // Funcionário: itens diretos sem grupo Operações
+  { to: "/app/tasks",    label: "Tarefas",   icon: ListChecks,  roles: ["funcionario"] },
+  { to: "/app/services", label: "Serviços",  icon: ListChecks,  roles: ["funcionario"] },
+  { to: "/app/notes",    label: "Anotações", icon: StickyNote,  roles: ["funcionario"] },
+
+  // Operações — somente para não-funcionários (sem Timeline)
   {
     label: "Operações",
+    roles: ["sindico", "administradora", "morador"],
     items: [
-      { to: "/app/my-condo", label: "Meu condomínio", icon: Building, roles: ["sindico", "administradora"] },
-      { to: "/app/areas", label: "Áreas comuns", icon: Building, roles: ["sindico", "administradora"] },
-      { to: "/app/tasks", label: "Tarefas", icon: ListChecks },
-      { to: "/app/services", label: "Serviços", icon: ListChecks, roles: ["funcionario"] },
-      { to: "/app/ai-monitor", label: "IA Operacional", icon: Brain, roles: ["sindico", "administradora"] },
-      { to: "/app/timeline", label: "Timeline", icon: Activity },
+      { to: "/app/my-condo",   label: "Meu condomínio", icon: Building,   roles: ["sindico", "administradora"] },
+      { to: "/app/areas",      label: "Áreas comuns",   icon: Building,   roles: ["sindico", "administradora"] },
+      { to: "/app/tasks",      label: "Tarefas",         icon: ListChecks },
+      { to: "/app/services",   label: "Serviços",        icon: ListChecks },
+      { to: "/app/ai-monitor", label: "IA Operacional",  icon: Brain,      roles: ["sindico", "administradora"] },
     ],
   },
-
 
   {
     label: "Pessoas",
     roles: ["sindico", "administradora"],
     items: [
-      { to: "/app/team", label: "Equipe & moradores", icon: Users, roles: ["sindico", "administradora"] },
-      { to: "/app/invitations", label: "Convites", icon: Mail, roles: ["sindico", "administradora"] },
+      { to: "/app/team",        label: "Equipe & moradores", icon: Users },
+      { to: "/app/invitations", label: "Convites",            icon: Mail },
     ],
   },
-  { to: "/app/feedback", label: "Mural do condomínio", icon: MessageSquare },
-  { to: "/app/communication", label: "Comunicação", icon: Bell },
-  { to: "/app/analytics", label: "Analytics", icon: BarChart3, roles: ["sindico", "administradora"] },
+
+  { to: "/app/feedback",      label: "Mural do condomínio", icon: MessageSquare },
+  { to: "/app/communication", label: "Comunicação",          icon: Bell },
+  { to: "/app/analytics",     label: "Analytics",            icon: BarChart3, roles: ["sindico", "administradora"] },
 ];
 
 const SECONDARY: NavItem[] = [
@@ -108,6 +120,45 @@ function AppLayout() {
   const { session, loading, profile, condo, primaryRole, roles, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const getStatusFn = useServerFn(getMyMembershipStatus);
+
+  // ── Lembretes de anotações (apenas funcionário) ──────────────────────────
+  const [pendingReminders, setPendingReminders] = useState<Array<{ id: string; content: string }>>([]);
+  const firedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (primaryRole !== "funcionario" || !session?.user.id || !profile?.condo_id) return;
+
+    const check = async () => {
+      const { data } = await supabase
+        .from("worker_notes")
+        .select("id,content,remind_at")
+        .eq("user_id", session.user.id)
+        .eq("condo_id", profile.condo_id!)
+        .eq("completed", false)
+        .lte("remind_at", new Date().toISOString())
+        .not("remind_at", "is", null);
+
+      const notes = (data ?? []) as Array<{ id: string; content: string; remind_at: string }>;
+
+      // Notifica apenas os que ainda não foram exibidos nesta sessão
+      for (const note of notes) {
+        if (!firedRef.current.has(note.id)) {
+          firedRef.current.add(note.id);
+          toast(`⏰ Lembrete!`, {
+            description: note.content.length > 80 ? note.content.slice(0, 80) + "…" : note.content,
+            duration: Infinity,
+            action: { label: "Ver", onClick: () => navigate({ to: "/app/dashboard" }) },
+          });
+        }
+      }
+
+      setPendingReminders(notes.map((n) => ({ id: n.id, content: n.content })));
+    };
+
+    check();
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, [primaryRole, session?.user.id, profile?.condo_id]);
 
   const noRoles = !loading && !!session && roles.length === 0;
   const { data: membership, isLoading: loadingStatus } = useQuery({
@@ -206,14 +257,16 @@ function AppLayout() {
             const hasActive = filtered.some((it) => pathname === it.to);
             return (
               <NavSection key={i} label={entry.label} defaultOpen={hasActive}>
-                {filtered.map((it) => (
-                  <SidebarLink key={it.to} item={it} active={pathname === it.to} nested />
+                {filtered.map((it, j) => (
+                  <SidebarLink key={`${i}-${j}`} item={it} active={pathname === it.to} nested />
                 ))}
               </NavSection>
             );
           }
           if (!visibleFor(primaryRole, entry.roles)) return null;
-          return <SidebarLink key={entry.to} item={entry} active={pathname === entry.to} />;
+          const isDashboard = entry.to === "/app/dashboard";
+          const badge = isDashboard && primaryRole === "funcionario" ? pendingReminders.length : undefined;
+          return <SidebarLink key={i} item={entry} active={pathname === entry.to} badge={badge} />;
         })}
 
         <div className="pt-4 mt-2 border-t border-sidebar-border/60">
@@ -321,6 +374,22 @@ function AppLayout() {
           </div>
         </header>
 
+        {/* Banner de lembrete — fixo abaixo do header, só sai quando vai para o Início */}
+        {primaryRole === "funcionario" && pendingReminders.length > 0 && pathname !== "/app/dashboard" && (
+          <div
+            onClick={() => navigate({ to: "/app/dashboard" })}
+            className="sticky top-16 z-20 cursor-pointer flex items-center justify-between gap-3 bg-amber-500 dark:bg-amber-600 px-4 py-2.5"
+          >
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-white animate-bounce shrink-0" />
+              <p className="text-sm font-semibold text-white">
+                {pendingReminders.length} lembrete{pendingReminders.length > 1 ? "s" : ""} esperando por você
+              </p>
+            </div>
+            <span className="text-xs font-medium text-white/90 whitespace-nowrap">Toque para ver →</span>
+          </div>
+        )}
+
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
@@ -386,7 +455,7 @@ function PendingApprovalScreen({ status, reason, onSignOut }: { status: string |
   );
 }
 
-function SidebarLink({ item, active, nested = false }: { item: NavItem; active: boolean; nested?: boolean }) {
+function SidebarLink({ item, active, nested = false, badge }: { item: NavItem; active: boolean; nested?: boolean; badge?: number }) {
   return (
     <Link
       to={item.to}
@@ -398,7 +467,12 @@ function SidebarLink({ item, active, nested = false }: { item: NavItem; active: 
     >
       <item.icon className={`h-4 w-4 transition-transform ${active ? "" : "group-hover:scale-110"}`} />
       <span className="truncate">{item.label}</span>
-      {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary-foreground/80" />}
+      {badge && badge > 0
+        ? <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">{badge}</span>
+        : active
+        ? <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary-foreground/80" />
+        : null
+      }
     </Link>
   );
 }

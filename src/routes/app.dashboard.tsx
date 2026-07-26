@@ -16,6 +16,9 @@ import {
   TrendingUp,
   AlertTriangle,
   Loader2,
+  AlarmClock,
+  Check,
+  StickyNote,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -644,10 +647,93 @@ function StaffHome({ condoId, userId, userName }: { condoId: string; userId: str
           )}
         </div>
 
+        {/* Lembretes pendentes */}
+        <PendingRemindersWidget condoId={condoId} userId={userId} />
+
         {/* Reportar problema */}
         <ReportarProblema condoId={condoId} userId={userId} />
 
       </div>
+    </div>
+  );
+}
+
+/* ──────────────── LEMBRETES PENDENTES (COLABORADOR) ──────────────── */
+function PendingRemindersWidget({ condoId, userId }: { condoId: string; userId: string }) {
+  const [notes, setNotes] = useState<any[]>([]);
+
+  const fetch = async () => {
+    const { data } = await supabase
+      .from("worker_notes")
+      .select("id,content,remind_at")
+      .eq("user_id", userId)
+      .eq("condo_id", condoId)
+      .eq("completed", false)
+      .lte("remind_at", new Date().toISOString())
+      .not("remind_at", "is", null)
+      .order("remind_at", { ascending: true });
+    setNotes(data ?? []);
+  };
+
+  useEffect(() => {
+    fetch();
+    const id = setInterval(fetch, 30_000);
+    return () => clearInterval(id);
+  }, [userId, condoId]);
+
+  const markDone = async (noteId: string, done: boolean) => {
+    await supabase
+      .from("worker_notes")
+      .update({ completed: done, completed_at: done ? new Date().toISOString() : null })
+      .eq("id", noteId);
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    toast.success(done ? "Lembrete cumprido!" : "Anotação reaberta");
+  };
+
+  const snooze = async (noteId: string) => {
+    const newAt = new Date(Date.now() + 3_600_000).toISOString();
+    await supabase.from("worker_notes").update({ remind_at: newAt }).eq("id", noteId);
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    toast.success("Lembrete adiado 1h");
+  };
+
+  if (notes.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-amber-400/50 bg-amber-50 dark:bg-amber-900/20 shadow-card overflow-hidden">
+      <div className="flex items-center gap-2 p-5 border-b border-amber-400/30">
+        <AlarmClock className="h-4 w-4 text-amber-600 dark:text-amber-400 animate-pulse" />
+        <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+          Lembretes aguardando ({notes.length})
+        </h2>
+      </div>
+
+      <ul className="divide-y divide-amber-200/40 dark:divide-amber-700/30">
+        {notes.map((note) => (
+          <li key={note.id} className="p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <StickyNote className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-100 leading-snug flex-1">
+                {note.content}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => markDone(note.id, true)}
+                className="flex-1 h-10 rounded-xl bg-success text-success-foreground text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition"
+              >
+                <Check className="h-4 w-4" /> Sim, cumpri!
+              </button>
+              <button
+                onClick={() => snooze(note.id)}
+                className="h-10 px-4 rounded-xl border border-amber-300 dark:border-amber-600 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/40 transition"
+              >
+                Não cumpri — adiar 1h
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

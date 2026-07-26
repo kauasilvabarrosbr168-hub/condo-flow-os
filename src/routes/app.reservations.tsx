@@ -34,7 +34,7 @@ type Reservation = {
 };
 
 function ReservationsPage() {
-  const { profile, condo, user, isAdmin } = useAuth();
+  const { profile, condo, user, isAdmin, primaryRole } = useAuth();
   const qc = useQueryClient();
   const condoId = condo?.id ?? profile?.condo_id ?? null;
   const dispatchFn       = useServerFn(dispatchAIEvent);
@@ -125,22 +125,31 @@ function ReservationsPage() {
     return true;
   });
 
-  const canReserve = (areas?.length ?? 0) > 0;
+  const isFuncionario = primaryRole === "funcionario";
+  const canReserve    = (areas?.length ?? 0) > 0 && !isFuncionario;
 
   return (
     <div className="bg-gradient-glow">
       <div className="px-4 lg:px-8 pt-8 pb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Reservas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Reserve áreas comuns e acompanhe a operação automatizada.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {isFuncionario ? "Calendário de Reservas" : "Reservas"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isFuncionario
+              ? "Acompanhe as reservas das áreas comuns do condomínio."
+              : "Reserve áreas comuns e acompanhe a operação automatizada."}
+          </p>
         </div>
-        <button
-          onClick={() => setOpen(true)}
-          disabled={!canReserve}
-          className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 disabled:opacity-50"
-        >
-          <CalendarPlus className="h-4 w-4" /> Nova reserva
-        </button>
+        {!isFuncionario && (
+          <button
+            onClick={() => setOpen(true)}
+            disabled={!canReserve}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 disabled:opacity-50"
+          >
+            <CalendarPlus className="h-4 w-4" /> Nova reserva
+          </button>
+        )}
       </div>
 
       <div className="px-4 lg:px-8 pb-12 space-y-4 animate-slide-up">
