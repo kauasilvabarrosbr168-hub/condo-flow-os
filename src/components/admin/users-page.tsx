@@ -111,7 +111,8 @@ export function AdminUsersPage() {
         <EmptyBlock icon={<UsersIcon className="h-5 w-5" />} title="Nenhum usuário" description="As contas criadas aparecerão aqui." />
       ) : (
         <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="text-left px-5 py-3 font-medium">Pessoa</th>
@@ -186,6 +187,7 @@ export function AdminUsersPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
