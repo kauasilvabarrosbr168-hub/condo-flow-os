@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Sparkles,
   CalendarPlus,
@@ -13,12 +14,15 @@ import {
   Wrench,
   Clock,
   TrendingUp,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { EmptyState, Stat } from "@/components/empty-state";
 import { Badge } from "@/components/brand";
 import { ReservationsCalendar } from "@/components/condo/reservations-calendar";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/dashboard")({
   head: () => ({ meta: [{ title: "Início · CondoFlow" }] }),
@@ -454,63 +458,289 @@ function ResidentHome({ condoId, userId, userName }: { condoId: string; userId: 
 
 /* ──────────────── FUNCIONÁRIO ──────────────── */
 function StaffHome({ condoId, userId, userName }: { condoId: string; userId: string; userName: string }) {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["dashboard", "staff", userId],
     queryFn: async () => {
-      const { data: myTasks } = await supabase
-        .from("tasks")
-        .select("id,title,kind,status,due_at,description")
-        .eq("condo_id", condoId)
-        .eq("assignee_id", userId)
-        .neq("status", "concluida")
-        .order("due_at", { ascending: true, nullsFirst: false });
-      return { myTasks: myTasks ?? [] };
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const [allRes, doneRes] = await Promise.all([
+        supabase
+          .from("tasks")
+          .select("id,title,kind,status,due_at,description,urgency,ai_generated,notify_immediately")
+          .eq("condo_id", condoId)
+          .or(`assignee_id.eq.${userId},assignee_id.is.null`)
+          .neq("status", "concluida")
+          .order("due_at", { ascending: true, nullsFirst: false }),
+        supabase
+          .from("tasks")
+          .select("id,title,kind,completed_at")
+          .eq("condo_id", condoId)
+          .or(`assignee_id.eq.${userId},assignee_id.is.null`)
+          .eq("status", "concluida")
+          .gte("completed_at", today.toISOString())
+          .lt("completed_at", tomorrow.toISOString()),
+      ]);
+
+      const all = allRes.data ?? [];
+      // Ordenar: urgente → normal → baixa, depois por due_at
+      const urgOrder: Record<string, number> = { urgente: 0, normal: 1, baixa: 2 };
+      const sorted = [...all].sort((a, b) => {
+        const ua = urgOrder[a.urgency ?? "normal"] ?? 1;
+        const ub = urgOrder[b.urgency ?? "normal"] ?? 1;
+        if (ua !== ub) return ua - ub;
+        if (!a.due_at && !b.due_at) return 0;
+        if (!a.due_at) return 1;
+        if (!b.due_at) return -1;
+        return new Date(a.due_at).getTime() - new Date(b.due_at).getTime();
+      });
+
+      return {
+        tasks: sorted,
+        doneToday: doneRes.data ?? [],
+        urgent: all.filter((t) => t.urgency === "urgente"),
+        todayTasks: all.filter((t) => t.due_at && new Date(t.due_at) >= today && new Date(t.due_at) < tomorrow),
+      };
     },
   });
 
+  const greeting = getGreeting();
+  const shift    = getShift();
+  const dateStr  = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  const nextTask = data?.tasks?.[0] ?? null;
+
+  const URGENCY_COLOR: Record<string, string> = {
+    urgente: "text-destructive bg-destructive/10 border-destructive/30",
+    normal:  "text-primary bg-primary/10 border-primary/30",
+    baixa:   "text-muted-foreground bg-muted border-border",
+  };
+  const URGENCY_DOT: Record<string, string> = {
+    urgente: "bg-destructive",
+    normal:  "bg-primary",
+    baixa:   "bg-muted-foreground/50",
+  };
+
   return (
-    <PageShell
-      title={`Bom dia, ${firstName(userName)}`}
-      subtitle="Suas tarefas do turno e checklists em ordem de prioridade."
-    >
-      <div className="grid gap-4 md:grid-cols-3">
-        <Stat label="Tarefas no turno" value={data?.myTasks?.length ?? 0} icon={ListChecks} tone={(data?.myTasks?.length ?? 0) > 0 ? "warning" : "default"} />
-        <Stat label="Concluídas hoje" value={0} icon={TrendingUp} hint="Comece executando uma tarefa" />
-        <Stat label="Manutenções abertas" value={0} icon={Wrench} hint="Nenhuma atribuída" />
+    <div className="bg-gradient-glow min-h-screen">
+      {/* Header do colaborador */}
+      <div className="px-4 lg:px-8 pt-8 pb-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+              {greeting} · {shift}
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight">{firstName(userName)}</h1>
+            <p className="mt-1 text-sm text-muted-foreground capitalize">{dateStr}</p>
+          </div>
+          <Link
+            to="/app/tasks"
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 transition"
+          >
+            <ListChecks className="h-4 w-4" /> Ver todas as tarefas
+          </Link>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card shadow-card">
-        <div className="p-5 border-b border-border">
-          <h2 className="text-sm font-semibold">Sua fila</h2>
-          <p className="text-xs text-muted-foreground">As tarefas aparecem aqui quando o síndico atribuir.</p>
+      <div className="px-4 lg:px-8 pb-12 space-y-6 animate-slide-up">
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: "Tarefas hoje",    value: data?.todayTasks?.length ?? 0, icon: Clock,       tone: "default" as const },
+            { label: "Pendentes",       value: data?.tasks?.length ?? 0,      icon: ListChecks,  tone: (data?.tasks?.length ?? 0) > 0 ? "warning" as const : "default" as const },
+            { label: "Urgentes",        value: data?.urgent?.length ?? 0,     icon: Wrench,      tone: (data?.urgent?.length ?? 0) > 0 ? "destructive" as const : "default" as const },
+            { label: "Concluídas hoje", value: data?.doneToday?.length ?? 0,  icon: TrendingUp,  tone: (data?.doneToday?.length ?? 0) > 0 ? "success" as const : "default" as const },
+          ].map((s) => (
+            <Stat key={s.label} label={s.label} value={s.value} icon={s.icon} tone={s.tone} />
+          ))}
         </div>
-        <div className="p-5">
-          {(data?.myTasks ?? []).length === 0 ? (
-            <EmptyState
-              icon={ListChecks}
-              title="Nenhuma tarefa atribuída"
-              description="Quando um morador reservar uma área ou o síndico designar uma manutenção, ela aparecerá aqui em tempo real."
-            />
-          ) : (
-            <ul className="space-y-2">
-              {(data?.myTasks ?? []).map((t) => (
-                <li key={t.id} className="flex items-start gap-3 rounded-xl border border-border/60 p-3 hover:border-primary/40 transition">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-warning/15 text-warning-foreground">
-                    <ListChecks className="h-4 w-4" />
+
+        {/* Próxima tarefa — destaque */}
+        {nextTask && (
+          <div className={`rounded-2xl border p-5 ${nextTask.urgency === "urgente" ? "border-destructive/40 bg-destructive/5" : "border-primary/30 bg-primary/5"}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+              ⚡ Próxima tarefa
+            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h2 className="text-base font-semibold">{nextTask.title}</h2>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-semibold ${URGENCY_COLOR[nextTask.urgency ?? "normal"]}`}>
+                    {nextTask.urgency === "urgente" ? "🔴" : nextTask.urgency === "normal" ? "🟡" : "⚪"} {(nextTask.urgency ?? "normal").charAt(0).toUpperCase() + (nextTask.urgency ?? "normal").slice(1)}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{t.title}</p>
-                    {t.description && <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>}
-                    {t.due_at && <p className="text-[11px] text-muted-foreground mt-1">Vence {relativeTime(t.due_at)}</p>}
-                  </div>
-                  <Link to="/app/tasks" className="text-xs text-primary font-medium">Abrir</Link>
+                </div>
+                {nextTask.description && <p className="text-sm text-muted-foreground line-clamp-2">{nextTask.description}</p>}
+                {nextTask.due_at && (
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Vence {formatDateTime(nextTask.due_at)}
+                    {new Date(nextTask.due_at) < new Date() && <span className="text-destructive font-medium ml-1">— Atrasada</span>}
+                  </p>
+                )}
+              </div>
+              <Link
+                to="/app/tasks"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-foreground text-background text-xs font-semibold hover:opacity-80 transition shrink-0"
+              >
+                Abrir <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Minha missão de hoje */}
+        <div className="rounded-2xl border border-border bg-card shadow-card">
+          <div className="flex items-center justify-between p-5 border-b border-border">
+            <div>
+              <h2 className="text-sm font-semibold">Minha missão de hoje</h2>
+              <p className="text-xs text-muted-foreground">Execute nesta ordem — urgentes primeiro</p>
+            </div>
+            <Link to="/app/tasks" className="text-xs text-primary font-medium inline-flex items-center gap-1 hover:underline">
+              Ver tudo <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : (data?.tasks ?? []).length === 0 ? (
+            <div className="p-8 text-center">
+              <ListChecks className="mx-auto h-8 w-8 text-muted-foreground/40 mb-3" />
+              <p className="text-sm font-medium text-muted-foreground">Nenhuma tarefa pendente</p>
+              <p className="text-xs text-muted-foreground mt-1">O síndico ou a IA atribuirá tarefas conforme necessário.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {(data?.tasks ?? []).slice(0, 8).map((t, idx) => (
+                <li key={t.id}>
+                  <Link to="/app/tasks" className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/30 transition">
+                    {/* Número de ordem */}
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground shrink-0">
+                      {idx + 1}
+                    </span>
+                    {/* Dot urgência */}
+                    <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${URGENCY_DOT[t.urgency ?? "normal"]}`} />
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{t.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {kindLabel(t.kind ?? "")}
+                        {t.due_at ? ` · Vence ${formatDateTime(t.due_at)}` : ""}
+                        {t.ai_generated ? " · ✨ CondoFlow AI" : ""}
+                      </p>
+                    </div>
+                    {/* Status badge */}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium shrink-0 ${
+                      t.status === "em_andamento"
+                        ? "bg-primary/10 border-primary/30 text-primary"
+                        : "bg-muted border-border text-muted-foreground"
+                    }`}>
+                      {t.status === "em_andamento" ? "Em andamento" : "Pendente"}
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>
           )}
         </div>
+
+        {/* Reportar problema */}
+        <ReportarProblema condoId={condoId} userId={userId} />
+
       </div>
-    </PageShell>
+    </div>
+  );
+}
+
+function ReportarProblema({ condoId, userId }: { condoId: string; userId: string }) {
+  const [open, setOpen]   = useState(false);
+  const [desc, setDesc]   = useState("");
+  const [local, setLocal] = useState("");
+  const [urgency, setUrg] = useState("normal");
+  const [busy, setBusy]   = useState(false);
+
+  const submit = async () => {
+    if (!desc.trim()) return;
+    setBusy(true);
+    try {
+      await supabase.from("tasks").insert({
+        condo_id:    condoId,
+        title:       `Problema reportado: ${desc.slice(0, 60)}`,
+        description: `${desc}${local ? `\nLocal: ${local}` : ""}`,
+        kind:        "incidente",
+        urgency,
+        status:      "pendente",
+        ai_generated: false,
+        notify_immediately: urgency === "urgente",
+        location:    local || null,
+      });
+      toast.success("Problema reportado! O síndico foi notificado.");
+      setOpen(false); setDesc(""); setLocal(""); setUrg("normal");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao reportar");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border-2 border-dashed border-destructive/30 text-destructive/80 hover:border-destructive hover:bg-destructive/5 transition text-sm font-medium"
+      >
+        <AlertTriangle className="h-4 w-4" /> Reportar problema
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-elegant" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h2 className="text-base font-semibold flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive" /> Reportar problema
+              </h2>
+              <button onClick={() => setOpen(false)} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted">✕</button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Descreva o problema *</label>
+                <textarea
+                  value={desc} onChange={(e) => setDesc(e.target.value)} rows={3}
+                  placeholder="O que aconteceu? Seja específico..."
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none outline-none focus:ring-2 focus:ring-ring/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Local</label>
+                <input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Ex: Piscina, Academia, Entrada..."
+                  className="mt-1 w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Urgência</label>
+                <div className="mt-1 grid grid-cols-3 gap-2">
+                  {(["baixa","normal","urgente"] as const).map((u) => (
+                    <button key={u} type="button" onClick={() => setUrg(u)}
+                      className={`h-9 rounded-lg border text-xs font-medium transition capitalize ${
+                        urgency === u
+                          ? u === "urgente" ? "border-destructive bg-destructive/10 text-destructive"
+                            : u === "normal" ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-muted text-foreground"
+                          : "border-border text-muted-foreground"
+                      }`}>{u}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-5 border-t border-border">
+              <button onClick={() => setOpen(false)} className="h-9 px-4 rounded-lg border border-border text-sm">Cancelar</button>
+              <button onClick={submit} disabled={!desc.trim() || busy}
+                className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium disabled:opacity-50">
+                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                Enviar relatório
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -549,6 +779,28 @@ function StatusBadge({ status }: { status: string }) {
 
 function firstName(name: string) {
   return name.split(" ")[0] || "você";
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Bom dia";
+  if (h < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
+function getShift() {
+  const h = new Date().getHours();
+  if (h < 12) return "Turno: Manhã";
+  if (h < 18) return "Turno: Tarde";
+  return "Turno: Noite";
+}
+
+function kindLabel(k: string) {
+  return ({
+    pre_checklist: "Pré-uso", pos_checklist: "Pós-uso",
+    manutencao: "Manutenção", incidente: "Incidente",
+    limpeza: "Limpeza", verificacao: "Verificação",
+  } as Record<string, string>)[k] ?? k;
 }
 
 function formatDateTime(iso: string) {
