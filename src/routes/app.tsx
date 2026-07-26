@@ -63,7 +63,7 @@ type NavGroup = {
 
 const NAV: (NavItem | NavGroup)[] = [
   { to: "/app/dashboard", label: "Início", icon: LayoutDashboard },
-  { to: "/app/reservations", label: "Reservas", icon: CalendarDays, roles: ["sindico", "administradora", "morador"] },
+  { to: "/app/reservations", label: "Reservas", icon: CalendarDays },
   { to: "/app/charges", label: "Cobranças", icon: CreditCard, roles: ["sindico", "administradora", "morador"] },
   {
     label: "Operações",
@@ -73,7 +73,7 @@ const NAV: (NavItem | NavGroup)[] = [
       { to: "/app/tasks", label: "Tarefas", icon: ListChecks },
       { to: "/app/services", label: "Serviços", icon: ListChecks, roles: ["funcionario"] },
       { to: "/app/ai-monitor", label: "IA Operacional", icon: Brain, roles: ["sindico", "administradora"] },
-      { to: "/app/timeline", label: "Timeline", icon: Activity, roles: ["sindico", "administradora", "morador"] },
+      { to: "/app/timeline", label: "Timeline", icon: Activity },
     ],
   },
 
@@ -86,8 +86,8 @@ const NAV: (NavItem | NavGroup)[] = [
       { to: "/app/invitations", label: "Convites", icon: Mail, roles: ["sindico", "administradora"] },
     ],
   },
-  { to: "/app/feedback", label: "Mural do condomínio", icon: MessageSquare, roles: ["sindico", "administradora", "morador"] },
-  { to: "/app/communication", label: "Comunicação", icon: Bell, roles: ["sindico", "administradora", "morador"] },
+  { to: "/app/feedback", label: "Mural do condomínio", icon: MessageSquare },
+  { to: "/app/communication", label: "Comunicação", icon: Bell },
   { to: "/app/analytics", label: "Analytics", icon: BarChart3, roles: ["sindico", "administradora"] },
 ];
 
