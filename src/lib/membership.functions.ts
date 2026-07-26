@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { notifyMembershipApproved, notifyMembershipRejected, notifyNewMembershipRequest } from "@/lib/notify.server";
 
 const requestSchema = z.object({
@@ -272,6 +273,47 @@ export const decideMembership = createServerFn({ method: "POST" })
     // C-05: síndico só pode aprovar requests do seu próprio condomínio
     if (!isAdmin && req?.condo_id !== sindicoCondo) {
       throw new Error("Sem permissão para aprovar este pedido.");
+    }
+
+    // Super admin aprovando funcionário pendente: resolve direto via service role
+    // para evitar o erro sindico_required do RPC (que exige síndico na 1ª etapa).
+    if (isAdmin && data.decision === "approve" && req?.requested_role === "funcionario") {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ condo_id: req.condo_id })
+        .eq("id", req.user_id);
+
+      const { data: existingRole } = await supabaseAdmin
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", req.user_id)
+        .eq("condo_id", req.condo_id)
+        .maybeSingle();
+
+      if (!existingRole) {
+        await supabaseAdmin
+          .from("user_roles")
+          .insert({ user_id: req.user_id, condo_id: req.condo_id, role: "funcionario" });
+      } else {
+        await supabaseAdmin
+          .from("user_roles")
+          .update({ role: "funcionario" })
+          .eq("user_id", req.user_id)
+          .eq("condo_id", req.condo_id);
+      }
+
+      const { data: row } = await supabaseAdmin
+        .from("membership_requests")
+        .update({
+          status: "approved",
+          decided_by_admin: userId,
+          decided_admin_at: new Date().toISOString(),
+        })
+        .eq("id", data.requestId)
+        .select()
+        .single();
+
+      return row;
     }
 
     const { data: row, error } = await context.supabase.rpc("decide_membership_request", {
