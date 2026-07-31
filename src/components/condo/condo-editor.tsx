@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Loader2, Save, Upload, X, Plus, Trash2, Phone, Mail, MessageCircle, Link as LinkIcon, ImageIcon, Building2, Image as ImageBanner,
+  Loader2, Save, Upload, X, Plus, Trash2, Phone, Mail, MessageCircle, Link as LinkIcon, ImageIcon, Building2, Image as ImageBanner, Copy, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -229,14 +229,10 @@ export function CondoEditor({
         <TabsContent value="structure" className="mt-5 space-y-5">
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="Quantidade de torres" error={errors.towers_count}>
-              {variant === "sindico"
-                ? <ReadOnly value={form.towers_count != null ? String(form.towers_count) : ""} />
-                : <Input type="number" min={0} max={500} value={form.towers_count ?? ""} onChange={(e) => update("towers_count", e.target.value === "" ? null : Number(e.target.value))} />}
+              <Input type="number" min={0} max={500} value={form.towers_count ?? ""} onChange={(e) => update("towers_count", e.target.value === "" ? null : Number(e.target.value))} />
             </Field>
             <Field label="Quantidade de blocos" error={errors.blocks_count}>
-              {variant === "sindico"
-                ? <ReadOnly value={form.blocks_count != null ? String(form.blocks_count) : ""} />
-                : <Input type="number" min={0} max={500} value={form.blocks_count ?? ""} onChange={(e) => update("blocks_count", e.target.value === "" ? null : Number(e.target.value))} />}
+              <Input type="number" min={0} max={500} value={form.blocks_count ?? ""} onChange={(e) => update("blocks_count", e.target.value === "" ? null : Number(e.target.value))} />
             </Field>
           </div>
         </TabsContent>
@@ -300,20 +296,14 @@ export function CondoEditor({
         <TabsContent value="contacts" className="mt-5 space-y-3">
           {form.contacts.length === 0 && <p className="text-sm text-muted-foreground">Nenhum contato cadastrado.</p>}
           {form.contacts.map((c, i) => (
-            <div key={i} className="grid gap-2 md:grid-cols-[140px_1fr_1fr_auto] items-center">
-              <Select value={c.kind ?? "other"} onValueChange={(v) => update("contacts", form.contacts.map((x, idx) => idx === i ? { ...x, kind: v as Contact["kind"] } : x))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="phone"><span className="inline-flex items-center gap-2"><Phone className="h-3.5 w-3.5" />Telefone</span></SelectItem>
-                  <SelectItem value="email"><span className="inline-flex items-center gap-2"><Mail className="h-3.5 w-3.5" />Email</span></SelectItem>
-                  <SelectItem value="whatsapp"><span className="inline-flex items-center gap-2"><MessageCircle className="h-3.5 w-3.5" />WhatsApp</span></SelectItem>
-                  <SelectItem value="other"><span className="inline-flex items-center gap-2"><LinkIcon className="h-3.5 w-3.5" />Outro</span></SelectItem>
-                </SelectContent>
-              </Select>
-              <Input placeholder="Título (ex: Portaria)" maxLength={80} value={c.label} onChange={(e) => update("contacts", form.contacts.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))} />
-              <Input placeholder="Valor" maxLength={200} value={c.value} onChange={(e) => update("contacts", form.contacts.map((x, idx) => idx === i ? { ...x, value: e.target.value } : x))} />
-              <Button type="button" size="icon" variant="ghost" onClick={() => update("contacts", form.contacts.filter((_, idx) => idx !== i))}><X className="h-4 w-4" /></Button>
-            </div>
+            <ContactRow
+              key={i}
+              contact={c}
+              onKindChange={(v) => update("contacts", form.contacts.map((x, idx) => idx === i ? { ...x, kind: v as Contact["kind"] } : x))}
+              onLabelChange={(v) => update("contacts", form.contacts.map((x, idx) => idx === i ? { ...x, label: v } : x))}
+              onValueChange={(v) => update("contacts", form.contacts.map((x, idx) => idx === i ? { ...x, value: v } : x))}
+              onRemove={() => update("contacts", form.contacts.filter((_, idx) => idx !== i))}
+            />
           ))}
           {errors.contacts && <p className="text-xs text-destructive">{errors.contacts}</p>}
           <Button type="button" variant="outline" onClick={() => update("contacts", [...form.contacts, { label: "", value: "", kind: "phone" }])}>
@@ -339,6 +329,43 @@ export function CondoEditor({
         </div>
       </div>
       {variant === "sindico" && null}
+    </div>
+  );
+}
+
+function ContactRow({ contact, onKindChange, onLabelChange, onValueChange, onRemove }: {
+  contact: Contact;
+  onKindChange: (v: string) => void;
+  onLabelChange: (v: string) => void;
+  onValueChange: (v: string) => void;
+  onRemove: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (!contact.value) return;
+    navigator.clipboard.writeText(contact.value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="grid gap-2 md:grid-cols-[140px_1fr_1fr_auto_auto] items-center">
+      <Select value={contact.kind ?? "other"} onValueChange={onKindChange}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="phone"><span className="inline-flex items-center gap-2"><Phone className="h-3.5 w-3.5" />Telefone</span></SelectItem>
+          <SelectItem value="email"><span className="inline-flex items-center gap-2"><Mail className="h-3.5 w-3.5" />Email</span></SelectItem>
+          <SelectItem value="whatsapp"><span className="inline-flex items-center gap-2"><MessageCircle className="h-3.5 w-3.5" />WhatsApp</span></SelectItem>
+          <SelectItem value="other"><span className="inline-flex items-center gap-2"><LinkIcon className="h-3.5 w-3.5" />Outro</span></SelectItem>
+        </SelectContent>
+      </Select>
+      <Input placeholder="Título (ex: Portaria)" maxLength={80} value={contact.label} onChange={(e) => onLabelChange(e.target.value)} />
+      <Input placeholder="Número, e-mail ou link" maxLength={200} value={contact.value} onChange={(e) => onValueChange(e.target.value)} />
+      <Button type="button" size="icon" variant="ghost" disabled={!contact.value} onClick={handleCopy} title="Copiar">
+        {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+      </Button>
+      <Button type="button" size="icon" variant="ghost" onClick={onRemove}><X className="h-4 w-4" /></Button>
     </div>
   );
 }

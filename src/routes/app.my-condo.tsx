@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2, Copy, RefreshCw, Check, Sparkles, Plus, X, Phone, Trash2,
-  ExternalLink, Settings2, CheckCircle2,
+  ExternalLink, Settings2, CheckCircle2, PowerOff,
 } from "lucide-react";
 import { CondoEditor } from "@/components/condo/condo-editor";
 import { getMyCondoId, getCondoJoinCode, regenerateCondoJoinCode } from "@/lib/admin-condo.functions";
@@ -34,7 +34,9 @@ function MyCondoPage() {
   const [joinCode, setJoinCode]   = useState<string | null>(null);
   const [regenBusy, setRegenBusy] = useState(false);
   const [copied, setCopied]       = useState(false);
-  const [openCleaning, setOpenCleaning] = useState(false);
+  const [openCleaning, setOpenCleaning]   = useState(false);
+  const [cleaningEnabled, setCleaningEnabled] = useState<boolean>(true);
+  const [savingToggle, setSavingToggle]   = useState(false);
 
   // Limpeza interna
   const [cleanConfig, setCleanConfig] = useState<Config | null>(null);
@@ -55,8 +57,34 @@ function MyCondoPage() {
   });
 
   useEffect(() => {
-    fetchId().then((r) => setCondoId(r.condoId)).catch(() => setCondoId(null));
+    fetchId().then(async (r) => {
+      setCondoId(r.condoId);
+      if (r.condoId) {
+        const { data } = await supabase
+          .from("condominiums")
+          .select("cleaning_enabled")
+          .eq("id", r.condoId)
+          .maybeSingle();
+        if (data && typeof data.cleaning_enabled === "boolean") {
+          setCleaningEnabled(data.cleaning_enabled);
+        }
+      }
+    }).catch(() => setCondoId(null));
   }, [fetchId]);
+
+  const handleToggleCleaning = async () => {
+    if (!condoId) return;
+    const next = !cleaningEnabled;
+    setSavingToggle(true);
+    const { error } = await supabase
+      .from("condominiums")
+      .update({ cleaning_enabled: next })
+      .eq("id", condoId);
+    setSavingToggle(false);
+    if (error) { toast.error("Erro ao salvar configuração."); return; }
+    setCleaningEnabled(next);
+    toast.success(next ? "Opção de limpeza ativada." : "Opção de limpeza desativada.");
+  };
 
   useEffect(() => {
     if (!condoId) return;
@@ -138,7 +166,7 @@ function MyCondoPage() {
 
       {/* Prestadores de Limpeza */}
       <div className="mb-6 rounded-2xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-sm font-semibold flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" /> Prestadores de limpeza
@@ -164,6 +192,32 @@ function MyCondoPage() {
               <Plus className="h-3.5 w-3.5" /> Adicionar
             </button>
           </div>
+        </div>
+
+        {/* Toggle ativar/desativar opção de limpeza nas reservas */}
+        <div className={`flex items-center justify-between rounded-xl px-4 py-3 mb-4 border ${cleaningEnabled ? "border-primary/20 bg-primary/5" : "border-border bg-muted/40"}`}>
+          <div>
+            <p className="text-xs font-semibold">{cleaningEnabled ? "Opção de limpeza ativada" : "Opção de limpeza desativada"}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {cleaningEnabled
+                ? "Moradores veem a opção de solicitar limpeza ao reservar."
+                : "Opção oculta para todos — moradores não verão ao reservar."}
+            </p>
+          </div>
+          <button
+            onClick={handleToggleCleaning}
+            disabled={savingToggle}
+            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition ${
+              cleaningEnabled
+                ? "border border-border text-muted-foreground hover:bg-muted"
+                : "bg-primary text-primary-foreground hover:opacity-90"
+            }`}
+          >
+            {savingToggle
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <PowerOff className="h-3.5 w-3.5" />}
+            {cleaningEnabled ? "Desativar" : "Ativar"}
+          </button>
         </div>
 
         {(cleaningServices?.length ?? 0) === 0 ? (
