@@ -37,8 +37,9 @@ function ReservationsPage() {
   const { profile, condo, user, isAdmin, primaryRole } = useAuth();
   const qc = useQueryClient();
   const condoId = condo?.id ?? profile?.condo_id ?? null;
-  const dispatchFn       = useServerFn(dispatchAIEvent);
-  const updateStatusFn   = useServerFn(updateReservationStatus);
+  const dispatchFn         = useServerFn(dispatchAIEvent);
+  const updateStatusFn     = useServerFn(updateReservationStatus);
+  const createReservationFn = useServerFn(createReservation);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "mine" | "upcoming">("upcoming");
 
@@ -262,7 +263,7 @@ function ReservationsPage() {
           onClose={() => setOpen(false)}
           onCreated={() => qc.invalidateQueries({ queryKey: ["reservations", condoId] })}
           dispatchFn={dispatchFn}
-          createReservationFn={useServerFn(createReservation)}
+          createReservationFn={createReservationFn}
         />
       )}
     </div>
