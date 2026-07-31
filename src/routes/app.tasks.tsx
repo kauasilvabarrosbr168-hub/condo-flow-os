@@ -280,7 +280,7 @@ function TasksPage() {
             <EmptyState
               icon={Brain}
               title="Nenhuma proposta pendente"
-              description="Clique em "Gerar com IA" para que a IA analise a rotina do condomínio e sugira tarefas para sua aprovação."
+              description={'Clique em "Gerar com IA" para que a IA analise a rotina do condomínio e sugira tarefas para sua aprovação.'}
             />
           ) : (
             <>
