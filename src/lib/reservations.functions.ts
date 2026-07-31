@@ -32,17 +32,11 @@ export const createReservation = createServerFn({ method: "POST" })
     // Verifica que a área pertence a este condomínio
     const { data: area } = await supabase
       .from("common_areas")
-      .select("id, name, min_advance_hours")
+      .select("id, name")
       .eq("id", data.areaId)
       .eq("condo_id", data.condoId)
       .maybeSingle();
     if (!area) throw new Error("Área não encontrada ou não pertence a este condomínio.");
-
-    // Antecedência mínima
-    const minAdvanceMs = (area.min_advance_hours ?? 0) * 3600_000;
-    if (new Date(data.startsAt).getTime() < Date.now() + minAdvanceMs) {
-      throw new Error(`Esta área exige pelo menos ${area.min_advance_hours}h de antecedência.`);
-    }
 
     // C-04: verifica conflito de horário no servidor
     const { data: conflicts } = await supabase
