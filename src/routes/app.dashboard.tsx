@@ -19,6 +19,7 @@ import {
   AlarmClock,
   Check,
   StickyNote,
+  Brain,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -83,13 +84,14 @@ function AdminHome({ condoId, userName }: { condoId: string; userName: string })
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard", "admin", condoId],
     queryFn: async () => {
-      const [areas, reservations, tasks, members, invites, activity] = await Promise.all([
+      const [areas, reservations, tasks, members, invites, activity, condoCtx] = await Promise.all([
         supabase.from("common_areas").select("id", { count: "exact", head: true }).eq("condo_id", condoId),
         supabase.from("reservations").select("id,status,starts_at,area_id,resident_id").eq("condo_id", condoId).order("starts_at", { ascending: false }).limit(50),
         supabase.from("tasks").select("id,status,title,due_at,kind").eq("condo_id", condoId).neq("status", "concluida").order("due_at", { ascending: true, nullsFirst: false }).limit(20),
         supabase.from("user_roles").select("user_id", { count: "exact", head: true }).eq("condo_id", condoId),
         supabase.from("invitations").select("id,full_name,email,role,accepted_at").eq("condo_id", condoId).is("accepted_at", null),
         supabase.from("activity_events").select("id,title,kind,created_at").eq("condo_id", condoId).order("created_at", { ascending: false }).limit(8),
+        supabase.from("condominiums").select("ai_context").eq("id", condoId).maybeSingle(),
       ]);
       return {
         areasCount: areas.count ?? 0,
@@ -98,6 +100,7 @@ function AdminHome({ condoId, userName }: { condoId: string; userName: string })
         membersCount: members.count ?? 0,
         pendingInvites: invites.data ?? [],
         activity: activity.data ?? [],
+        aiConfigured: !!(condoCtx.data?.ai_context),
       };
     },
   });
@@ -126,6 +129,33 @@ function AdminHome({ condoId, userName }: { condoId: string; userName: string })
           membersCount={data?.membersCount ?? 0}
           loading={isLoading}
         />
+      )}
+
+      {/* Banner de configuração da IA — aparece até o síndico preencher */}
+      {!isLoading && !data?.aiConfigured && (
+        <div className="relative overflow-hidden rounded-2xl border border-violet-400/30 bg-gradient-to-br from-violet-500/10 via-card to-card p-6 shadow-card">
+          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl" />
+          <div className="relative flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/20 text-violet-600 dark:text-violet-400 shrink-0">
+                <Brain className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400">Inteligência Artificial</p>
+                <h2 className="mt-1 text-base font-semibold">Configure a IA do seu condomínio</h2>
+                <p className="text-sm text-muted-foreground mt-0.5 max-w-sm">
+                  Explique como o condomínio funciona e a IA vai gerar tarefas automáticas, lembretes e sugestões de serviço — tudo sujeito à sua aprovação.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/app/ai-setup"
+              className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition shrink-0"
+            >
+              <Brain className="h-4 w-4" /> Configurar agora
+            </Link>
+          </div>
+        </div>
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

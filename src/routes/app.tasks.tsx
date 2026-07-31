@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ListChecks, Check, Loader2, Clock, Plus, Sparkles,
-  X, AlertTriangle, ChevronDown, Brain, Bell,
+  X, AlertTriangle, ChevronDown, Brain, Bell, ThumbsUp, ThumbsDown, MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useEffect, useRef, useState } from "react";
 import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
 import { createWorkerTask, generateAITasks, listCondoCollaborators } from "@/lib/worker-tasks.functions";
+import { approveAiProposal, rejectAiProposal } from "@/lib/ai-context.functions";
 
 export const Route = createFileRoute("/app/tasks")({
   head: () => ({ meta: [{ title: "Tarefas · CondoFlow" }] }),
@@ -25,6 +26,12 @@ type Task = {
   due_at: string | null; status: string | null; kind: string | null;
   urgency: string; ai_generated: boolean; notify_immediately: boolean;
   assignee_id: string | null;
+};
+
+type Proposal = {
+  id: string; title: string; description: string | null;
+  kind: string; urgency: string; ai_reasoning: string | null;
+  due_at: string | null; status: string; created_at: string;
 };
 
 type Worker = { id: string; full_name: string | null; email: string | null };
@@ -41,19 +48,37 @@ function TasksPage() {
   const qc = useQueryClient();
   const isSindico = isAdmin;
   const isWorker  = primaryRole === "funcionario";
-  const [scope, setScope]     = useState<"mine" | "all" | "ai">(isSindico ? "all" : "mine");
-  const [newOpen, setNewOpen] = useState(false);
-  const [aiBusy, setAiBusy]   = useState(false);
+  const [scope, setScope]          = useState<"mine" | "all" | "ai">(isSindico ? "all" : "mine");
+  const [mainTab, setMainTab]      = useState<"tarefas" | "propostas">("tarefas");
+  const [newOpen, setNewOpen]      = useState(false);
+  const [aiBusy, setAiBusy]        = useState(false);
+  const [reviewingId, setReviewing] = useState<string | null>(null);
 
   const dispatchFn    = useServerFn(dispatchAIEvent);
   const createTaskFn  = useServerFn(createWorkerTask);
   const generateAIFn  = useServerFn(generateAITasks);
   const listWorkersFn = useServerFn(listCondoCollaborators);
+  const approveFn     = useServerFn(approveAiProposal);
+  const rejectFn      = useServerFn(rejectAiProposal);
 
   const { data: workers } = useQuery({
     enabled: !!condoId && isSindico,
     queryKey: ["workers", condoId],
     queryFn: () => listWorkersFn({ data: { condoId: condoId! } }) as Promise<Worker[]>,
+  });
+
+  const { data: proposals, refetch: refetchProposals } = useQuery({
+    enabled: !!condoId && isSindico,
+    queryKey: ["ai_proposals", condoId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_task_proposals")
+        .select("id,title,description,kind,urgency,ai_reasoning,due_at,status,created_at")
+        .eq("condo_id", condoId!)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      return (data ?? []) as Proposal[];
+    },
   });
 
   const { data: tasks, isLoading } = useQuery({
@@ -122,14 +147,41 @@ function TasksPage() {
       if (result.created === 0) {
         toast.info("A IA não identificou novas tarefas necessárias no momento.");
       } else {
-        toast.success(`${result.created} tarefa${result.created > 1 ? "s" : ""} gerada${result.created > 1 ? "s" : ""} pela IA!`);
-        qc.invalidateQueries({ queryKey: ["tasks"] });
-        setScope("ai");
+        toast.success(`${result.created} sugestão${result.created > 1 ? "ões" : ""} da IA aguardando sua aprovação!`);
+        refetchProposals();
+        setMainTab("propostas");
       }
     } catch (e: any) {
-      toast.error(e.message ?? "Erro ao gerar tarefas com IA");
+      toast.error(e.message ?? "Erro ao gerar sugestões com IA");
     } finally {
       setAiBusy(false);
+    }
+  };
+
+  const handleApprove = async (p: Proposal) => {
+    setReviewing(p.id);
+    try {
+      await approveFn({ data: { proposalId: p.id } });
+      toast.success("Tarefa aprovada e criada para o colaborador!");
+      refetchProposals();
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao aprovar sugestão");
+    } finally {
+      setReviewing(null);
+    }
+  };
+
+  const handleReject = async (p: Proposal) => {
+    setReviewing(p.id);
+    try {
+      await rejectFn({ data: { proposalId: p.id } });
+      toast.info("Sugestão rejeitada.");
+      refetchProposals();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao rejeitar sugestão");
+    } finally {
+      setReviewing(null);
     }
   };
 
@@ -176,7 +228,28 @@ function TasksPage() {
         )}
       </div>
 
-      {/* Filtros de escopo */}
+      {/* Abas principais */}
+      {isSindico && (
+        <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
+          <button onClick={() => setMainTab("tarefas")}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${mainTab === "tarefas" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}>
+            Tarefas
+          </button>
+          <button onClick={() => setMainTab("propostas")}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition ${mainTab === "propostas" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}>
+            <Sparkles className="h-3 w-3" />
+            Propostas da IA
+            {(proposals?.length ?? 0) > 0 && (
+              <span className={`h-4 min-w-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${mainTab === "propostas" ? "bg-background text-foreground" : "bg-primary text-primary-foreground"}`}>
+                {proposals!.length}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Filtros de escopo (só na aba tarefas) */}
+      {mainTab === "tarefas" && (
       <div className="flex flex-wrap items-center gap-3">
         <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
           {(isSindico
@@ -198,9 +271,90 @@ function TasksPage() {
           ))}
         </div>
       </div>
+      )}
 
-      {/* Lista */}
-      {isLoading ? (
+      {/* Aba: Propostas da IA */}
+      {mainTab === "propostas" && isSindico && (
+        <div className="space-y-3">
+          {(proposals?.length ?? 0) === 0 ? (
+            <EmptyState
+              icon={Brain}
+              title="Nenhuma proposta pendente"
+              description="Clique em "Gerar com IA" para que a IA analise a rotina do condomínio e sugira tarefas para sua aprovação."
+            />
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                A IA sugeriu {proposals!.length} tarefa{proposals!.length !== 1 ? "s" : ""}. Revise e aprove ou rejeite cada uma antes que ela seja criada para o colaborador.
+              </p>
+              <ul className="space-y-3">
+                {proposals!.map((p) => {
+                  const isBusy = reviewingId === p.id;
+                  const urgStyle = URGENCY_STYLE[p.urgency] ?? URGENCY_STYLE.normal;
+                  return (
+                    <li key={p.id} className="rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
+                      <div className="flex items-stretch gap-0">
+                        <div className={`w-1 shrink-0 ${urgStyle.bar}`} />
+                        <div className="flex-1 p-4 space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold">{p.title}</p>
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium ${urgStyle.badge}`}>
+                                  {p.urgency === "urgente" && <AlertTriangle className="h-2.5 w-2.5" />}
+                                  {urgStyle.label}
+                                </span>
+                                <Badge tone={kindTone(p.kind)}>{kindLabel(p.kind)}</Badge>
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-violet-300/40 bg-violet-500/10 text-violet-600 dark:text-violet-400 text-[10px] font-medium">
+                                  <Sparkles className="h-2.5 w-2.5" /> IA
+                                </span>
+                              </div>
+                              {p.description && <p className="text-xs text-muted-foreground mt-1">{p.description}</p>}
+                              {p.due_at && (
+                                <p className="text-[11px] text-muted-foreground mt-1 inline-flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Prazo: {new Date(p.due_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {p.ai_reasoning && (
+                            <div className="rounded-lg border border-violet-300/30 bg-violet-500/5 px-3 py-2 flex items-start gap-2">
+                              <MessageSquare className="h-3.5 w-3.5 text-violet-500 shrink-0 mt-0.5" />
+                              <p className="text-[11px] text-violet-700 dark:text-violet-300 italic">{p.ai_reasoning}</p>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              onClick={() => handleApprove(p)}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-60 transition"
+                            >
+                              {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />}
+                              Aprovar e criar tarefa
+                            </button>
+                            <button
+                              onClick={() => handleReject(p)}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 disabled:opacity-60 transition"
+                            >
+                              {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsDown className="h-3.5 w-3.5" />}
+                              Rejeitar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Lista de tarefas (aba padrão) */}
+      {mainTab === "tarefas" && (isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       ) : visible.length === 0 ? (
         <EmptyState
@@ -208,7 +362,7 @@ function TasksPage() {
           title={tab === "ativas" ? "Nenhuma tarefa ativa" : "Nenhuma tarefa concluída"}
           description={
             tab === "ativas" && isSindico
-              ? "Clique em \"Gerar com IA\" para criar tarefas com base nas regras e reservas do condomínio, ou em \"Nova tarefa\" para adicionar manualmente."
+              ? "Clique em \"Gerar com IA\" para criar sugestões, ou em \"Nova tarefa\" para adicionar manualmente."
               : "As tarefas aparecem automaticamente conforme as reservas e o síndico criar."
           }
         />
@@ -288,7 +442,7 @@ function TasksPage() {
             );
           })}
         </ul>
-      )}
+      ))}
 
       {/* Dialog nova tarefa */}
       {newOpen && condoId && (

@@ -87,6 +87,7 @@ const NAV: (NavItem | NavGroup)[] = [
       { to: "/app/tasks",        label: "Tarefas",            icon: ListChecks },
       { to: "/app/services",     label: "Serviços",           icon: ListChecks },
       { to: "/app/ai-monitor",   label: "IA Operacional",     icon: Brain,       roles: ["sindico", "administradora"] },
+      { to: "/app/ai-setup",     label: "Configurar IA",      icon: Sparkles,    roles: ["sindico", "administradora"] },
       { to: "/app/condo-rules",  label: "Regras Operacionais", icon: ScrollText,  roles: ["sindico", "administradora"] },
     ],
   },

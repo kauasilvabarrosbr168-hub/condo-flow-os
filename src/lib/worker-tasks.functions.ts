@@ -120,10 +120,19 @@ export const generateAITasks = createServerFn({ method: "POST" })
 
     const serviceRules = serviceRulesRes.data ?? [];
 
+    // Carrega também o contexto livre do síndico
+    const contextRes = await supabaseAdmin.from("condominiums").select("ai_context").eq("id", data.condoId).maybeSingle();
+    const aiContext = contextRes.data?.ai_context ?? null;
+
     const prompt = `Você é o assistente operacional do condomínio "${condoRes.data?.name ?? "CondoFlow"}".
 SIGA RIGOROSAMENTE AS REGRAS ABAIXO — elas foram definidas pelo síndico e têm prioridade máxima.
 
-REGRAS OPERACIONAIS DO CONDOMÍNIO (definidas pelo síndico):
+${aiContext ? `CONTEXTO GERAL DO CONDOMÍNIO (explicado pelo síndico):
+"""
+${aiContext}
+"""
+
+` : ""}REGRAS OPERACIONAIS DO CONDOMÍNIO (definidas pelo síndico):
 ${serviceRules.length
   ? serviceRules.map((r: any) => {
       const area = areasRes.data?.find((a) => a.id === r.area_id);
@@ -141,16 +150,16 @@ ${serviceRules.length
 ${(areasRes.data ?? []).map((a) => `- ${a.name}: ${a.rules_summary ?? "sem regras especiais"}${a.requires_checklist ? " (requer checklist)" : ""}`).join("\n") || "Nenhuma área cadastrada."}
 
 RESERVAS DOS PRÓXIMOS 7 DIAS:
-${reservationsWithArea.length ? reservationsWithArea.map((r) => `- ${r.area_name}: ${new Date(r.starts_at).toLocaleString("pt-BR")} → ${new Date(r.ends_at).toLocaleString("pt-BR")}${r.cleaning_type !== "none" ? " (limpeza solicitada)" : ""}`).join("\n") : "Nenhuma reserva nos próximos 7 dias."}
+${reservationsWithArea.length ? reservationsWithArea.map((r) => `- ${r.area_name}: ${new Date(r.starts_at).toLocaleString("pt-BR")} → ${new Date(r.ends_at).toLocaleString("pt-BR")}`).join("\n") : "Nenhuma reserva nos próximos 7 dias."}
 
 TAREFAS JÁ EM ABERTO (não duplicar):
 ${(pendingTasksRes.data ?? []).map((t) => `- ${t.title}`).join("\n") || "Nenhuma tarefa pendente."}
 
 DATA/HORA ATUAL: ${now.toLocaleString("pt-BR")}
 
-Com base nessas informações, sugira de 3 a 6 tarefas para o colaborador do condomínio.
+Com base nessas informações, sugira de 3 a 6 tarefas/serviços para o colaborador do condomínio.
 Priorize: limpeza entre reservas, verificações de segurança, manutenções preventivas, preparação de áreas.
-Não repita tarefas já em aberto.
+Não repita tarefas já em aberto. Identifique serviços que podem estar faltando ou atrasados.
 
 Responda APENAS com JSON válido (sem markdown):
 [
@@ -159,12 +168,13 @@ Responda APENAS com JSON válido (sem markdown):
     "description": "detalhes em 1-2 frases",
     "kind": "limpeza | manutencao | verificacao | pre_checklist | pos_checklist",
     "urgency": "baixa | normal | urgente",
-    "due_at": "ISO 8601 ou null"
+    "due_at": "ISO 8601 ou null",
+    "reasoning": "por que esta tarefa é necessária agora (1 frase)"
   }
 ]`;
 
     const suggestions = await callAI(prompt);
-    if (!suggestions.length) return { created: 0, tasks: [] };
+    if (!suggestions.length) return { created: 0, proposals: [] };
 
     const validKinds = ["limpeza", "manutencao", "verificacao", "pre_checklist", "pos_checklist", "incidente"];
     const validUrgencies = ["baixa", "normal", "urgente"];
@@ -176,13 +186,11 @@ Responda APENAS com JSON válido (sem markdown):
       kind:         validKinds.includes(s.kind) ? s.kind : "manutencao",
       urgency:      validUrgencies.includes(s.urgency) ? s.urgency : "normal",
       due_at:       s.due_at ?? null,
-      status:       "pendente",
-      ai_generated: true,
-      created_by:   context.userId,
-      notify_immediately: false,
+      ai_reasoning: s.reasoning ? String(s.reasoning).slice(0, 300) : null,
+      status:       "pending",
     }));
 
-    const { data: created, error } = await supabaseAdmin.from("tasks").insert(toInsert).select("id, title, urgency");
+    const { data: created, error } = await supabaseAdmin.from("ai_task_proposals").insert(toInsert).select("id, title, urgency");
     if (error) throw new Error(error.message);
-    return { created: created?.length ?? 0, tasks: created ?? [] };
+    return { created: created?.length ?? 0, proposals: created ?? [] };
   });
