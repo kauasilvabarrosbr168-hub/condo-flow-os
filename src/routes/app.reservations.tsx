@@ -29,8 +29,6 @@ type Reservation = {
   guests: number | null;
   notes: string | null;
   status: string;
-  cleaning_type: string | null;
-  cleaning_service_id: string | null;
 };
 
 function ReservationsPage() {
@@ -92,7 +90,7 @@ function ReservationsPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("reservations")
-        .select("id,area_id,resident_id,starts_at,ends_at,guests,notes,status,cleaning_type,cleaning_service_id")
+        .select("id,area_id,resident_id,starts_at,ends_at,guests,notes,status")
         .eq("condo_id", condoId!)
         .neq("status", "cancelada")
         .order("starts_at", { ascending: true });
@@ -205,14 +203,6 @@ function ReservationsPage() {
                     <StatusBadge status={r.status} />
                   </div>
                   {r.notes && <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{r.notes}</p>}
-                  {(r.cleaning_type === "external" || r.cleaning_type === "internal") && (
-                    <p className="mt-2 text-[11px] text-primary flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      {r.cleaning_type === "internal"
-                        ? "Limpeza: colaborador do condomínio"
-                        : `Limpeza: ${cleaningServices?.find((s) => s.id === r.cleaning_service_id)?.name ?? "Prestador externo"}`}
-                    </p>
-                  )}
                   <div className="mt-4 flex items-center justify-between gap-2">
                     <span className="text-[11px] text-muted-foreground">{r.guests ?? 0} convidados</span>
                     {(isMine || isAdmin) && r.status !== "cancelada" && (

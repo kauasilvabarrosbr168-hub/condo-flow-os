@@ -54,72 +54,18 @@ export const createReservation = createServerFn({ method: "POST" })
     const { data: res, error } = await supabase
       .from("reservations")
       .insert({
-        condo_id:            data.condoId,
-        area_id:             data.areaId,
-        resident_id:         userId,
-        starts_at:           data.startsAt,
-        ends_at:             data.endsAt,
-        guests:              data.guests,
-        notes:               data.notes || null,
-        cleaning_service_id: data.cleaningType === "external" ? (data.cleaningServiceId || null) : null,
-        cleaning_type:       data.cleaningType,
-        status:              "pendente",
+        condo_id:   data.condoId,
+        area_id:    data.areaId,
+        resident_id: userId,
+        starts_at:  data.startsAt,
+        ends_at:    data.endsAt,
+        guests:     data.guests,
+        notes:      data.notes || null,
+        status:     "pendente",
       })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-
-    // Limpeza externa — cria tarefa para o prestador
-    if (data.cleaningType === "external" && data.cleaningServiceId && res?.id) {
-      const { data: svc } = await supabase
-        .from("cleaning_services")
-        .select("name, phone")
-        .eq("id", data.cleaningServiceId)
-        .maybeSingle();
-      await supabase.from("tasks").insert({
-        condo_id:       data.condoId,
-        reservation_id: res.id,
-        title:          `Limpeza pós-evento — ${area.name}`,
-        description:    svc ? `Prestador: ${svc.name}${svc.phone ? ` · ${svc.phone}` : ""}` : null,
-        kind:           "pos_checklist",
-        status:         "pendente",
-        due_at:         data.endsAt,
-      });
-    }
-
-    // Limpeza interna — cria pedido para o colaborador do condomínio
-    if (data.cleaningType === "internal" && res?.id) {
-      const { data: cfg } = await supabase
-        .from("condo_cleaning_config")
-        .select("price_cents, worker_id")
-        .eq("condo_id", data.condoId)
-        .maybeSingle();
-      if (cfg) {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("unit_label")
-          .eq("id", userId)
-          .maybeSingle();
-        await supabase.from("cleaning_requests").insert({
-          condo_id:     data.condoId,
-          requested_by: userId,
-          worker_id:    cfg.worker_id,
-          unit_label:   prof?.unit_label ?? null,
-          notes:        `Limpeza pós-evento — ${area.name}`,
-          price_cents:  cfg.price_cents,
-          scheduled_at: data.endsAt,
-        });
-        await supabase.from("tasks").insert({
-          condo_id:       data.condoId,
-          reservation_id: res.id,
-          title:          `Limpeza pós-evento — ${area.name}`,
-          description:    "Limpeza interna pelo colaborador do condomínio.",
-          kind:           "pos_checklist",
-          status:         "pendente",
-          due_at:         data.endsAt,
-        });
-      }
-    }
 
     return { id: res.id };
   });
