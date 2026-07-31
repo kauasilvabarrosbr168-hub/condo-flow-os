@@ -300,7 +300,7 @@ function NewReservationDialog({
   createReservationFn: (args: any) => Promise<{ id: string }>;
 }) {
   const [areaId, setAreaId] = useState(areas[0]?.id ?? "");
-  const [date, setDate] = useState(() => new Date(Date.now() + 86400000).toLocaleDateString("sv"));
+  const [date, setDate] = useState(() => new Date().toLocaleDateString("sv"));
   const [startTime, setStartTime] = useState("18:00");
   const [endTime, setEndTime] = useState("22:00");
   const [guests, setGuests] = useState(0);
