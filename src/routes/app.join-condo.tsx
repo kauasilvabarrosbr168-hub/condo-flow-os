@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Building2, ArrowRight, Loader2, CheckCircle2, LogOut, Home, Briefcase } from "lucide-react";
 import { joinCondoByCode } from "@/lib/membership.functions";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,7 +17,7 @@ type UserType = "morador" | "funcionario";
 
 function JoinCondoPage() {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, condo } = useAuth();
   const joinFn = useServerFn(joinCondoByCode);
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -27,6 +27,15 @@ function JoinCondoPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState<{ condoName?: string } | null>(null);
+
+  // Quando o síndico aprova, user_roles é inserido e o AuthProvider
+  // detecta em real-time e carrega o condo. Assim que condo aparecer,
+  // redirecionamos automaticamente sem precisar de refresh manual.
+  useEffect(() => {
+    if (joined && condo) {
+      navigate({ to: "/app/dashboard" });
+    }
+  }, [joined, condo]);
 
   const handleSelectType = (type: UserType) => {
     setUserType(type);

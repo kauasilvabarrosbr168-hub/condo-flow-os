@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { CondoEditor } from "@/components/condo/condo-editor";
 import { getMyCondoId, getCondoJoinCode, regenerateCondoJoinCode } from "@/lib/admin-condo.functions";
-import { getCleaningData, saveCleaningConfig } from "@/lib/cleaning.functions";
+import { getCleaningData, saveCleaningConfig, setCleaningEnabled } from "@/lib/cleaning.functions";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -26,7 +26,8 @@ function MyCondoPage() {
   const fetchId    = useServerFn(getMyCondoId);
   const fetchCode  = useServerFn(getCondoJoinCode);
   const regenCode  = useServerFn(regenerateCondoJoinCode);
-  const fetchClean = useServerFn(getCleaningData);
+  const fetchClean       = useServerFn(getCleaningData);
+  const setCleaningEnabledFn = useServerFn(setCleaningEnabled);
   const saveCfg    = useServerFn(saveCleaningConfig);
   const qc = useQueryClient();
 
@@ -76,14 +77,15 @@ function MyCondoPage() {
     if (!condoId) return;
     const next = !cleaningEnabled;
     setSavingToggle(true);
-    const { error } = await supabase
-      .from("condominiums")
-      .update({ cleaning_enabled: next })
-      .eq("id", condoId);
-    setSavingToggle(false);
-    if (error) { toast.error("Erro ao salvar configuração."); return; }
-    setCleaningEnabled(next);
-    toast.success(next ? "Opção de limpeza ativada." : "Opção de limpeza desativada.");
+    try {
+      await setCleaningEnabledFn({ data: { condoId, enabled: next } });
+      setCleaningEnabled(next);
+      toast.success(next ? "Opção de limpeza ativada." : "Opção de limpeza desativada.");
+    } catch {
+      toast.error("Erro ao salvar configuração.");
+    } finally {
+      setSavingToggle(false);
+    }
   };
 
   useEffect(() => {
@@ -207,10 +209,10 @@ function MyCondoPage() {
           <button
             onClick={handleToggleCleaning}
             disabled={savingToggle}
-            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition ${
+            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition disabled:opacity-60 ${
               cleaningEnabled
-                ? "border border-border text-muted-foreground hover:bg-muted"
-                : "bg-primary text-primary-foreground hover:opacity-90"
+                ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                : "bg-red-600 text-white hover:bg-red-700"
             }`}
           >
             {savingToggle

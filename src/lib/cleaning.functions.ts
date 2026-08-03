@@ -131,3 +131,25 @@ export const updateCleaningRequestStatus = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ─── Ativar/desativar opção de limpeza para moradores ────────────────────────
+
+export const setCleaningEnabled = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoId: string; enabled: boolean }) =>
+    z.object({ condoId: z.string().uuid(), enabled: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Verifica que caller é síndico ou administradora
+    const { data: role } = await supabaseAdmin
+      .from("user_roles").select("role")
+      .eq("user_id", context.userId).eq("condo_id", data.condoId).maybeSingle();
+    if (!role || !["sindico", "administradora"].includes(role.role)) throw new Error("forbidden");
+
+    const { error } = await supabaseAdmin
+      .from("condominiums")
+      .update({ cleaning_enabled: data.enabled })
+      .eq("id", data.condoId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+

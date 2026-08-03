@@ -50,7 +50,7 @@ export const createReservation = createServerFn({ method: "POST" })
       throw new Error("Já existe uma reserva neste horário para esta área.");
     }
 
-    // Cria a reserva
+    // Cria a reserva já confirmada — não exige aprovação separada do síndico
     const { data: res, error } = await supabase
       .from("reservations")
       .insert({
@@ -61,7 +61,7 @@ export const createReservation = createServerFn({ method: "POST" })
         ends_at:    data.endsAt,
         guests:     data.guests,
         notes:      data.notes || null,
-        status:     "pendente",
+        status:     "confirmada",
       })
       .select("id")
       .single();

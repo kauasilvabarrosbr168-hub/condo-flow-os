@@ -339,7 +339,7 @@ function NewReservationDialog({
     }
 
     setBusy(false);
-    toast.success("Reserva criada! O fluxo automático foi iniciado.");
+    toast.success("Reserva confirmada com sucesso!");
     const areaName = areas.find((a) => a.id === areaId)?.name ?? "área";
     void dispatchFn({ data: { condoId, eventType: "reservation_created", entityType: "reservation", entityId: resId, context: { areaName, cleaningType, guests } } });
     if (cleaningType !== "none") {
