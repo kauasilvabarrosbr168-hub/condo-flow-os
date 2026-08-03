@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Sparkles,
   CalendarPlus,
@@ -20,6 +20,10 @@ import {
   Check,
   StickyNote,
   Brain,
+  CheckCircle2,
+  Camera,
+  X,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -680,9 +684,193 @@ function StaffHome({ condoId, userId, userName }: { condoId: string; userId: str
         {/* Lembretes pendentes */}
         <PendingRemindersWidget condoId={condoId} userId={userId} />
 
+        {/* Serviços registrados */}
+        <ServiceSection condoId={condoId} userId={userId} tasks={data?.tasks ?? []} />
+
         {/* Reportar problema */}
         <ReportarProblema condoId={condoId} userId={userId} />
 
+      </div>
+    </div>
+  );
+}
+
+type ServiceLog = { id: string; title: string; notes: string | null; photo_url: string | null; done_at: string };
+
+function ServiceSection({ condoId, userId, tasks }: { condoId: string; userId: string; tasks: any[] }) {
+  const [logs, setLogs] = useState<ServiceLog[]>([]);
+  const [checkin, setCheckin] = useState<{ taskId?: string; title: string } | null>(null);
+  const [freeTitle, setFreeTitle] = useState("");
+
+  const loadLogs = useCallback(async () => {
+    const { data } = await supabase
+      .from("service_logs")
+      .select("id, title, notes, photo_url, done_at")
+      .eq("condo_id", condoId)
+      .eq("worker_id", userId)
+      .order("done_at", { ascending: false })
+      .limit(10);
+    setLogs(data ?? []);
+  }, [condoId, userId]);
+
+  useEffect(() => { loadLogs(); }, [loadLogs]);
+
+  return (
+    <>
+      {/* Registrar serviço avulso */}
+      <div className="rounded-2xl border border-border bg-card shadow-card p-5">
+        <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Registrar serviço
+        </h2>
+        <div className="flex gap-2">
+          <input
+            value={freeTitle}
+            onChange={(e) => setFreeTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && freeTitle.trim()) { setCheckin({ title: freeTitle.trim() }); setFreeTitle(""); } }}
+            placeholder="Descreva o serviço executado…"
+            className="flex-1 h-10 rounded-xl border border-input bg-muted px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          />
+          <button
+            onClick={() => { if (freeTitle.trim()) { setCheckin({ title: freeTitle.trim() }); setFreeTitle(""); } }}
+            disabled={!freeTitle.trim()}
+            className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-40 transition"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Registrar
+          </button>
+        </div>
+
+        {/* Concluir tarefa específica */}
+        {tasks.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {tasks.slice(0, 4).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setCheckin({ taskId: t.id, title: t.title ?? "" })}
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-muted text-xs font-medium hover:border-emerald-500 hover:text-emerald-600 transition"
+              >
+                <CheckCircle2 className="h-3 w-3" /> {t.title?.slice(0, 30)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Histórico de serviços */}
+      {logs.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card shadow-card">
+          <div className="px-5 py-4 border-b border-border">
+            <h2 className="text-sm font-semibold">Meus registros recentes</h2>
+          </div>
+          <ul className="divide-y divide-border/60">
+            {logs.map((l) => (
+              <li key={l.id} className="flex items-start gap-3 px-5 py-3">
+                {l.photo_url && <img src={l.photo_url} alt="" className="h-12 w-12 rounded-lg object-cover shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{l.title}</p>
+                  {l.notes && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{l.notes}</p>}
+                  <p className="text-[10px] text-muted-foreground mt-1">{new Date(l.done_at).toLocaleString("pt-BR")}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {checkin && (
+        <ServiceCheckinDialog
+          condoId={condoId}
+          userId={userId}
+          init={checkin}
+          onClose={() => setCheckin(null)}
+          onDone={async () => { await loadLogs(); setCheckin(null); }}
+        />
+      )}
+    </>
+  );
+}
+
+function ServiceCheckinDialog({ condoId, userId, init, onClose, onDone }: {
+  condoId: string; userId: string;
+  init: { taskId?: string; title: string };
+  onClose: () => void; onDone: () => Promise<void>;
+}) {
+  const [notes, setNotes] = useState("");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${condoId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("condo-areas").upload(path, file);
+    setUploading(false);
+    if (error) { toast.error(error.message); return; }
+    const { data } = supabase.storage.from("condo-areas").getPublicUrl(path);
+    setPhotoUrl(data.publicUrl);
+  };
+
+  const submit = async () => {
+    setBusy(true);
+    const { error } = await supabase.from("service_logs").insert({
+      condo_id: condoId, worker_id: userId,
+      task_id: init.taskId ?? null,
+      title: init.title,
+      notes: notes.trim() || null,
+      photo_url: photoUrl,
+    });
+    if (!error && init.taskId) {
+      await supabase.from("tasks").update({ status: "concluida", completed_at: new Date().toISOString() }).eq("id", init.taskId);
+    }
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Serviço registrado!");
+    await onDone();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-elegant animate-pop" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <div>
+            <h2 className="text-base font-semibold">Registrar conclusão</h2>
+            <p className="text-xs text-muted-foreground truncate max-w-xs mt-0.5">{init.title}</p>
+          </div>
+          <button onClick={onClose} className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Observações (opcional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Descreva o que foi feito, materiais usados, problemas encontrados…"
+              className="mt-1 w-full rounded-xl border border-input bg-muted px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 resize-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Foto (opcional)</label>
+            <label className="mt-1 flex items-center justify-center gap-2 h-20 rounded-xl border-2 border-dashed border-border hover:border-primary cursor-pointer transition">
+              {photoUrl
+                ? <img src={photoUrl} alt="" className="h-full w-full object-cover rounded-xl" />
+                : uploading
+                  ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  : <><Camera className="h-5 w-5 text-muted-foreground" /><span className="text-xs text-muted-foreground">Adicionar foto</span></>
+              }
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
+            </label>
+          </div>
+        </div>
+        <div className="flex gap-2 p-5 pt-0">
+          <button onClick={onClose} className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted transition">Cancelar</button>
+          <button onClick={submit} disabled={busy} className="flex-1 h-10 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60 transition flex items-center justify-center gap-2">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            Confirmar
+          </button>
+        </div>
       </div>
     </div>
   );

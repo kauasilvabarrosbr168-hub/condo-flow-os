@@ -74,7 +74,6 @@ const NAV: (NavItem | NavGroup)[] = [
 
   // Funcionário: itens diretos sem grupo Operações
   { to: "/app/tasks",    label: "Tarefas",   icon: ListChecks,  roles: ["funcionario"] },
-  { to: "/app/services", label: "Serviços",  icon: ListChecks,  roles: ["funcionario"] },
   { to: "/app/notes",    label: "Anotações", icon: StickyNote,  roles: ["funcionario"] },
 
   // Operações — somente para não-funcionários (sem Timeline)
@@ -85,7 +84,6 @@ const NAV: (NavItem | NavGroup)[] = [
       { to: "/app/my-condo",   label: "Meu condomínio", icon: Building,   roles: ["sindico", "administradora"] },
       { to: "/app/areas",      label: "Áreas comuns",   icon: Building,   roles: ["sindico", "administradora"] },
       { to: "/app/tasks",        label: "Tarefas",            icon: ListChecks },
-      { to: "/app/services",     label: "Serviços",           icon: ListChecks },
       { to: "/app/ai-monitor",   label: "IA Operacional",     icon: Brain,       roles: ["sindico", "administradora"] },
       { to: "/app/ai-setup",     label: "Configurar IA",      icon: Sparkles,    roles: ["sindico", "administradora"] },
       { to: "/app/condo-rules",  label: "Regras Operacionais", icon: ScrollText,  roles: ["sindico", "administradora"] },
