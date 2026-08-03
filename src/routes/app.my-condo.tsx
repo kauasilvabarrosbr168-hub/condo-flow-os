@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { CondoEditor } from "@/components/condo/condo-editor";
 import { getMyCondoId, getCondoJoinCode, regenerateCondoJoinCode } from "@/lib/admin-condo.functions";
-import { getCleaningData, saveCleaningConfig, setCleaningEnabled } from "@/lib/cleaning.functions";
+import { getCleaningData, saveCleaningConfig, setCleaningEnabled as setCleaningEnabledServerFn } from "@/lib/cleaning.functions";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -27,7 +27,7 @@ function MyCondoPage() {
   const fetchCode  = useServerFn(getCondoJoinCode);
   const regenCode  = useServerFn(regenerateCondoJoinCode);
   const fetchClean       = useServerFn(getCleaningData);
-  const setCleaningEnabledFn = useServerFn(setCleaningEnabled);
+  const setCleaningEnabledFn = useServerFn(setCleaningEnabledServerFn);
   const saveCfg    = useServerFn(saveCleaningConfig);
   const qc = useQueryClient();
 
