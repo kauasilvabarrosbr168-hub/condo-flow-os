@@ -9,7 +9,6 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/empty-state";
-import { Badge } from "@/components/brand";
 import { toast } from "sonner";
 import { useEffect, useRef, useState } from "react";
 import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
@@ -37,9 +36,9 @@ type Proposal = {
 type Worker = { id: string; full_name: string | null; email: string | null };
 
 const URGENCY_STYLE: Record<string, { label: string; bar: string; badge: string }> = {
-  urgente: { label: "Urgente",  bar: "bg-destructive", badge: "text-destructive bg-destructive/10 border-destructive/30" },
-  normal:  { label: "Normal",   bar: "bg-primary",     badge: "text-primary bg-primary/10 border-primary/30" },
-  baixa:   { label: "Baixa",    bar: "bg-muted-foreground/40", badge: "text-muted-foreground bg-muted border-border" },
+  urgente: { label: "Urgente", bar: "bg-red-500",    badge: "text-white bg-red-500 border-red-500" },
+  normal:  { label: "Normal",  bar: "bg-blue-500",   badge: "text-white bg-blue-500 border-blue-500" },
+  baixa:   { label: "Baixa",   bar: "bg-slate-400",  badge: "text-white bg-slate-400 border-slate-400" },
 };
 
 function TasksPage() {
@@ -304,7 +303,7 @@ function TasksPage() {
                                   {p.urgency === "urgente" && <AlertTriangle className="h-2.5 w-2.5" />}
                                   {urgStyle.label}
                                 </span>
-                                <Badge tone={kindTone(p.kind)}>{kindLabel(p.kind)}</Badge>
+                                <span className={kindClass(p.kind)}>{kindLabel(p.kind)}</span>
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-violet-300/40 bg-violet-500/10 text-violet-600 dark:text-violet-400 text-[10px] font-medium">
                                   <Sparkles className="h-2.5 w-2.5" /> IA
                                 </span>
@@ -398,7 +397,7 @@ function TasksPage() {
                         {urgStyle.label}
                       </span>
                       {/* Tipo */}
-                      <Badge tone={kindTone(t.kind ?? "")}>{kindLabel(t.kind ?? "")}</Badge>
+                      <span className={kindClass(t.kind ?? "")}>{kindLabel(t.kind ?? "")}</span>
                       {/* IA */}
                       {t.ai_generated && (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-violet-300/40 bg-violet-500/10 text-violet-600 dark:text-violet-400 text-[10px] font-medium">
@@ -620,8 +619,14 @@ function kindLabel(k: string) {
     limpeza: "Limpeza", verificacao: "Verificação",
   } as Record<string, string>)[k] ?? k;
 }
-function kindTone(k: string): "default" | "primary" | "warning" | "destructive" {
-  if (k === "manutencao" || k === "verificacao") return "warning";
-  if (k === "incidente") return "destructive";
-  return "primary";
+function kindClass(k: string) {
+  const map: Record<string, string> = {
+    manutencao:    "bg-amber-500 text-white",
+    limpeza:       "bg-sky-500 text-white",
+    verificacao:   "bg-violet-500 text-white",
+    incidente:     "bg-red-600 text-white",
+    pre_checklist: "bg-emerald-500 text-white",
+    pos_checklist: "bg-teal-600 text-white",
+  };
+  return `inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${map[k] ?? "bg-slate-500 text-white"}`;
 }

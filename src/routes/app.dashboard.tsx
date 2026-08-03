@@ -663,10 +663,10 @@ function StaffHome({ condoId, userId, userName }: { condoId: string; userId: str
                       </p>
                     </div>
                     {/* Status badge */}
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium shrink-0 ${
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${
                       t.status === "em_andamento"
-                        ? "bg-primary/10 border-primary/30 text-primary"
-                        : "bg-muted border-border text-muted-foreground"
+                        ? "bg-blue-500 text-white"
+                        : "bg-slate-400 text-white"
                     }`}>
                       {t.status === "em_andamento" ? "Em andamento" : "Pendente"}
                     </span>
