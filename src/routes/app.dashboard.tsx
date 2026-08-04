@@ -26,7 +26,7 @@ import {
   ClipboardCheck,
   Bell,
   CalendarDays,
-  Waves,
+  Droplets,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -1229,7 +1229,7 @@ function StaffActivityFeed({ condoId }: { condoId: string }) {
             }`}>
               {n.type === "reservation"
                 ? <CalendarDays className="h-3.5 w-3.5" />
-                : <Waves className="h-3.5 w-3.5" />}
+                : <Droplets className="h-3.5 w-3.5" />}
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-sm leading-snug">
