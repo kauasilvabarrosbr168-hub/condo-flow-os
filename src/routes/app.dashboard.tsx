@@ -584,10 +584,10 @@ function StaffHome({ condoId, userId, userName }: { condoId: string; userId: str
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { label: "Tarefas hoje",    value: data?.todayTasks?.length ?? 0, icon: Clock,       tone: "default" as const },
-            { label: "Pendentes",       value: data?.tasks?.length ?? 0,      icon: ListChecks,  tone: (data?.tasks?.length ?? 0) > 0 ? "warning" as const : "default" as const },
-            { label: "Urgentes",        value: data?.urgent?.length ?? 0,     icon: Wrench,      tone: (data?.urgent?.length ?? 0) > 0 ? "destructive" as const : "default" as const },
-            { label: "Concluídas hoje", value: data?.doneToday?.length ?? 0,  icon: TrendingUp,  tone: (data?.doneToday?.length ?? 0) > 0 ? "success" as const : "default" as const },
+            { label: "Tarefas hoje",    value: data?.todayTasks?.length ?? 0, icon: Clock,       tone: "primary" as const },
+            { label: "Pendentes",       value: data?.tasks?.length ?? 0,      icon: ListChecks,  tone: "warning" as const },
+            { label: "Urgentes",        value: data?.urgent?.length ?? 0,     icon: Wrench,      tone: "destructive" as const },
+            { label: "Concluídas hoje", value: data?.doneToday?.length ?? 0,  icon: TrendingUp,  tone: "success" as const },
           ].map((s) => (
             <Stat key={s.label} label={s.label} value={s.value} icon={s.icon} tone={s.tone} />
           ))}

@@ -48,14 +48,14 @@ export function Stat({
   tone?: "default" | "primary" | "success" | "warning" | "destructive";
 }) {
   const toneText: Record<string, string> = {
-    default: "text-foreground",
-    primary: "text-primary",
-    success: "text-success",
-    warning: "text-warning-foreground",
-    destructive: "text-destructive",
+    default:     "text-foreground",
+    primary:     "text-blue-500",
+    success:     "text-emerald-500",
+    warning:     "text-amber-500",
+    destructive: "text-red-500",
   };
   const toneBg: Record<string, string> = {
-    default:     "bg-slate-500 text-white",
+    default:     "bg-slate-400 text-white",
     primary:     "bg-blue-600 text-white",
     success:     "bg-emerald-500 text-white",
     warning:     "bg-amber-500 text-white",
