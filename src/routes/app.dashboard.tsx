@@ -24,6 +24,9 @@ import {
   Camera,
   X,
   ClipboardCheck,
+  Bell,
+  CalendarDays,
+  Waves,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -581,6 +584,9 @@ function StaffHome({ condoId, userId, userName }: { condoId: string; userId: str
 
       <div className="px-4 lg:px-8 pb-12 space-y-6 animate-slide-up">
 
+        {/* Notificações de atividade recente */}
+        <StaffActivityFeed condoId={condoId} />
+
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
@@ -679,6 +685,18 @@ function StaffHome({ condoId, userId, userName }: { condoId: string; userId: str
               ))}
             </ul>
           )}
+        </div>
+
+        {/* Calendário de reservas — somente visualização */}
+        <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-blue-500" />
+            <h2 className="text-sm font-semibold">Calendário de reservas</h2>
+            <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              Somente visualização
+            </span>
+          </div>
+          <ReservationsCalendar condoId={condoId} />
         </div>
 
         {/* Lembretes pendentes */}
@@ -1126,4 +1144,106 @@ function relativeTime(iso: string) {
   if (h < 24) return `há ${h}h`;
   const d = Math.round(h / 24);
   return `há ${d}d`;
+}
+
+/* ──────────────── FEED DE ATIVIDADE ──────────────── */
+function StaffActivityFeed({ condoId }: { condoId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["staff-activity", condoId],
+    queryFn: async () => {
+      const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+      const [resRes, cleanRes, areasRes] = await Promise.all([
+        supabase
+          .from("reservations")
+          .select("id, starts_at, area_id, resident_id, status, created_at")
+          .eq("condo_id", condoId)
+          .gte("created_at", cutoff)
+          .order("created_at", { ascending: false })
+          .limit(15),
+        supabase
+          .from("cleaning_requests")
+          .select("id, requested_by, unit_label, status, created_at")
+          .eq("condo_id", condoId)
+          .gte("created_at", cutoff)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase.from("areas").select("id, name").eq("condo_id", condoId),
+      ]);
+
+      const reservations = resRes.data ?? [];
+      const cleanings    = cleanRes.data ?? [];
+      const areas        = areasRes.data ?? [];
+
+      const userIds = [...new Set([
+        ...reservations.map((r) => r.resident_id).filter(Boolean),
+        ...cleanings.map((c) => c.requested_by).filter(Boolean),
+      ])];
+
+      const { data: profiles } = userIds.length
+        ? await supabase.from("profiles").select("id, full_name, unit_label").in("id", userIds)
+        : { data: [] };
+
+      const pm   = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
+      const am   = Object.fromEntries(areas.map((a) => [a.id, a.name]));
+
+      type Entry =
+        | { id: string; type: "reservation"; name: string; area: string; starts_at: string; created_at: string }
+        | { id: string; type: "cleaning";    name: string; unit: string | null; created_at: string };
+
+      const entries: Entry[] = [
+        ...reservations.map((r) => ({
+          id: r.id, type: "reservation" as const,
+          name: pm[r.resident_id]?.full_name ?? "Morador",
+          area: r.area_id ? (am[r.area_id] ?? "Área") : "Área",
+          starts_at: r.starts_at,
+          created_at: r.created_at,
+        })),
+        ...cleanings.map((c) => ({
+          id: c.id, type: "cleaning" as const,
+          name: pm[c.requested_by]?.full_name ?? "Morador",
+          unit: c.unit_label ?? null,
+          created_at: c.created_at,
+        })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      return entries;
+    },
+    refetchInterval: 30_000,
+  });
+
+  if (isLoading || !data?.length) return null;
+
+  return (
+    <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 shadow-card overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-amber-500/20 flex items-center gap-2">
+        <Bell className="h-4 w-4 text-amber-500" />
+        <h2 className="text-sm font-semibold">Atividade recente</h2>
+        <span className="ml-auto text-[10px] text-muted-foreground">Últimas 48h</span>
+      </div>
+      <ul className="divide-y divide-border/40">
+        {data.map((n) => (
+          <li key={n.id} className="flex items-start gap-3 px-5 py-3">
+            <span className={`mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0 ${
+              n.type === "reservation" ? "bg-blue-600 text-white" : "bg-emerald-500 text-white"
+            }`}>
+              {n.type === "reservation"
+                ? <CalendarDays className="h-3.5 w-3.5" />
+                : <Waves className="h-3.5 w-3.5" />}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm leading-snug">
+                <span className="font-semibold">{n.name}</span>
+                {n.type === "reservation"
+                  ? <> reservou <span className="font-medium text-blue-500">{n.area}</span> para {new Date(n.starts_at).toLocaleString("pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</>
+                  : <> solicitou o <span className="font-medium text-emerald-500">serviço de limpeza</span>{n.unit ? ` · unidade ${n.unit}` : ""}</>
+                }
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{relativeTime(n.created_at)}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
