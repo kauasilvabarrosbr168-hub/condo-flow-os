@@ -239,7 +239,7 @@ export function CondoEditor({
 
         {/* AREAS */}
         <TabsContent value="areas" className="mt-5">
-          {variant === "admin" && (
+          {(variant === "admin" || variant === "sindico") && (
             <div className="flex justify-end mb-4">
               <Button onClick={() => setEditingArea({ min_advance_hours: 24, requires_checklist: true, gallery: [], active: true })}>
                 <Plus className="h-4 w-4" /> Nova área
@@ -261,7 +261,7 @@ export function CondoEditor({
                       {a.description && <p className="text-[11px] text-muted-foreground line-clamp-1">{a.description}</p>}
                       {a.capacity != null && <p className="text-[11px] text-muted-foreground">Capacidade: {a.capacity}</p>}
                     </div>
-                    {variant === "admin" && (
+                    {(variant === "admin" || variant === "sindico") && (
                       <div className="flex gap-1 shrink-0">
                         <button onClick={() => setEditingArea(a)} className="text-xs text-primary hover:underline px-2">Editar</button>
                         <button onClick={async () => { if (confirm("Remover esta área?")) { await del({ data: { areaId: a.id } }); toast.success("Removida"); reloadAreas(); } }} className="h-7 w-7 rounded-md hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -272,7 +272,7 @@ export function CondoEditor({
               ))}
             </div>
           )}
-          {editingArea && variant === "admin" && (
+          {editingArea && (variant === "admin" || variant === "sindico") && (
             <AreaEditor
               condoId={condoId}
               initial={editingArea}
