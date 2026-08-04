@@ -987,12 +987,17 @@ function ReportarProblema({ condoId, userId }: { condoId: string; userId: string
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border-2 border-dashed border-destructive/30 text-destructive/80 hover:border-destructive hover:bg-destructive/5 transition text-sm font-medium"
-      >
-        <AlertTriangle className="h-4 w-4" /> Reportar problema
-      </button>
+      <div className="space-y-1.5">
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border-2 border-dashed border-destructive/30 text-destructive/80 hover:border-destructive hover:bg-destructive/5 transition text-sm font-medium"
+        >
+          <AlertTriangle className="h-4 w-4" /> Reportar problema
+        </button>
+        <p className="text-center text-xs text-muted-foreground">
+          Encontrou algo quebrado, com vazamento ou qualquer situação no condomínio? Clique para avisar o síndico imediatamente.
+        </p>
+      </div>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)}>
