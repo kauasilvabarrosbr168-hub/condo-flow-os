@@ -548,9 +548,9 @@ function StaffHome({ condoId, userId, userName }: { condoId: string; userId: str
   const nextTask = data?.tasks?.[0] ?? null;
 
   const URGENCY_COLOR: Record<string, string> = {
-    urgente: "text-destructive bg-destructive/10 border-destructive/30",
-    normal:  "text-primary bg-primary/10 border-primary/30",
-    baixa:   "text-muted-foreground bg-muted border-border",
+    urgente: "text-white bg-red-600 border-red-600",
+    normal:  "text-white bg-blue-600 border-blue-600",
+    baixa:   "text-white bg-slate-400 border-slate-400",
   };
   const URGENCY_DOT: Record<string, string> = {
     urgente: "bg-destructive",
@@ -1024,9 +1024,9 @@ function ReportarProblema({ condoId, userId }: { condoId: string; userId: string
                     <button key={u} type="button" onClick={() => setUrg(u)}
                       className={`h-9 rounded-lg border text-xs font-medium transition capitalize ${
                         urgency === u
-                          ? u === "urgente" ? "border-destructive bg-destructive/10 text-destructive"
-                            : u === "normal" ? "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-muted text-foreground"
+                          ? u === "urgente" ? "border-red-600 bg-red-600 text-white"
+                            : u === "normal" ? "border-blue-600 bg-blue-600 text-white"
+                            : "border-slate-500 bg-slate-500 text-white"
                           : "border-border text-muted-foreground"
                       }`}>{u}</button>
                   ))}

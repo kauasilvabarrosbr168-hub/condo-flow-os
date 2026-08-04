@@ -15,9 +15,9 @@ export function EmptyState({
   tone?: "default" | "primary" | "warning";
 }) {
   const toneClasses = {
-    default: "bg-muted text-muted-foreground",
-    primary: "bg-primary/10 text-primary",
-    warning: "bg-warning/15 text-warning-foreground",
+    default: "bg-slate-500 text-white",
+    primary: "bg-blue-600 text-white",
+    warning: "bg-amber-500 text-white",
   };
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-10 text-center shadow-card animate-fade-in">
@@ -55,11 +55,11 @@ export function Stat({
     destructive: "text-destructive",
   };
   const toneBg: Record<string, string> = {
-    default: "bg-muted text-muted-foreground",
-    primary: "bg-primary/10 text-primary",
-    success: "bg-success/15 text-success",
-    warning: "bg-warning/15 text-warning-foreground",
-    destructive: "bg-destructive/10 text-destructive",
+    default:     "bg-slate-500 text-white",
+    primary:     "bg-blue-600 text-white",
+    success:     "bg-emerald-500 text-white",
+    warning:     "bg-amber-500 text-white",
+    destructive: "bg-red-600 text-white",
   };
   return (
     <div className="group rounded-2xl border border-border bg-card p-5 shadow-card transition-all hover:shadow-elegant hover:-translate-y-0.5">

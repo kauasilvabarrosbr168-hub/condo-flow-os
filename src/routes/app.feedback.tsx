@@ -15,10 +15,10 @@ export const Route = createFileRoute("/app/feedback")({
 type Kind = "feedback" | "aviso" | "sugestao" | "elogio";
 
 const KIND_META: Record<Kind, { label: string; icon: typeof MessageSquare; tone: string }> = {
-  aviso: { label: "Aviso", icon: Megaphone, tone: "bg-warning/15 text-warning-foreground border-warning/40" },
-  feedback: { label: "Feedback", icon: MessageSquare, tone: "bg-primary/15 text-primary border-primary/40" },
-  sugestao: { label: "Sugestão", icon: Lightbulb, tone: "bg-accent/30 text-accent-foreground border-accent/50" },
-  elogio: { label: "Elogio", icon: Heart, tone: "bg-success/15 text-success border-success/40" },
+  aviso:    { label: "Aviso",    icon: Megaphone,      tone: "bg-amber-500 text-white border-amber-500" },
+  feedback: { label: "Feedback", icon: MessageSquare,  tone: "bg-blue-600 text-white border-blue-600" },
+  sugestao: { label: "Sugestão", icon: Lightbulb,      tone: "bg-violet-500 text-white border-violet-500" },
+  elogio:   { label: "Elogio",   icon: Heart,          tone: "bg-emerald-500 text-white border-emerald-500" },
 };
 
 function FeedbackPage() {
@@ -123,7 +123,7 @@ function FeedbackPage() {
           <button
             onClick={() => create.mutate()}
             disabled={create.isPending || !content.trim()}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 disabled:opacity-50 transition"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition"
           >
             {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Publicar

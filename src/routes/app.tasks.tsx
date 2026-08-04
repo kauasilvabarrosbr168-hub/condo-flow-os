@@ -533,9 +533,9 @@ function NewTaskDialog({ condoId, workers, createFn, dispatchFn, onClose, onCrea
                   key={u} type="button" onClick={() => setUrgency(u)}
                   className={`h-10 rounded-lg border text-xs font-medium transition capitalize ${
                     urgency === u
-                      ? u === "urgente" ? "border-destructive bg-destructive/10 text-destructive"
-                        : u === "normal" ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-muted text-foreground"
+                      ? u === "urgente" ? "border-red-600 bg-red-600 text-white"
+                        : u === "normal" ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-slate-500 bg-slate-500 text-white"
                       : "border-border text-muted-foreground hover:border-primary/40"
                   }`}
                 >
