@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Loader2, Save, Upload, X, Plus, Trash2, Phone, Mail, MessageCircle, Link as LinkIcon, ImageIcon, Building2, Image as ImageBanner, Copy, Check,
+  Loader2, Save, Upload, X, Plus, Trash2, Phone, Mail, MessageCircle, Link as LinkIcon, ImageIcon, Building2, Image as ImageBanner, Copy, Check, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
 import { getCondoDetails, updateCondo, upsertArea, deleteArea } from "@/lib/admin-condo.functions";
 import { AreaEditor } from "@/routes/admin.condos.$condoId";
+import { AREA_CATALOG, type AreaType } from "@/lib/area-catalog";
+import { configureAreaWithAI } from "@/lib/ai-engine/area-config.functions";
 
 import { toast } from "sonner";
 
@@ -60,7 +63,10 @@ export function CondoEditor({
   const [form, setForm] = useState<CondoForm | null>(null);
   const [areas, setAreas] = useState<Area[]>([]);
   const [editingArea, setEditingArea] = useState<Partial<Area> | null>(null);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [aiConfiguring, setAiConfiguring] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof CondoForm, string>>>({});
+  const configureArea = useServerFn(configureAreaWithAI);
   const [uploading, setUploading] = useState<"logo" | "cover" | null>(null);
 
   useEffect(() => {
@@ -143,6 +149,39 @@ export function CondoEditor({
 
   const reloadAreas = () => {
     fetchDetail({ data: { condoId } }).then((d) => setAreas((d.areas ?? []) as Area[]));
+  };
+
+  const handleCatalogSelect = async (areaType: AreaType) => {
+    setShowCatalog(false);
+    setAiConfiguring(true);
+    try {
+      const config = await configureArea({ data: { areaType, userRules: "" } });
+      setEditingArea({
+        name: areaType.name,
+        description: areaType.description,
+        rules: config.rules_summary,
+        capacity: config.max_simultaneous ?? areaType.defaultCapacity,
+        min_advance_hours: areaType.defaultAdvanceHours,
+        requires_checklist: config.requires_checklist,
+        gallery: [],
+        active: true,
+        available_slots: config.operating_hours,
+      });
+    } catch {
+      setEditingArea({
+        name: areaType.name,
+        description: areaType.description,
+        rules: "",
+        capacity: areaType.defaultCapacity,
+        min_advance_hours: areaType.defaultAdvanceHours,
+        requires_checklist: areaType.defaultChecklist,
+        gallery: [],
+        active: true,
+        available_slots: areaType.defaultSchedule,
+      });
+    } finally {
+      setAiConfiguring(false);
+    }
   };
 
   if (loading || !form) {
@@ -241,11 +280,34 @@ export function CondoEditor({
         <TabsContent value="areas" className="mt-5">
           {(variant === "admin" || variant === "sindico") && (
             <div className="flex justify-end mb-4">
-              <Button onClick={() => setEditingArea({ min_advance_hours: 24, requires_checklist: true, gallery: [], active: true })}>
-                <Plus className="h-4 w-4" /> Nova área
+              <Button onClick={() => setShowCatalog(true)} disabled={aiConfiguring}>
+                {aiConfiguring ? <><Loader2 className="h-4 w-4 animate-spin" /> IA configurando…</> : <><Plus className="h-4 w-4" /> Nova área</>}
               </Button>
             </div>
           )}
+
+          {/* Catálogo de tipos de área */}
+          <Dialog open={showCatalog} onOpenChange={setShowCatalog}>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-blue-500" /> Escolha o tipo de área</DialogTitle>
+                <DialogDescription>A IA vai pré-configurar horários, regras e checklist automaticamente com base no tipo selecionado.</DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
+                {AREA_CATALOG.map((type) => (
+                  <button
+                    key={type.key}
+                    onClick={() => handleCatalogSelect(type)}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border hover:border-blue-500/50 hover:bg-blue-500/5 transition text-center group"
+                  >
+                    <span className="text-3xl group-hover:scale-110 transition-transform">{type.emoji}</span>
+                    <span className="text-sm font-medium">{type.name}</span>
+                    <span className="text-[11px] text-muted-foreground leading-tight">{type.description}</span>
+                  </button>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
           {areas.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-10">Nenhuma área cadastrada.</p>
           ) : (
