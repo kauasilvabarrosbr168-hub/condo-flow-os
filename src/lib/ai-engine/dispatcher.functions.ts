@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from '@/lib/supabase-auth-middleware'
 import { supabaseAdmin } from '@/integrations/supabase/client.server'
 import { runRulesEngine } from './rules-engine'
 import type { AIEventInput, CondoAISettings, AISeverity } from './types'
+import { sendEvolutionWhatsApp } from '@/lib/whatsapp.functions'
 
 const DEFAULT_SETTINGS: CondoAISettings = {
   enabled: true,
@@ -50,23 +51,13 @@ Analise e responda APENAS com JSON válido (sem markdown):
   return { severity: 'warning', analysis: rulesSummary, recommendation: '' }
 }
 
-async function sendWhatsApp(phone: string, message: string): Promise<void> {
-  const sid = process.env.TWILIO_ACCOUNT_SID
-  const token = process.env.TWILIO_AUTH_TOKEN
-  const from = process.env.TWILIO_WHATSAPP_FROM ?? 'whatsapp:+14155238886'
-  if (!sid || !token) return
-
-  const to = phone.startsWith('whatsapp:') ? phone : `whatsapp:${phone}`
-
+// WhatsApp via Evolution API (configurado pelo síndico no app)
+async function sendWhatsAppToSindico(
+  cfg: { url: string; key: string; instance: string; phone: string },
+  message: string
+): Promise<void> {
   try {
-    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${btoa(`${sid}:${token}`)}`,
-        'content-type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({ From: from, To: to, Body: message }).toString(),
-    })
+    await sendEvolutionWhatsApp({ url: cfg.url, apiKey: cfg.key, instance: cfg.instance, phone: cfg.phone }, message)
   } catch {
     // falha silenciosa — notificação não deve travar o fluxo
   }
@@ -106,6 +97,13 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
       whatsapp_phone?: string | null
       notify_warning?: boolean
       notify_critical?: boolean
+      evolution_api_url?: string | null
+      evolution_api_key?: string | null
+      evolution_instance?: string | null
+      evolution_phone?: string | null
+      wa_notify_warning?: boolean
+      wa_notify_critical?: boolean
+      wa_notify_info?: boolean
     } = settingsRow ?? DEFAULT_SETTINGS
 
     if (!settings.enabled) return { success: true, skipped: true }
@@ -145,16 +143,23 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
       actions_taken: actionsExecuted,
     })
 
-    // WhatsApp — só envia para warning/critical se o síndico configurou o número
-    const phone = settings.whatsapp_phone
-    const shouldNotify =
-      phone &&
-      ((finalSeverity === 'warning' && settings.notify_warning !== false) ||
-        (finalSeverity === 'critical' && settings.notify_critical !== false))
+    // WhatsApp via Evolution API — envia se o síndico configurou a integração
+    const evUrl      = settings.evolution_api_url
+    const evKey      = settings.evolution_api_key
+    const evInstance = settings.evolution_instance
+    const evPhone    = settings.evolution_phone
 
-    if (shouldNotify) {
+    const evolutionConfigured = evUrl && evKey && evInstance && evPhone
+
+    const shouldNotifyEvolution =
+      evolutionConfigured &&
+      ((finalSeverity === 'warning'  && settings.wa_notify_warning  !== false) ||
+       (finalSeverity === 'critical' && settings.wa_notify_critical !== false) ||
+       (finalSeverity === 'info'     && settings.wa_notify_info     === true))
+
+    if (shouldNotifyEvolution) {
       const msg = buildWhatsAppMessage(finalSeverity, finalSummary, finalRecommendation, data.eventType)
-      void sendWhatsApp(phone, msg)
+      void sendWhatsAppToSindico({ url: evUrl!, key: evKey!, instance: evInstance!, phone: evPhone! }, msg)
     }
 
     return { success: true }
