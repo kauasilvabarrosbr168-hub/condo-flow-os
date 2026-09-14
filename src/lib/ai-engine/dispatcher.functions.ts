@@ -4,7 +4,6 @@ import { requireSupabaseAuth } from '@/lib/supabase-auth-middleware'
 import { supabaseAdmin } from '@/integrations/supabase/client.server'
 import { runRulesEngine } from './rules-engine'
 import type { AIEventInput, CondoAISettings, AISeverity } from './types'
-import { callAnthropicText } from '@/lib/ai-client'
 
 const DEFAULT_SETTINGS: CondoAISettings = {
   enabled: true,
@@ -15,6 +14,9 @@ const DEFAULT_SETTINGS: CondoAISettings = {
 }
 
 async function callAI(event: AIEventInput, rulesSummary: string): Promise<{ severity: AISeverity; analysis: string; recommendation: string }> {
+  const apiKey = process.env.LOVABLE_API_KEY
+  if (!apiKey) return { severity: 'warning', analysis: rulesSummary, recommendation: '' }
+
   const prompt = `Você é o Motor de Inteligência Operacional do CondoFlow — um gerente operacional virtual que analisa eventos de condomínio.
 
 Evento: ${event.eventType}
@@ -25,7 +27,21 @@ Analise e responda APENAS com JSON válido (sem markdown):
 {"severity":"warning","analysis":"análise em português (máx 60 palavras)","recommendation":"ação recomendada (máx 30 palavras)"}`
 
   try {
-    const text = await callAnthropicText(prompt, 250)
+    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1-mini',
+        max_tokens: 250,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
+    if (!res.ok) return { severity: 'warning', analysis: rulesSummary, recommendation: '' }
+    const data = await res.json()
+    const text = (data.choices?.[0]?.message?.content ?? '') as string
     const match = text.match(/\{[\s\S]*\}/)
     if (match) return JSON.parse(match[0])
   } catch {

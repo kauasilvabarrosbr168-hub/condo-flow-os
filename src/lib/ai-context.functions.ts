@@ -3,10 +3,26 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { callAnthropicText } from "@/lib/ai-client";
 
 async function callAI(prompt: string): Promise<string> {
-  return callAnthropicText(prompt, 2000);
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) return "";
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        max_tokens: 2000,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) return "";
+    const data = await res.json();
+    return (data.choices?.[0]?.message?.content ?? "") as string;
+  } catch {
+    return "";
+  }
 }
 
 // ─── Salvar contexto e gerar regras operacionais ──────────────────────────────

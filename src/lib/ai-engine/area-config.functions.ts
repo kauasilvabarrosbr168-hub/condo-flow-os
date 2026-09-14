@@ -3,7 +3,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import type { WeekSchedule } from "@/components/condo/area-schedule-picker";
 import type { AreaType } from "@/lib/area-catalog";
-import { callAnthropicText } from "@/lib/ai-client";
 
 export type AIAreaConfig = {
   requires_reservation: boolean;
@@ -58,8 +57,27 @@ Com base nas regras do síndico, configure esta área. Responda APENAS com JSON 
   "ai_interpretation": "o que a IA entendeu das regras em 1 frase curta"
 }`;
 
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) return fallback;
+
   try {
-    const text = await callAnthropicText(prompt, 600);
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        max_tokens: 600,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!res.ok) return fallback;
+
+    const data = await res.json();
+    const text = (data.choices?.[0]?.message?.content ?? "") as string;
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]);
