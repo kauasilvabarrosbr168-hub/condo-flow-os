@@ -1,7 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "tanstack-start-app",
+  "name": "condoflow",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
+  // Pix (Efí Bank) exige certificado mTLS em toda chamada. Depois de rodar
+  // `npx wrangler cert upload mtls-certificate --cert efi-cert.pem --key efi-key.pem --name efi-pix-cert`
+  // descomente e cole o certificate_id retornado. Veja src/lib/efi/pix.ts para o passo a passo completo.
+  // "mtls_certificates": [{ "binding": "EFI_MTLS", "certificate_id": "<certificate_id>" }],
 }

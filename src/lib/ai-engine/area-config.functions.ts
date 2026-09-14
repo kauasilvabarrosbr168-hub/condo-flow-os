@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import type { WeekSchedule } from "@/components/condo/area-schedule-picker";
 import type { AreaType } from "@/lib/area-catalog";
+import { callAnthropicText } from "@/lib/ai-client";
 
 export type AIAreaConfig = {
   requires_reservation: boolean;
@@ -17,8 +18,6 @@ export type AIAreaConfig = {
 };
 
 async function callAI(areaType: AreaType, userRules: string): Promise<AIAreaConfig> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-
   const fallback: AIAreaConfig = {
     requires_reservation: areaType.defaultChecklist,
     operating_hours: areaType.defaultSchedule,
@@ -30,8 +29,6 @@ async function callAI(areaType: AreaType, userRules: string): Promise<AIAreaConf
     rules_summary: userRules,
     ai_interpretation: "Configuração padrão aplicada.",
   };
-
-  if (!apiKey) return fallback;
 
   const prompt = `Você é um assistente de configuração de áreas comuns de condomínios brasileiros.
 
@@ -62,23 +59,7 @@ Com base nas regras do síndico, configure esta área. Responda APENAS com JSON 
 }`;
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        max_tokens: 600,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    if (!res.ok) return fallback;
-
-    const data = await res.json();
-    const text = (data.choices?.[0]?.message?.content ?? "") as string;
+    const text = await callAnthropicText(prompt, 600);
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]);

@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { callAnthropicText } from "@/lib/ai-client";
 
 const UrgencyEnum = z.enum(["baixa", "normal", "urgente"]);
 const KindEnum = z.enum(["manutencao", "limpeza", "verificacao", "incidente", "pos_checklist", "pre_checklist"]);
@@ -67,22 +68,8 @@ export const listCondoCollaborators = createServerFn({ method: "GET" })
 // ─── Gerar tarefas com IA ─────────────────────────────────────────────────────
 
 async function callAI(prompt: string): Promise<{ title: string; description: string; kind: string; urgency: string; due_at: string | null }[]> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return [];
-
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        max_tokens: 1200,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const text = (data.choices?.[0]?.message?.content ?? "") as string;
+    const text = await callAnthropicText(prompt, 1200);
     const match = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
     if (!match) return [];
     const parsed = JSON.parse(match[0]);
