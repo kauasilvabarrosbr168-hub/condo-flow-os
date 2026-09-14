@@ -23,7 +23,10 @@ type MtlsFetcher = { fetch: typeof fetch };
 
 async function getMtlsFetcher(): Promise<MtlsFetcher> {
   try {
-    const mod: any = await import(/* @vite-ignore */ "cloudflare:workers");
+    // Construído em runtime para o bundler do cliente não tentar resolver
+    // "cloudflare:workers" (só existe no workerd em produção).
+    const specifier = ["cloudflare", "workers"].join(":");
+    const mod: any = await import(/* @vite-ignore */ specifier);
     const binding = mod?.env?.EFI_MTLS as MtlsFetcher | undefined;
     if (!binding) throw new Error("missing binding");
     return binding;
