@@ -36,6 +36,7 @@ import { useAuth, type Role } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getMyMembershipStatus } from "@/lib/membership.functions";
+import { checkGarbageNotifications } from "@/lib/garbage.functions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -160,6 +161,23 @@ function AppLayout() {
     const id = setInterval(check, 30_000);
     return () => clearInterval(id);
   }, [primaryRole, session?.user.id, profile?.condo_id]);
+
+  // ── Notificações de coleta de lixo (todos os moradores/síndico) ──────────────
+  const checkGarbageFn = useServerFn(checkGarbageNotifications);
+  useEffect(() => {
+    if (!profile?.condo_id || !session?.user.id) return;
+    const condoId = profile.condo_id;
+    const check = async () => {
+      try {
+        await checkGarbageFn({ data: { condoId } });
+      } catch {
+        // silencioso — notificação não deve travar o app
+      }
+    };
+    check();
+    const id = setInterval(check, 5 * 60_000); // a cada 5 minutos
+    return () => clearInterval(id);
+  }, [profile?.condo_id, session?.user.id]);
 
   const noRoles = !loading && !!session && roles.length === 0;
   const { data: membership, isLoading: loadingStatus } = useQuery({

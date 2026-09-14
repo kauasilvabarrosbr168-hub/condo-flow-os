@@ -5,11 +5,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2, Copy, RefreshCw, Check, Sparkles, Plus, X, Phone, Trash2,
-  ExternalLink, Settings2, CheckCircle2, PowerOff,
+  ExternalLink, Settings2, CheckCircle2, PowerOff, Trash, Bell, BellOff, Clock,
 } from "lucide-react";
 import { CondoEditor } from "@/components/condo/condo-editor";
 import { getMyCondoId, getCondoJoinCode, regenerateCondoJoinCode } from "@/lib/admin-condo.functions";
 import { getCleaningData, saveCleaningConfig, setCleaningEnabled as setCleaningEnabledServerFn } from "@/lib/cleaning.functions";
+import { getGarbageSchedule, saveGarbageSchedule, type GarbageSchedule } from "@/lib/garbage.functions";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -29,6 +30,8 @@ function MyCondoPage() {
   const fetchClean       = useServerFn(getCleaningData);
   const setCleaningEnabledFn = useServerFn(setCleaningEnabledServerFn);
   const saveCfg    = useServerFn(saveCleaningConfig);
+  const fetchGarbage  = useServerFn(getGarbageSchedule);
+  const saveGarbage   = useServerFn(saveGarbageSchedule);
   const qc = useQueryClient();
 
   const [condoId, setCondoId]     = useState<string | null | undefined>(undefined);
@@ -42,6 +45,10 @@ function MyCondoPage() {
   // Limpeza interna
   const [cleanConfig, setCleanConfig] = useState<Config | null>(null);
   const [workers, setWorkers]         = useState<Profile[]>([]);
+
+  // Coleta de lixo
+  const [garbageSchedule, setGarbageSchedule] = useState<GarbageSchedule | null | undefined>(undefined);
+  const [garbageBusy, setGarbageBusy]         = useState(false);
 
   const { data: cleaningServices } = useQuery({
     enabled: !!condoId,
@@ -95,7 +102,8 @@ function MyCondoPage() {
       setCleanConfig(r.config as Config);
       setWorkers(r.workers as Profile[]);
     }).catch(() => {});
-  }, [condoId, fetchCode, fetchClean]);
+    fetchGarbage({ data: { condoId } }).then((r) => setGarbageSchedule(r)).catch(() => setGarbageSchedule(null));
+  }, [condoId, fetchCode, fetchClean, fetchGarbage]);
 
   const handleCopy = () => {
     if (!joinCode) return;
@@ -272,6 +280,16 @@ function MyCondoPage() {
         />
       )}
 
+      {/* Coleta de Lixo */}
+      <GarbageScheduleSection
+        condoId={condoId}
+        schedule={garbageSchedule}
+        saveFn={saveGarbage}
+        onSaved={setGarbageSchedule}
+        busy={garbageBusy}
+        setBusy={setGarbageBusy}
+      />
+
       <CondoEditor condoId={condoId} variant="sindico" />
 
       {openCleaning && (
@@ -374,6 +392,159 @@ function InternalCleaningConfig({ condoId, config, workers, saveFn, onSaved }: {
       <div className="flex justify-end">
         <button
           onClick={save}
+          disabled={busy}
+          className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60 transition"
+        >
+          {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Salvar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Coleta de Lixo ──────────────────────────────────────────────────────────
+
+const DAYS = [
+  { label: "Dom", value: 0 },
+  { label: "Seg", value: 1 },
+  { label: "Ter", value: 2 },
+  { label: "Qua", value: 3 },
+  { label: "Qui", value: 4 },
+  { label: "Sex", value: 5 },
+  { label: "Sáb", value: 6 },
+];
+
+function GarbageScheduleSection({ condoId, schedule, saveFn, onSaved, busy, setBusy }: {
+  condoId: string;
+  schedule: GarbageSchedule | null | undefined;
+  saveFn: (a: any) => Promise<any>;
+  onSaved: (s: GarbageSchedule) => void;
+  busy: boolean;
+  setBusy: (v: boolean) => void;
+}) {
+  const [days, setDays]     = useState<number[]>([]);
+  const [time, setTime]     = useState("07:00");
+  const [notify8h, set8h]   = useState(true);
+  const [notify1h, set1h]   = useState(true);
+  const [active, setActive] = useState(true);
+
+  useEffect(() => {
+    if (!schedule) return;
+    setDays(schedule.days_of_week ?? []);
+    setTime(schedule.collection_time?.slice(0, 5) ?? "07:00");
+    set8h(schedule.notify_8h_before ?? true);
+    set1h(schedule.notify_1h_before ?? true);
+    setActive(schedule.active ?? true);
+  }, [schedule]);
+
+  const toggleDay = (d: number) =>
+    setDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort());
+
+  const handleSave = async () => {
+    setBusy(true);
+    try {
+      await saveFn({ data: { condoId, days_of_week: days, collection_time: time, notify_8h_before: notify8h, notify_1h_before: notify1h, active } });
+      onSaved({ id: schedule?.id ?? "", condo_id: condoId, days_of_week: days, collection_time: time, notify_8h_before: notify8h, notify_1h_before: notify1h, active });
+      toast.success("Cronograma de coleta salvo!");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao salvar.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (schedule === undefined) return null;
+
+  return (
+    <div className="mb-6 rounded-2xl border border-border bg-card p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <Trash className="h-4 w-4 text-primary" /> Coleta de lixo
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Moradores recebem aviso automático por WhatsApp ou e-mail antes da coleta.
+          </p>
+        </div>
+        {/* Toggle ativo */}
+        <button
+          onClick={() => setActive((v) => !v)}
+          className={`shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition ${
+            active ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          {active ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+          {active ? "Ativo" : "Inativo"}
+        </button>
+      </div>
+
+      {/* Dias da semana */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-2">Dias de coleta</p>
+        <div className="flex gap-2 flex-wrap">
+          {DAYS.map((d) => (
+            <button
+              key={d.value}
+              onClick={() => toggleDay(d.value)}
+              className={`h-9 w-11 rounded-lg text-xs font-semibold border transition ${
+                days.includes(d.value)
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border hover:border-primary/40 hover:bg-muted"
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Horário */}
+      <div>
+        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+          <Clock className="h-3.5 w-3.5" /> Horário da coleta (Brasília)
+        </label>
+        <input
+          type="time"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40 w-36"
+        />
+      </div>
+
+      {/* Avisos */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-2">Avisar moradores</p>
+        <div className="space-y-2">
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              onClick={() => set8h((v) => !v)}
+              className={`relative h-5 w-9 rounded-full transition-colors ${notify8h ? "bg-primary" : "bg-muted-foreground/30"}`}
+            >
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${notify8h ? "translate-x-4" : "translate-x-0.5"}`} />
+            </div>
+            <span className="text-sm">8 horas antes</span>
+          </label>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              onClick={() => set1h((v) => !v)}
+              className={`relative h-5 w-9 rounded-full transition-colors ${notify1h ? "bg-primary" : "bg-muted-foreground/30"}`}
+            >
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${notify1h ? "translate-x-4" : "translate-x-0.5"}`} />
+            </div>
+            <span className="text-sm">1 hora antes</span>
+          </label>
+        </div>
+      </div>
+
+      {days.length === 0 && (
+        <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">
+          Selecione pelo menos um dia de coleta para ativar os avisos.
+        </p>
+      )}
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
           disabled={busy}
           className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60 transition"
         >

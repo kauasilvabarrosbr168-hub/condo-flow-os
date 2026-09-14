@@ -21,13 +21,16 @@ import { Route as AppTasksRouteImport } from './routes/app.tasks'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppServicesRouteImport } from './routes/app.services'
 import { Route as AppReservationsRouteImport } from './routes/app.reservations'
+import { Route as AppNotesRouteImport } from './routes/app.notes'
 import { Route as AppMyCondoRouteImport } from './routes/app.my-condo'
 import { Route as AppJoinCondoRouteImport } from './routes/app.join-condo'
 import { Route as AppInvitationsRouteImport } from './routes/app.invitations'
 import { Route as AppFeedbackRouteImport } from './routes/app.feedback'
 import { Route as AppExploreRouteImport } from './routes/app.explore'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
+import { Route as AppCondoRulesRouteImport } from './routes/app.condo-rules'
 import { Route as AppCommunicationRouteImport } from './routes/app.communication'
+import { Route as AppChargesRouteImport } from './routes/app.charges'
 import { Route as AppAreasRouteImport } from './routes/app.areas'
 import { Route as AppAnalyticsRouteImport } from './routes/app.analytics'
 import { Route as AppAiMonitorRouteImport } from './routes/app.ai-monitor'
@@ -45,6 +48,7 @@ import { Route as AdminInvitationsRouteImport } from './routes/admin.invitations
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCondosRouteImport } from './routes/admin.condos'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as ApiWebhooksEfiRouteImport } from './routes/api.webhooks.efi'
 import { Route as AdminCondosCondoIdRouteImport } from './routes/admin.condos.$condoId'
 import { Route as AdminCondosCondoIdEditRouteImport } from './routes/admin.condos.$condoId.edit'
 
@@ -108,6 +112,11 @@ const AppReservationsRoute = AppReservationsRouteImport.update({
   path: '/reservations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppNotesRoute = AppNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMyCondoRoute = AppMyCondoRouteImport.update({
   id: '/my-condo',
   path: '/my-condo',
@@ -138,9 +147,19 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCondoRulesRoute = AppCondoRulesRouteImport.update({
+  id: '/condo-rules',
+  path: '/condo-rules',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCommunicationRoute = AppCommunicationRouteImport.update({
   id: '/communication',
   path: '/communication',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChargesRoute = AppChargesRouteImport.update({
+  id: '/charges',
+  path: '/charges',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAreasRoute = AppAreasRouteImport.update({
@@ -228,6 +247,11 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiWebhooksEfiRoute = ApiWebhooksEfiRouteImport.update({
+  id: '/api/webhooks/efi',
+  path: '/api/webhooks/efi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminCondosCondoIdRoute = AdminCondosCondoIdRouteImport.update({
   id: '/$condoId',
   path: '/$condoId',
@@ -262,13 +286,16 @@ export interface FileRoutesByFullPath {
   '/app/ai-monitor': typeof AppAiMonitorRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
+  '/app/charges': typeof AppChargesRoute
   '/app/communication': typeof AppCommunicationRoute
+  '/app/condo-rules': typeof AppCondoRulesRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
   '/app/feedback': typeof AppFeedbackRoute
   '/app/invitations': typeof AppInvitationsRoute
   '/app/join-condo': typeof AppJoinCondoRoute
   '/app/my-condo': typeof AppMyCondoRoute
+  '/app/notes': typeof AppNotesRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/services': typeof AppServicesRoute
   '/app/settings': typeof AppSettingsRoute
@@ -277,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/app/timeline': typeof AppTimelineRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/condos/$condoId': typeof AdminCondosCondoIdRouteWithChildren
+  '/api/webhooks/efi': typeof ApiWebhooksEfiRoute
   '/admin/condos/$condoId/edit': typeof AdminCondosCondoIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -301,13 +329,16 @@ export interface FileRoutesByTo {
   '/app/ai-monitor': typeof AppAiMonitorRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
+  '/app/charges': typeof AppChargesRoute
   '/app/communication': typeof AppCommunicationRoute
+  '/app/condo-rules': typeof AppCondoRulesRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
   '/app/feedback': typeof AppFeedbackRoute
   '/app/invitations': typeof AppInvitationsRoute
   '/app/join-condo': typeof AppJoinCondoRoute
   '/app/my-condo': typeof AppMyCondoRoute
+  '/app/notes': typeof AppNotesRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/services': typeof AppServicesRoute
   '/app/settings': typeof AppSettingsRoute
@@ -316,6 +347,7 @@ export interface FileRoutesByTo {
   '/app/timeline': typeof AppTimelineRoute
   '/admin': typeof AdminIndexRoute
   '/admin/condos/$condoId': typeof AdminCondosCondoIdRouteWithChildren
+  '/api/webhooks/efi': typeof ApiWebhooksEfiRoute
   '/admin/condos/$condoId/edit': typeof AdminCondosCondoIdEditRoute
 }
 export interface FileRoutesById {
@@ -342,13 +374,16 @@ export interface FileRoutesById {
   '/app/ai-monitor': typeof AppAiMonitorRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
+  '/app/charges': typeof AppChargesRoute
   '/app/communication': typeof AppCommunicationRoute
+  '/app/condo-rules': typeof AppCondoRulesRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/explore': typeof AppExploreRoute
   '/app/feedback': typeof AppFeedbackRoute
   '/app/invitations': typeof AppInvitationsRoute
   '/app/join-condo': typeof AppJoinCondoRoute
   '/app/my-condo': typeof AppMyCondoRoute
+  '/app/notes': typeof AppNotesRoute
   '/app/reservations': typeof AppReservationsRoute
   '/app/services': typeof AppServicesRoute
   '/app/settings': typeof AppSettingsRoute
@@ -357,6 +392,7 @@ export interface FileRoutesById {
   '/app/timeline': typeof AppTimelineRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/condos/$condoId': typeof AdminCondosCondoIdRouteWithChildren
+  '/api/webhooks/efi': typeof ApiWebhooksEfiRoute
   '/admin/condos/$condoId/edit': typeof AdminCondosCondoIdEditRoute
 }
 export interface FileRouteTypes {
@@ -384,13 +420,16 @@ export interface FileRouteTypes {
     | '/app/ai-monitor'
     | '/app/analytics'
     | '/app/areas'
+    | '/app/charges'
     | '/app/communication'
+    | '/app/condo-rules'
     | '/app/dashboard'
     | '/app/explore'
     | '/app/feedback'
     | '/app/invitations'
     | '/app/join-condo'
     | '/app/my-condo'
+    | '/app/notes'
     | '/app/reservations'
     | '/app/services'
     | '/app/settings'
@@ -399,6 +438,7 @@ export interface FileRouteTypes {
     | '/app/timeline'
     | '/admin/'
     | '/admin/condos/$condoId'
+    | '/api/webhooks/efi'
     | '/admin/condos/$condoId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -423,13 +463,16 @@ export interface FileRouteTypes {
     | '/app/ai-monitor'
     | '/app/analytics'
     | '/app/areas'
+    | '/app/charges'
     | '/app/communication'
+    | '/app/condo-rules'
     | '/app/dashboard'
     | '/app/explore'
     | '/app/feedback'
     | '/app/invitations'
     | '/app/join-condo'
     | '/app/my-condo'
+    | '/app/notes'
     | '/app/reservations'
     | '/app/services'
     | '/app/settings'
@@ -438,6 +481,7 @@ export interface FileRouteTypes {
     | '/app/timeline'
     | '/admin'
     | '/admin/condos/$condoId'
+    | '/api/webhooks/efi'
     | '/admin/condos/$condoId/edit'
   id:
     | '__root__'
@@ -463,13 +507,16 @@ export interface FileRouteTypes {
     | '/app/ai-monitor'
     | '/app/analytics'
     | '/app/areas'
+    | '/app/charges'
     | '/app/communication'
+    | '/app/condo-rules'
     | '/app/dashboard'
     | '/app/explore'
     | '/app/feedback'
     | '/app/invitations'
     | '/app/join-condo'
     | '/app/my-condo'
+    | '/app/notes'
     | '/app/reservations'
     | '/app/services'
     | '/app/settings'
@@ -478,6 +525,7 @@ export interface FileRouteTypes {
     | '/app/timeline'
     | '/admin/'
     | '/admin/condos/$condoId'
+    | '/api/webhooks/efi'
     | '/admin/condos/$condoId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -487,6 +535,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiWebhooksEfiRoute: typeof ApiWebhooksEfiRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -575,6 +624,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppReservationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/notes': {
+      id: '/app/notes'
+      path: '/notes'
+      fullPath: '/app/notes'
+      preLoaderRoute: typeof AppNotesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/my-condo': {
       id: '/app/my-condo'
       path: '/my-condo'
@@ -617,11 +673,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/condo-rules': {
+      id: '/app/condo-rules'
+      path: '/condo-rules'
+      fullPath: '/app/condo-rules'
+      preLoaderRoute: typeof AppCondoRulesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/communication': {
       id: '/app/communication'
       path: '/communication'
       fullPath: '/app/communication'
       preLoaderRoute: typeof AppCommunicationRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/charges': {
+      id: '/app/charges'
+      path: '/charges'
+      fullPath: '/app/charges'
+      preLoaderRoute: typeof AppChargesRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/areas': {
@@ -743,6 +813,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/webhooks/efi': {
+      id: '/api/webhooks/efi'
+      path: '/api/webhooks/efi'
+      fullPath: '/api/webhooks/efi'
+      preLoaderRoute: typeof ApiWebhooksEfiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/condos/$condoId': {
       id: '/admin/condos/$condoId'
       path: '/$condoId'
@@ -825,13 +902,16 @@ interface AppRouteChildren {
   AppAiMonitorRoute: typeof AppAiMonitorRoute
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAreasRoute: typeof AppAreasRoute
+  AppChargesRoute: typeof AppChargesRoute
   AppCommunicationRoute: typeof AppCommunicationRoute
+  AppCondoRulesRoute: typeof AppCondoRulesRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppExploreRoute: typeof AppExploreRoute
   AppFeedbackRoute: typeof AppFeedbackRoute
   AppInvitationsRoute: typeof AppInvitationsRoute
   AppJoinCondoRoute: typeof AppJoinCondoRoute
   AppMyCondoRoute: typeof AppMyCondoRoute
+  AppNotesRoute: typeof AppNotesRoute
   AppReservationsRoute: typeof AppReservationsRoute
   AppServicesRoute: typeof AppServicesRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -844,13 +924,16 @@ const AppRouteChildren: AppRouteChildren = {
   AppAiMonitorRoute: AppAiMonitorRoute,
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppAreasRoute: AppAreasRoute,
+  AppChargesRoute: AppChargesRoute,
   AppCommunicationRoute: AppCommunicationRoute,
+  AppCondoRulesRoute: AppCondoRulesRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppExploreRoute: AppExploreRoute,
   AppFeedbackRoute: AppFeedbackRoute,
   AppInvitationsRoute: AppInvitationsRoute,
   AppJoinCondoRoute: AppJoinCondoRoute,
   AppMyCondoRoute: AppMyCondoRoute,
+  AppNotesRoute: AppNotesRoute,
   AppReservationsRoute: AppReservationsRoute,
   AppServicesRoute: AppServicesRoute,
   AppSettingsRoute: AppSettingsRoute,
@@ -867,7 +950,18 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiWebhooksEfiRoute: ApiWebhooksEfiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
