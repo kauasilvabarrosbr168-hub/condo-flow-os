@@ -33,6 +33,7 @@ import { Route as AppCommunicationRouteImport } from './routes/app.communication
 import { Route as AppChargesRouteImport } from './routes/app.charges'
 import { Route as AppAreasRouteImport } from './routes/app.areas'
 import { Route as AppAnalyticsRouteImport } from './routes/app.analytics'
+import { Route as AppAiSetupRouteImport } from './routes/app.ai-setup'
 import { Route as AppAiMonitorRouteImport } from './routes/app.ai-monitor'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminTicketsRouteImport } from './routes/admin.tickets'
@@ -172,6 +173,11 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAiSetupRoute = AppAiSetupRouteImport.update({
+  id: '/ai-setup',
+  path: '/ai-setup',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAiMonitorRoute = AppAiMonitorRouteImport.update({
   id: '/ai-monitor',
   path: '/ai-monitor',
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/admin/tickets': typeof AdminTicketsRoute
   '/admin/users': typeof AdminUsersRoute
   '/app/ai-monitor': typeof AppAiMonitorRoute
+  '/app/ai-setup': typeof AppAiSetupRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
   '/app/charges': typeof AppChargesRoute
@@ -327,6 +334,7 @@ export interface FileRoutesByTo {
   '/admin/tickets': typeof AdminTicketsRoute
   '/admin/users': typeof AdminUsersRoute
   '/app/ai-monitor': typeof AppAiMonitorRoute
+  '/app/ai-setup': typeof AppAiSetupRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
   '/app/charges': typeof AppChargesRoute
@@ -372,6 +380,7 @@ export interface FileRoutesById {
   '/admin/tickets': typeof AdminTicketsRoute
   '/admin/users': typeof AdminUsersRoute
   '/app/ai-monitor': typeof AppAiMonitorRoute
+  '/app/ai-setup': typeof AppAiSetupRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/areas': typeof AppAreasRoute
   '/app/charges': typeof AppChargesRoute
@@ -418,6 +427,7 @@ export interface FileRouteTypes {
     | '/admin/tickets'
     | '/admin/users'
     | '/app/ai-monitor'
+    | '/app/ai-setup'
     | '/app/analytics'
     | '/app/areas'
     | '/app/charges'
@@ -461,6 +471,7 @@ export interface FileRouteTypes {
     | '/admin/tickets'
     | '/admin/users'
     | '/app/ai-monitor'
+    | '/app/ai-setup'
     | '/app/analytics'
     | '/app/areas'
     | '/app/charges'
@@ -505,6 +516,7 @@ export interface FileRouteTypes {
     | '/admin/tickets'
     | '/admin/users'
     | '/app/ai-monitor'
+    | '/app/ai-setup'
     | '/app/analytics'
     | '/app/areas'
     | '/app/charges'
@@ -708,6 +720,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ai-setup': {
+      id: '/app/ai-setup'
+      path: '/ai-setup'
+      fullPath: '/app/ai-setup'
+      preLoaderRoute: typeof AppAiSetupRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/ai-monitor': {
       id: '/app/ai-monitor'
       path: '/ai-monitor'
@@ -900,6 +919,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AppRouteChildren {
   AppAiMonitorRoute: typeof AppAiMonitorRoute
+  AppAiSetupRoute: typeof AppAiSetupRoute
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAreasRoute: typeof AppAreasRoute
   AppChargesRoute: typeof AppChargesRoute
@@ -922,6 +942,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAiMonitorRoute: AppAiMonitorRoute,
+  AppAiSetupRoute: AppAiSetupRoute,
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppAreasRoute: AppAreasRoute,
   AppChargesRoute: AppChargesRoute,
