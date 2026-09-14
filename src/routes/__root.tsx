@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -99,6 +100,32 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    const remove = () => {
+      document.querySelectorAll("a, button, div").forEach((el) => {
+        try {
+          const text = (el as HTMLElement).innerText ?? "";
+          if (!text.includes("Lovable")) return;
+          const s = window.getComputedStyle(el);
+          if (s.position === "fixed" || s.position === "absolute") {
+            (el as HTMLElement).style.setProperty("display", "none", "important");
+          }
+        } catch {
+          // ignora shadow roots e elementos inacessíveis
+        }
+      });
+    };
+
+    const observer = new MutationObserver(remove);
+    observer.observe(document.body, { childList: true, subtree: true });
+    remove();
+    setTimeout(remove, 800);
+    setTimeout(remove, 2000);
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
