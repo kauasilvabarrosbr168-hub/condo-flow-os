@@ -5,13 +5,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2, Copy, RefreshCw, Check, Sparkles, Plus, X, Phone, Trash2,
-  ExternalLink, Settings2, CheckCircle2, PowerOff, Trash, Bell, BellOff, Clock, UserPlus,
+  ExternalLink, Settings2, CheckCircle2, PowerOff, Trash, Bell, BellOff, Clock,
 } from "lucide-react";
 import { CondoEditor } from "@/components/condo/condo-editor";
 import { getMyCondoId, getCondoJoinCode, regenerateCondoJoinCode } from "@/lib/admin-condo.functions";
 import { getCleaningData, saveCleaningConfig, setCleaningEnabled as setCleaningEnabledServerFn } from "@/lib/cleaning.functions";
 import { getGarbageSchedule, saveGarbageSchedule, type GarbageSchedule } from "@/lib/garbage.functions";
-import { listPendingRequests, decideMembership } from "@/lib/membership.functions";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -33,8 +32,6 @@ function MyCondoPage() {
   const saveCfg    = useServerFn(saveCleaningConfig);
   const fetchGarbage  = useServerFn(getGarbageSchedule);
   const saveGarbage   = useServerFn(saveGarbageSchedule);
-  const fetchRequests = useServerFn(listPendingRequests);
-  const decideFn      = useServerFn(decideMembership);
   const qc = useQueryClient();
 
   const [condoId, setCondoId]     = useState<string | null | undefined>(undefined);
@@ -52,9 +49,6 @@ function MyCondoPage() {
   // Coleta de lixo
   const [garbageSchedule, setGarbageSchedule] = useState<GarbageSchedule | null | undefined>(undefined);
   const [garbageBusy, setGarbageBusy]         = useState(false);
-
-  // Solicitações pendentes (entrada por código)
-  const [pendingRequests, setPendingRequests] = useState<any[] | null>(null);
 
   const { data: cleaningServices } = useQuery({
     enabled: !!condoId,
@@ -109,18 +103,7 @@ function MyCondoPage() {
       setWorkers(r.workers as Profile[]);
     }).catch(() => {});
     fetchGarbage({ data: { condoId } }).then((r) => setGarbageSchedule(r)).catch(() => setGarbageSchedule(null));
-    fetchRequests({}).then((r) => setPendingRequests(r as any[])).catch(() => setPendingRequests([]));
-  }, [condoId, fetchCode, fetchClean, fetchGarbage, fetchRequests]);
-
-  const handleDecideRequest = async (requestId: string, decision: "approve" | "reject") => {
-    try {
-      await decideFn({ data: { requestId, decision } });
-      toast.success(decision === "approve" ? "Solicitação aprovada!" : "Solicitação rejeitada.");
-      setPendingRequests((prev) => (prev ?? []).filter((r) => r.id !== requestId));
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao processar solicitação.");
-    }
-  };
+  }, [condoId, fetchCode, fetchClean, fetchGarbage]);
 
   const handleCopy = () => {
     if (!joinCode) return;
@@ -190,46 +173,6 @@ function MyCondoPage() {
           ⚠ Ao gerar um novo código, o código anterior deixará de funcionar.
         </p>
       </div>
-
-      {/* Solicitações pendentes (entrada por código) */}
-      {(pendingRequests?.length ?? 0) > 0 && (
-        <div className="mb-6 rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-5">
-          <p className="text-sm font-semibold flex items-center gap-2 text-amber-800 dark:text-amber-300">
-            <UserPlus className="h-4 w-4" /> Solicitações pendentes ({pendingRequests!.length})
-          </p>
-          <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-            Pessoas que entraram com o código do condomínio e aguardam sua aprovação.
-          </p>
-          <div className="mt-4 space-y-2">
-            {pendingRequests!.map((r) => (
-              <div key={r.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{r.profiles?.full_name ?? "—"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {r.profiles?.email}
-                    {r.unit_label && ` · ${r.unit_label}`}
-                    {` · ${r.requested_role === "funcionario" ? "Funcionário" : "Morador"}`}
-                  </p>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    onClick={() => handleDecideRequest(r.id, "reject")}
-                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-medium hover:bg-destructive/10 hover:text-destructive transition"
-                  >
-                    <X className="h-3.5 w-3.5" /> Rejeitar
-                  </button>
-                  <button
-                    onClick={() => handleDecideRequest(r.id, "approve")}
-                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition"
-                  >
-                    <Check className="h-3.5 w-3.5" /> Aprovar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Prestadores de Limpeza */}
       <div className="mb-6 rounded-2xl border border-border bg-card p-5">

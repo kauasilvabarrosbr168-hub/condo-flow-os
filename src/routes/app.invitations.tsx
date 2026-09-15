@@ -1,23 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Mail, Plus, Loader2, X, Copy, Trash2 } from "lucide-react";
+import { Mail, Plus, Loader2, X, Copy, Trash2, UserPlus, Check } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { Badge } from "@/components/brand";
+import { listPendingRequests, decideMembership } from "@/lib/membership.functions";
 
 export const Route = createFileRoute("/app/invitations")({
   head: () => ({ meta: [{ title: "Convites · CondoFlow" }] }),
   component: InvitationsPage,
 });
 
+type PendingRequest = {
+  id: string;
+  requested_role: string;
+  unit_label: string | null;
+  profiles: { full_name: string | null; email: string | null } | null;
+};
+
 function InvitationsPage() {
   const { condo, profile, user, isAdmin } = useAuth();
   const condoId = condo?.id ?? profile?.condo_id ?? null;
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const fetchRequests = useServerFn(listPendingRequests);
+  const decideFn = useServerFn(decideMembership);
 
   const { data: invites, isLoading } = useQuery({
     enabled: !!condoId,
@@ -27,6 +38,22 @@ function InvitationsPage() {
       return data ?? [];
     },
   });
+
+  const { data: pendingRequests } = useQuery({
+    enabled: !!condoId,
+    queryKey: ["membership_requests", condoId],
+    queryFn: async () => (await fetchRequests({})) as PendingRequest[],
+  });
+
+  const handleDecide = async (requestId: string, decision: "approve" | "reject") => {
+    try {
+      await decideFn({ data: { requestId, decision } });
+      toast.success(decision === "approve" ? "Solicitação aprovada!" : "Solicitação rejeitada.");
+      qc.invalidateQueries({ queryKey: ["membership_requests", condoId] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao processar solicitação.");
+    }
+  };
 
   if (!isAdmin) {
     return <div className="p-8"><EmptyState icon={Mail} title="Acesso restrito" description="Apenas síndicos e administradoras podem convidar pessoas." /></div>;
@@ -43,6 +70,57 @@ function InvitationsPage() {
           <Plus className="h-4 w-4" /> Novo convite
         </button>
       </div>
+
+      {(pendingRequests?.length ?? 0) > 0 && (
+        <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+          <div className="px-4 py-3 border-b border-border bg-muted/40">
+            <p className="text-sm font-semibold flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-primary" /> Solicitações pendentes ({pendingRequests!.length})
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pessoas que entraram com o código do condomínio e aguardam sua aprovação.
+            </p>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-muted/20 text-xs text-muted-foreground">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">Pessoa</th>
+                <th className="text-left px-4 py-3 font-medium">Papel</th>
+                <th className="text-right px-4 py-3 font-medium">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingRequests!.map((r) => (
+                <tr key={r.id} className="border-t border-border">
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{r.profiles?.full_name ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">{r.profiles?.email}{r.unit_label && ` · ${r.unit_label}`}</p>
+                  </td>
+                  <td className="px-4 py-3"><Badge tone="warning">{roleLabel(r.requested_role)}</Badge></td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex gap-1">
+                      <button
+                        onClick={() => handleDecide(r.id, "reject")}
+                        title="Rejeitar"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDecide(r.id, "approve")}
+                        title="Aprovar"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-emerald-600 hover:bg-emerald-600/10"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
