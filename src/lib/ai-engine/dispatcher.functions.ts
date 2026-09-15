@@ -70,7 +70,12 @@ async function sendEvolutionWhatsApp(phone: string, message: string): Promise<vo
 }
 
 function buildWhatsAppMessage(severity: AISeverity, summary: string, recommendation: string, eventType: string): string {
-  const emoji = severity === 'critical' ? '🚨' : '⚠️'
+  const emoji =
+    severity === 'critical' ? '🚨'
+    : severity === 'warning' ? '⚠️'
+    : eventType === 'reservation_created' ? '📅'
+    : eventType === 'reservation_cancelled' ? '🗑️'
+    : 'ℹ️'
   const eventLabel: Record<string, string> = {
     reservation_created: 'Reserva criada',
     reservation_cancelled: 'Reserva cancelada',
@@ -144,10 +149,12 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
 
     // WhatsApp via Evolution API — número do síndico cadastrado em Monitor de IA
     const phone = settings.whatsapp_phone
+    const isReservationEvent = data.eventType === 'reservation_created' || data.eventType === 'reservation_cancelled'
     const shouldNotify =
       phone &&
       ((finalSeverity === 'warning'  && settings.notify_warning  !== false) ||
-       (finalSeverity === 'critical' && settings.notify_critical !== false))
+       (finalSeverity === 'critical' && settings.notify_critical !== false) ||
+       isReservationEvent)
 
     if (shouldNotify) {
       const msg = buildWhatsAppMessage(finalSeverity, finalSummary, finalRecommendation, data.eventType)

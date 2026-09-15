@@ -187,7 +187,7 @@ function AIMonitorPage() {
           <p className="text-sm font-semibold">Notificações via WhatsApp</p>
         </div>
         <p className="text-xs text-muted-foreground mb-4">
-          Alertas de nível <strong>aviso</strong> e <strong>crítico</strong> chegam direto no seu WhatsApp em tempo real.
+          Alertas de nível <strong>aviso</strong> e <strong>crítico</strong>, além de toda <strong>reserva criada ou cancelada</strong>, chegam direto no seu WhatsApp em tempo real.
         </p>
         <div className="flex gap-2">
           <div className="relative flex-1">
