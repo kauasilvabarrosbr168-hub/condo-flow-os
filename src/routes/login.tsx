@@ -22,7 +22,7 @@ type PhoneStep = "enter" | "verify";
 type PhonePurpose = "login" | "recovery";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { invite?: string; mode?: "signin" | "signup" } => ({
     invite: (search.invite as string) || undefined,
     mode: (search.mode as "signin" | "signup") || undefined,
   }),
