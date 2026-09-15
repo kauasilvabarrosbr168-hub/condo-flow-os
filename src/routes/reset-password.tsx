@@ -86,6 +86,7 @@ function ResetPasswordPage() {
                 </p>
                 <Link
                   to="/login"
+                  search={{}}
                   className="mt-8 inline-flex items-center justify-center h-11 px-6 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 transition"
                 >
                   Solicitar novo link
