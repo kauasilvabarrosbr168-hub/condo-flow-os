@@ -54,7 +54,7 @@ function ResetPasswordPage() {
     if (err) { setError(err.message); return; }
     setStatus("done");
     toast.success("Senha redefinida com sucesso!");
-    setTimeout(() => navigate({ to: "/login", search: {} }), 2500);
+    setTimeout(() => navigate({ to: "/login" }), 2500);
   };
 
   return (
