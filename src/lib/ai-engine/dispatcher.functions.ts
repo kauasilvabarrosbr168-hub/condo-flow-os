@@ -51,21 +51,31 @@ Analise e responda APENAS com JSON válido (sem markdown):
 }
 
 // WhatsApp via Evolution API — credenciais por variável de ambiente, número vem do condo_ai_settings
-async function sendEvolutionWhatsApp(phone: string, message: string): Promise<void> {
+async function sendEvolutionWhatsApp(phone: string, message: string): Promise<string> {
   const url      = process.env.EVOLUTION_API_URL
   const apiKey   = process.env.EVOLUTION_API_KEY
   const instance = process.env.EVOLUTION_INSTANCE ?? 'condoflow'
-  if (!url || !apiKey) return
+  if (!url || !apiKey) {
+    console.error('[WhatsApp] EVOLUTION_API_URL ou EVOLUTION_API_KEY não configurados nas variáveis de ambiente')
+    return 'WhatsApp: não enviado — credenciais ausentes (EVOLUTION_API_URL/EVOLUTION_API_KEY)'
+  }
 
   const number = phone.replace(/\D/g, '')
   try {
-    await fetch(`${url.replace(/\/$/, '')}/message/sendText/${instance}`, {
+    const res = await fetch(`${url.replace(/\/$/, '')}/message/sendText/${instance}`, {
       method: 'POST',
       headers: { apikey: apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ number, text: message, options: { delay: 1000, presence: 'composing' } }),
     })
-  } catch {
-    // falha silenciosa — notificação não deve travar o fluxo
+    const body = await res.text()
+    if (!res.ok) {
+      console.error(`[WhatsApp] Evolution API respondeu ${res.status}: ${body}`)
+      return `WhatsApp: falhou — HTTP ${res.status} (${body.slice(0, 200)})`
+    }
+    return 'WhatsApp: enviado'
+  } catch (e: any) {
+    console.error('[WhatsApp] erro de rede ao chamar Evolution API:', e?.message ?? e)
+    return `WhatsApp: falhou — ${e?.message ?? 'erro de rede'}`
   }
 }
 
@@ -131,6 +141,22 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
       if (aiResult.recommendation) actionsExecuted.push(`IA: ${aiResult.recommendation}`)
     }
 
+    // WhatsApp via Evolution API — número do síndico cadastrado em Monitor de IA
+    const phone = settings.whatsapp_phone
+    const isReservationEvent = data.eventType === 'reservation_created' || data.eventType === 'reservation_cancelled'
+    const shouldNotify =
+      phone &&
+      ((finalSeverity === 'warning'  && settings.notify_warning  !== false) ||
+       (finalSeverity === 'critical' && settings.notify_critical !== false) ||
+       isReservationEvent)
+
+    if (shouldNotify) {
+      const msg = buildWhatsAppMessage(finalSeverity, finalSummary, finalRecommendation, data.eventType)
+      actionsExecuted.push(await sendEvolutionWhatsApp(phone, msg))
+    } else if (!phone) {
+      actionsExecuted.push('WhatsApp: não enviado — nenhum número cadastrado em IA Operacional')
+    }
+
     await adminSb.from('ai_event_log').insert({
       condo_id: data.condoId,
       event_type: data.eventType,
@@ -146,20 +172,6 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
       summary: finalSummary,
       actions_taken: actionsExecuted,
     })
-
-    // WhatsApp via Evolution API — número do síndico cadastrado em Monitor de IA
-    const phone = settings.whatsapp_phone
-    const isReservationEvent = data.eventType === 'reservation_created' || data.eventType === 'reservation_cancelled'
-    const shouldNotify =
-      phone &&
-      ((finalSeverity === 'warning'  && settings.notify_warning  !== false) ||
-       (finalSeverity === 'critical' && settings.notify_critical !== false) ||
-       isReservationEvent)
-
-    if (shouldNotify) {
-      const msg = buildWhatsAppMessage(finalSeverity, finalSummary, finalRecommendation, data.eventType)
-      void sendEvolutionWhatsApp(phone, msg)
-    }
 
     return { success: true }
   })
