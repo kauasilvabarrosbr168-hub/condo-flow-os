@@ -210,3 +210,115 @@ Responda APENAS com JSON válido (sem markdown):
     if (error) throw new Error(error.message);
     return { created: created?.length ?? 0, proposals: created ?? [] };
   });
+
+// ─── Tarefas diárias (recorrentes) ────────────────────────────────────────────
+
+async function assertCondoAdmin(userId: string, condoId: string) {
+  const { data: role } = await supabaseAdmin
+    .from("user_roles").select("role").eq("user_id", userId).eq("condo_id", condoId).maybeSingle();
+  if (!role || !["sindico", "administradora"].includes(role.role)) throw new Error("forbidden");
+}
+
+// Torna uma tarefa já criada em uma tarefa diária: cria o modelo recorrente e
+// marca a tarefa de hoje como já gerada por ele (evita duplicar a de hoje).
+export const makeTaskRecurring = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ taskId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: task, error: taskErr } = await supabaseAdmin
+      .from("tasks")
+      .select("id, condo_id, title, description, kind, urgency, assignee_id")
+      .eq("id", data.taskId)
+      .single();
+    if (taskErr || !task) throw new Error("Tarefa não encontrada");
+
+    await assertCondoAdmin(context.userId, task.condo_id);
+
+    const today = new Date().toLocaleDateString("sv"); // YYYY-MM-DD
+
+    const { data: recurring, error } = await supabaseAdmin.from("recurring_tasks").insert({
+      condo_id:          task.condo_id,
+      title:             task.title,
+      description:       task.description,
+      kind:              task.kind,
+      urgency:           task.urgency,
+      assignee_id:       task.assignee_id,
+      created_by:        context.userId,
+      active:            true,
+      last_generated_on: today,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+
+    await supabaseAdmin.from("tasks").update({ recurring_task_id: recurring.id }).eq("id", task.id);
+
+    return { id: recurring.id };
+  });
+
+// Lista as tarefas diárias do condomínio (síndico/administradora)
+export const listRecurringTasks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: rows } = await supabaseAdmin
+      .from("recurring_tasks")
+      .select("id, title, description, kind, urgency, assignee_id, active, created_at")
+      .eq("condo_id", data.condoId)
+      .eq("active", true)
+      .order("created_at", { ascending: false });
+    return rows ?? [];
+  });
+
+// Cancela a recorrência (a tarefa de hoje, se já criada, permanece — só para de gerar novas)
+export const cancelRecurringTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ recurringTaskId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: recurring } = await supabaseAdmin
+      .from("recurring_tasks").select("condo_id").eq("id", data.recurringTaskId).maybeSingle();
+    if (!recurring) throw new Error("Tarefa diária não encontrada");
+
+    await assertCondoAdmin(context.userId, recurring.condo_id);
+
+    const { error } = await supabaseAdmin.from("recurring_tasks").update({ active: false }).eq("id", data.recurringTaskId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Gera as instâncias do dia para todas as tarefas diárias ativas do condomínio.
+// Idempotente — chamado periodicamente pelo app (ver app.tsx), não duplica no mesmo dia.
+export const checkAndGenerateDailyTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: templates } = await supabaseAdmin
+      .from("recurring_tasks")
+      .select("id, title, description, kind, urgency, assignee_id, created_by, last_generated_on")
+      .eq("condo_id", data.condoId)
+      .eq("active", true);
+    if (!templates?.length) return { generated: 0 };
+
+    // Usa a data em horário de Brasília para definir "hoje"
+    const BRT_OFFSET_MS = -3 * 60 * 60 * 1000;
+    const todayBRT = new Date(Date.now() + BRT_OFFSET_MS).toISOString().slice(0, 10);
+
+    let generated = 0;
+    for (const t of templates) {
+      if (t.last_generated_on === todayBRT) continue;
+      const { error } = await supabaseAdmin.from("tasks").insert({
+        condo_id:          data.condoId,
+        title:             t.title,
+        description:       t.description,
+        kind:              t.kind,
+        urgency:           t.urgency,
+        assignee_id:       t.assignee_id,
+        status:            "pendente",
+        created_by:        t.created_by,
+        ai_generated:      false,
+        recurring_task_id: t.id,
+      });
+      if (error) continue;
+      await supabaseAdmin.from("recurring_tasks").update({ last_generated_on: todayBRT }).eq("id", t.id);
+      generated++;
+    }
+    return { generated };
+  });

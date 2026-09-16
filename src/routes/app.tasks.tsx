@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ListChecks, Check, Loader2, Clock, Plus, Sparkles,
-  X, AlertTriangle, ChevronDown, Brain, Bell, ThumbsUp, ThumbsDown, MessageSquare,
+  X, AlertTriangle, ChevronDown, Brain, Bell, ThumbsUp, ThumbsDown, MessageSquare, Repeat,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -12,7 +12,10 @@ import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { useEffect, useRef, useState } from "react";
 import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
-import { createWorkerTask, generateAITasks, listCondoCollaborators } from "@/lib/worker-tasks.functions";
+import {
+  createWorkerTask, generateAITasks, listCondoCollaborators,
+  makeTaskRecurring, listRecurringTasks, cancelRecurringTask,
+} from "@/lib/worker-tasks.functions";
 import { approveAiProposal, rejectAiProposal } from "@/lib/ai-context.functions";
 
 export const Route = createFileRoute("/app/tasks")({
@@ -24,7 +27,13 @@ type Task = {
   id: string; title: string | null; description: string | null;
   due_at: string | null; status: string | null; kind: string | null;
   urgency: string; ai_generated: boolean; notify_immediately: boolean;
-  assignee_id: string | null;
+  assignee_id: string | null; recurring_task_id: string | null;
+};
+
+type RecurringTask = {
+  id: string; title: string; description: string | null;
+  kind: string; urgency: string; assignee_id: string | null;
+  active: boolean; created_at: string;
 };
 
 type Proposal = {
@@ -53,12 +62,15 @@ function TasksPage() {
   const [aiBusy, setAiBusy]        = useState(false);
   const [reviewingId, setReviewing] = useState<string | null>(null);
 
-  const dispatchFn    = useServerFn(dispatchAIEvent);
-  const createTaskFn  = useServerFn(createWorkerTask);
-  const generateAIFn  = useServerFn(generateAITasks);
-  const listWorkersFn = useServerFn(listCondoCollaborators);
-  const approveFn     = useServerFn(approveAiProposal);
-  const rejectFn      = useServerFn(rejectAiProposal);
+  const dispatchFn      = useServerFn(dispatchAIEvent);
+  const createTaskFn    = useServerFn(createWorkerTask);
+  const generateAIFn    = useServerFn(generateAITasks);
+  const listWorkersFn   = useServerFn(listCondoCollaborators);
+  const approveFn       = useServerFn(approveAiProposal);
+  const rejectFn        = useServerFn(rejectAiProposal);
+  const makeRecurringFn = useServerFn(makeTaskRecurring);
+  const listRecurringFn = useServerFn(listRecurringTasks);
+  const cancelRecurringFn = useServerFn(cancelRecurringTask);
 
   const { data: workers } = useQuery({
     enabled: !!condoId && isSindico,
@@ -86,7 +98,7 @@ function TasksPage() {
     queryFn: async () => {
       let q = supabase
         .from("tasks")
-        .select("id, title, description, due_at, status, kind, urgency, ai_generated, notify_immediately, assignee_id")
+        .select("id, title, description, due_at, status, kind, urgency, ai_generated, notify_immediately, assignee_id, recurring_task_id")
         .eq("condo_id", condoId!)
         .order("urgency", { ascending: false }) // urgente primeiro (ordem: urgente > normal > baixa)
         .order("due_at", { ascending: true, nullsFirst: false });
@@ -96,6 +108,12 @@ function TasksPage() {
       const { data } = await q;
       return (data ?? []) as Task[];
     },
+  });
+
+  const { data: recurringTasks, refetch: refetchRecurring } = useQuery({
+    enabled: !!condoId && isSindico,
+    queryKey: ["recurring_tasks", condoId],
+    queryFn: () => listRecurringFn({ data: { condoId: condoId! } }) as Promise<RecurringTask[]>,
   });
 
   // Realtime — notifica colaborador quando nova tarefa urgente chegar
@@ -188,6 +206,17 @@ function TasksPage() {
     }
   };
 
+  const handleCancelRecurring = async (r: RecurringTask) => {
+    if (!confirm(`Cancelar a tarefa diária "${r.title}"? Ela deixará de ser criada automaticamente.`)) return;
+    try {
+      await cancelRecurringFn({ data: { recurringTaskId: r.id } });
+      toast.success("Tarefa diária cancelada.");
+      refetchRecurring();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao cancelar tarefa diária");
+    }
+  };
+
   if (!condoId) return (
     <div className="p-8">
       <EmptyState icon={ListChecks} title="Sem condomínio vinculado" description="Aguarde um convite." />
@@ -274,6 +303,28 @@ function TasksPage() {
           ))}
         </div>
       </div>
+      )}
+
+      {/* Tarefas diárias ativas (só síndico) */}
+      {mainTab === "tarefas" && isSindico && (recurringTasks?.length ?? 0) > 0 && (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+          <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
+            <Repeat className="h-3.5 w-3.5" /> Tarefas diárias ativas ({recurringTasks!.length})
+          </p>
+          <ul className="space-y-1.5">
+            {recurringTasks!.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-2 text-sm bg-card rounded-lg border border-border px-3 py-2">
+                <span className="truncate">{r.title}</span>
+                <button
+                  onClick={() => handleCancelRecurring(r)}
+                  className="shrink-0 text-xs px-2 py-1 rounded-md border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition"
+                >
+                  Cancelar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/* Aba: Propostas da IA */}
@@ -408,6 +459,12 @@ function TasksPage() {
                           <Sparkles className="h-2.5 w-2.5" /> IA
                         </span>
                       )}
+                      {/* Diária */}
+                      {t.recurring_task_id && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-[10px] font-medium">
+                          <Repeat className="h-2.5 w-2.5" /> Diária
+                        </span>
+                      )}
                       {/* Notificação imediata */}
                       {t.notify_immediately && t.status === "pendente" && (
                         <span className="inline-flex items-center gap-1 text-[10px] text-destructive animate-pulse">
@@ -454,9 +511,14 @@ function TasksPage() {
           workers={workers ?? []}
           createFn={createTaskFn}
           dispatchFn={dispatchFn}
+          makeRecurringFn={makeRecurringFn}
           creatorName={profile?.full_name ?? "Alguém"}
           onClose={() => setNewOpen(false)}
-          onCreated={() => { qc.invalidateQueries({ queryKey: ["tasks"] }); setNewOpen(false); }}
+          onCreated={() => {
+            qc.invalidateQueries({ queryKey: ["tasks"] });
+            refetchRecurring();
+            setNewOpen(false);
+          }}
         />
       )}
     </div>
@@ -465,11 +527,12 @@ function TasksPage() {
 
 // ─── Dialog nova tarefa (síndico) ─────────────────────────────────────────────
 
-function NewTaskDialog({ condoId, workers, createFn, dispatchFn, creatorName, onClose, onCreated }: {
+function NewTaskDialog({ condoId, workers, createFn, dispatchFn, makeRecurringFn, creatorName, onClose, onCreated }: {
   condoId: string;
   workers: Worker[];
   createFn: (a: any) => Promise<{ id: string }>;
   dispatchFn: (a: any) => Promise<any>;
+  makeRecurringFn: (a: any) => Promise<{ id: string }>;
   creatorName: string;
   onClose: () => void;
   onCreated: () => void;
@@ -481,6 +544,8 @@ function NewTaskDialog({ condoId, workers, createFn, dispatchFn, creatorName, on
   const [assigneeId, setAssignee] = useState("");
   const [dueAt, setDueAt]         = useState("");
   const [busy, setBusy]           = useState(false);
+  const [askDaily, setAskDaily]   = useState<{ id: string; title: string } | null>(null);
+  const [dailyBusy, setDailyBusy] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -505,7 +570,7 @@ function NewTaskDialog({ condoId, workers, createFn, dispatchFn, creatorName, on
         condoId, eventType: "task_created", entityType: "task", entityId: result.id,
         context: { title: title.trim(), kind, urgency, creatorName, assigneeName: assigneeId ? (workers.find((w) => w.id === assigneeId)?.full_name ?? null) : null },
       } });
-      onCreated();
+      setAskDaily({ id: result.id, title: title.trim() });
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -513,7 +578,54 @@ function NewTaskDialog({ condoId, workers, createFn, dispatchFn, creatorName, on
     }
   };
 
+  const answerDaily = async (makeDaily: boolean) => {
+    if (!askDaily) return;
+    if (!makeDaily) { onCreated(); return; }
+    setDailyBusy(true);
+    try {
+      await makeRecurringFn({ data: { taskId: askDaily.id } });
+      toast.success("Tarefa marcada como diária — será recriada automaticamente todos os dias.");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao tornar a tarefa diária");
+    } finally {
+      setDailyBusy(false);
+      onCreated();
+    }
+  };
+
   const inputCls = "w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40";
+
+  if (askDaily) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="w-full max-w-sm rounded-2xl border border-border bg-card shadow-elegant animate-pop p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Repeat className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold">Essa tarefa é diária?</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Se "{askDaily.title}" se repete todos os dias, deixe ela permanente — o sistema recria automaticamente
+                uma tarefa pendente pro colaborador a cada dia, sem você precisar recriar manualmente. Você pode cancelar quando quiser.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" disabled={dailyBusy} onClick={() => answerDaily(false)}
+              className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-muted disabled:opacity-60 transition">
+              Não, é única
+            </button>
+            <button type="button" disabled={dailyBusy} onClick={() => answerDaily(true)}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60 transition">
+              {dailyBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Repeat className="h-3.5 w-3.5" />}
+              Sim, deixar diária
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>

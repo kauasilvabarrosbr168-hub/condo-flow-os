@@ -38,6 +38,7 @@ import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getMyMembershipStatus } from "@/lib/membership.functions";
 import { checkGarbageNotifications } from "@/lib/garbage.functions";
+import { checkAndGenerateDailyTasks } from "@/lib/worker-tasks.functions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -173,6 +174,23 @@ function AppLayout() {
         await checkGarbageFn({ data: { condoId } });
       } catch {
         // silencioso — notificação não deve travar o app
+      }
+    };
+    check();
+    const id = setInterval(check, 5 * 60_000); // a cada 5 minutos
+    return () => clearInterval(id);
+  }, [profile?.condo_id, session?.user.id]);
+
+  // ── Gera as tarefas diárias pendentes do dia (idempotente) ───────────────────
+  const checkDailyTasksFn = useServerFn(checkAndGenerateDailyTasks);
+  useEffect(() => {
+    if (!profile?.condo_id || !session?.user.id) return;
+    const condoId = profile.condo_id;
+    const check = async () => {
+      try {
+        await checkDailyTasksFn({ data: { condoId } });
+      } catch {
+        // silencioso — geração de tarefa diária não deve travar o app
       }
     };
     check();
