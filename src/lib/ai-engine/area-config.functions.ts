@@ -68,7 +68,7 @@ Com base nas regras do síndico, configure esta área. Responda APENAS com JSON 
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4.1-mini",
+        model: "google/gemini-2.5-flash",
         max_tokens: 600,
         messages: [{ role: "user", content: prompt }],
       }),

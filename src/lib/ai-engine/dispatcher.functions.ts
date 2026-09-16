@@ -34,7 +34,7 @@ Analise e responda APENAS com JSON válido (sem markdown):
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-mini',
+        model: 'google/gemini-2.5-flash',
         max_tokens: 250,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -70,7 +70,7 @@ Escreva uma mensagem em português do Brasil que seja bem explicativa — conte 
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-mini',
+        model: 'google/gemini-2.5-flash',
         max_tokens: 200,
         messages: [{ role: 'user', content: prompt }],
       }),

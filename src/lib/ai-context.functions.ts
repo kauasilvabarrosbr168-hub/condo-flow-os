@@ -12,7 +12,7 @@ async function callAI(prompt: string): Promise<string> {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-4.1-mini",
+        model: "google/gemini-2.5-flash",
         max_tokens: 2000,
         messages: [{ role: "user", content: prompt }],
       }),
