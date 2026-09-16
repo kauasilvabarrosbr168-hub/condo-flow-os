@@ -66,9 +66,15 @@ export const listCondoCollaborators = createServerFn({ method: "GET" })
 
 // ─── Gerar tarefas com IA ─────────────────────────────────────────────────────
 
-async function callAI(prompt: string): Promise<{ title: string; description: string; kind: string; urgency: string; due_at: string | null }[]> {
+async function callAI(prompt: string): Promise<{
+  suggestions: { title: string; description: string; kind: string; urgency: string; due_at: string | null }[];
+  error: string | null;
+}> {
   const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return [];
+  if (!apiKey) {
+    console.error("[Tarefas IA] LOVABLE_API_KEY não configurada nas variáveis de ambiente");
+    return { suggestions: [], error: "IA não configurada — variável LOVABLE_API_KEY ausente" };
+  }
 
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -80,15 +86,24 @@ async function callAI(prompt: string): Promise<{ title: string; description: str
         messages: [{ role: "user", content: prompt }],
       }),
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[Tarefas IA] gateway respondeu ${res.status}: ${body}`);
+      return { suggestions: [], error: `IA respondeu com erro HTTP ${res.status} (${body.slice(0, 200)})` };
+    }
     const data = await res.json();
     const text = (data.choices?.[0]?.message?.content ?? "") as string;
     const match = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-    if (!match) return [];
+    if (!match) {
+      console.error("[Tarefas IA] resposta da IA não continha JSON reconhecível:", text.slice(0, 300));
+      return { suggestions: [], error: "Resposta da IA não veio em formato reconhecível" };
+    }
     const parsed = JSON.parse(match[0]);
-    return Array.isArray(parsed) ? parsed : (parsed.tasks ?? []);
-  } catch {
-    return [];
+    const suggestions = Array.isArray(parsed) ? parsed : (parsed.tasks ?? []);
+    return { suggestions, error: null };
+  } catch (e: any) {
+    console.error("[Tarefas IA] erro ao chamar o gateway de IA:", e?.message ?? e);
+    return { suggestions: [], error: e?.message ?? "erro de rede ao chamar a IA" };
   }
 }
 
@@ -174,8 +189,8 @@ Responda APENAS com JSON válido (sem markdown):
   }
 ]`;
 
-    const suggestions = await callAI(prompt);
-    if (!suggestions.length) return { created: 0, proposals: [] };
+    const { suggestions, error: aiError } = await callAI(prompt);
+    if (!suggestions.length) return { created: 0, proposals: [], aiError };
 
     const validKinds = ["limpeza", "manutencao", "verificacao", "pre_checklist", "pos_checklist", "incidente"];
     const validUrgencies = ["baixa", "normal", "urgente"];

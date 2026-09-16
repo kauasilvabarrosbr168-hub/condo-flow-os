@@ -144,7 +144,11 @@ function TasksPage() {
     try {
       const result = await generateAIFn({ data: { condoId } });
       if (result.created === 0) {
-        toast.info("A IA não identificou novas tarefas necessárias no momento.");
+        if (result.aiError) {
+          toast.error(`A IA não conseguiu gerar sugestões: ${result.aiError}`);
+        } else {
+          toast.info("A IA não identificou novas tarefas necessárias no momento.");
+        }
       } else {
         toast.success(`${result.created} sugestão${result.created > 1 ? "ões" : ""} da IA aguardando sua aprovação!`);
         refetchProposals();
