@@ -74,6 +74,20 @@ export function runRulesEngine(event: AIEventInput, settings: CondoAISettings): 
       return { handled: true, needsAI: false, severity: 'info', summary: `${who} atualizou a tarefa "${ctx.title}" → ${ctx.newStatus}.`, actions }
     }
 
+    case 'task_overdue': {
+      const ctx = event.context as { title?: string; dueAt?: string; assigneeName?: string | null }
+      actions.push({ type: 'update_priority', description: `Tarefa "${ctx.title}" escalada para urgente por atraso` })
+      const when = ctx.dueAt ? ` (prazo era ${new Date(ctx.dueAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })})` : ''
+      const who = ctx.assigneeName ? ` Atribuída a ${ctx.assigneeName}.` : ''
+      return {
+        handled: true,
+        needsAI: false,
+        severity: 'warning',
+        summary: `Tarefa "${ctx.title}" está atrasada${when} e foi marcada como urgente automaticamente.${who}`,
+        actions,
+      }
+    }
+
     case 'task_created': {
       const ctx = event.context as { title?: string; kind?: string; creatorName?: string; assigneeName?: string | null }
       const who = ctx.creatorName ?? 'Alguém'

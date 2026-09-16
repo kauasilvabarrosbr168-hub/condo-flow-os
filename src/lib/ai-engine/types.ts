@@ -3,6 +3,7 @@ export type AIEventType =
   | 'reservation_cancelled'
   | 'task_created'
   | 'task_status_changed'
+  | 'task_overdue'
   | 'cleaning_requested'
   | 'service_completed'
   | 'incident_reported'

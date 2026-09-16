@@ -38,7 +38,7 @@ import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getMyMembershipStatus } from "@/lib/membership.functions";
 import { checkGarbageNotifications } from "@/lib/garbage.functions";
-import { checkAndGenerateDailyTasks } from "@/lib/worker-tasks.functions";
+import { checkAndGenerateDailyTasks, checkOverdueTasks } from "@/lib/worker-tasks.functions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -191,6 +191,23 @@ function AppLayout() {
         await checkDailyTasksFn({ data: { condoId } });
       } catch {
         // silencioso — geração de tarefa diária não deve travar o app
+      }
+    };
+    check();
+    const id = setInterval(check, 5 * 60_000); // a cada 5 minutos
+    return () => clearInterval(id);
+  }, [profile?.condo_id, session?.user.id]);
+
+  // ── Escala tarefas atrasadas para "urgente" e avisa no WhatsApp (idempotente) ─
+  const checkOverdueFn = useServerFn(checkOverdueTasks);
+  useEffect(() => {
+    if (!profile?.condo_id || !session?.user.id) return;
+    const condoId = profile.condo_id;
+    const check = async () => {
+      try {
+        await checkOverdueFn({ data: { condoId } });
+      } catch {
+        // silencioso — escalada de tarefa não deve travar o app
       }
     };
     check();

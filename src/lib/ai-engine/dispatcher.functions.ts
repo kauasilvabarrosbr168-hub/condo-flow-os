@@ -124,6 +124,7 @@ function buildWhatsAppMessage(severity: AISeverity, body: string, eventType: str
     reservation_created: 'Reserva criada',
     reservation_cancelled: 'Reserva cancelada',
     task_status_changed: 'Tarefa atualizada',
+    task_overdue: 'Tarefa atrasada',
     cleaning_requested: 'Limpeza solicitada',
     service_completed: 'Serviço concluído',
     incident_reported: 'Incidente reportado',
@@ -135,10 +136,9 @@ function buildWhatsAppMessage(severity: AISeverity, body: string, eventType: str
   return msg
 }
 
-export const dispatchAIEvent = createServerFn({ method: 'POST' })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: AIEventInput) => input)
-  .handler(async ({ data }: { data: AIEventInput }) => {
+// Lógica de fato — extraída para ser chamada tanto pelo server fn público quanto
+// diretamente por outras rotinas do servidor (ex.: checagem periódica de tarefas atrasadas).
+export async function dispatchAIEventInternal(data: AIEventInput) {
     const adminSb = supabaseAdmin
 
     const { data: settingsRow } = await adminSb
@@ -214,4 +214,9 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
     })
 
     return { success: true }
-  })
+}
+
+export const dispatchAIEvent = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: AIEventInput) => input)
+  .handler(async ({ data }: { data: AIEventInput }) => dispatchAIEventInternal(data))

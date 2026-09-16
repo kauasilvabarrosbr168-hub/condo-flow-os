@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { dispatchAIEventInternal } from "@/lib/ai-engine/dispatcher.functions";
 
 const UrgencyEnum = z.enum(["baixa", "normal", "urgente"]);
 const KindEnum = z.enum(["manutencao", "limpeza", "verificacao", "incidente", "pos_checklist", "pre_checklist"]);
@@ -321,4 +322,55 @@ export const checkAndGenerateDailyTasks = createServerFn({ method: "POST" })
       generated++;
     }
     return { generated };
+  });
+
+// ─── Escalar tarefas atrasadas automaticamente ────────────────────────────────
+// Idempotente — chamado periodicamente pelo app (ver app.tsx). Marca como "urgente"
+// toda tarefa pendente/em andamento cujo prazo já passou e dispara aviso de WhatsApp.
+export const checkOverdueTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { condoId: string }) => z.object({ condoId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: overdue } = await supabaseAdmin
+      .from("tasks")
+      .select("id, title, due_at, assignee_id")
+      .eq("condo_id", data.condoId)
+      .in("status", ["pendente", "em_andamento"])
+      .neq("urgency", "urgente")
+      .not("due_at", "is", null)
+      .lt("due_at", new Date().toISOString());
+    if (!overdue?.length) return { escalated: 0 };
+
+    const assigneeIds = Array.from(new Set(overdue.map((t) => t.assignee_id).filter(Boolean)));
+    const { data: profiles } = assigneeIds.length
+      ? await supabaseAdmin.from("profiles").select("id, full_name").in("id", assigneeIds)
+      : { data: [] };
+    const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+
+    let escalated = 0;
+    for (const t of overdue) {
+      const { error } = await supabaseAdmin
+        .from("tasks")
+        .update({ urgency: "urgente", notify_immediately: true })
+        .eq("id", t.id);
+      if (error) continue;
+      escalated++;
+
+      try {
+        await dispatchAIEventInternal({
+          condoId: data.condoId,
+          eventType: "task_overdue",
+          entityType: "task",
+          entityId: t.id,
+          context: {
+            title: t.title ?? "tarefa",
+            dueAt: t.due_at,
+            assigneeName: t.assignee_id ? (nameById.get(t.assignee_id) ?? null) : null,
+          },
+        });
+      } catch {
+        // aviso não deve impedir a escalada em si
+      }
+    }
+    return { escalated };
   });
