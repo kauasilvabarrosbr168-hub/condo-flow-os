@@ -60,7 +60,7 @@ async function writeWhatsAppText(eventType: string, context: Record<string, unkn
 Tipo de evento: ${eventType}
 Dados do evento (use SOMENTE o que está aqui, nunca invente nada que não esteja nos dados): ${JSON.stringify(context)}
 
-Escreva uma mensagem curta (máx. 40 palavras), natural e direta em português do Brasil, contando o que aconteceu com os detalhes relevantes (quem, quando, quantidade, área, etc., conforme disponível nos dados). Pode usar *negrito* do WhatsApp com moderação, mas não use emojis nem títulos. Responda APENAS com o texto da mensagem, sem aspas.`
+Escreva uma mensagem em português do Brasil que seja bem explicativa — conte claramente o que aconteceu, quem fez, quando e outros detalhes relevantes disponíveis nos dados (quantidade, área, observações etc.) — mas sem ficar longa: no máximo 3 frases curtas (~50 palavras). Use 2 a 4 emojis espalhados no texto para dar destaque aos pontos principais (ex.: 📅 para data/horário, 👤 para quem fez, 👥 para quantidade de pessoas, 🧹 para limpeza, ⚠️ para atenção), sempre combinando com o conteúdo da frase — não jogue emojis aleatórios. Pode usar *negrito* do WhatsApp com moderação para destacar o principal. Não use títulos nem hashtags. Responda APENAS com o texto da mensagem, sem aspas.`
 
   try {
     const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -71,7 +71,7 @@ Escreva uma mensagem curta (máx. 40 palavras), natural e direta em português d
       },
       body: JSON.stringify({
         model: 'gpt-4.1-mini',
-        max_tokens: 150,
+        max_tokens: 200,
         messages: [{ role: 'user', content: prompt }],
       }),
     })
