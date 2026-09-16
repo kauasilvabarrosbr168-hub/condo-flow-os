@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ListChecks, Check, Loader2, Clock, Plus, Sparkles,
-  X, AlertTriangle, ChevronDown, Brain, Bell, ThumbsUp, ThumbsDown, MessageSquare, Repeat,
+  X, AlertTriangle, ChevronDown, Brain, Bell, ThumbsUp, ThumbsDown, MessageSquare, Repeat, Play,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -61,6 +61,7 @@ function TasksPage() {
   const [newOpen, setNewOpen]      = useState(false);
   const [aiBusy, setAiBusy]        = useState(false);
   const [reviewingId, setReviewing] = useState<string | null>(null);
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
 
   const dispatchFn      = useServerFn(dispatchAIEvent);
   const createTaskFn    = useServerFn(createWorkerTask);
@@ -135,6 +136,10 @@ function TasksPage() {
           });
         }
       })
+      // Reflete no painel do síndico e do colaborador em tempo real (ex.: ao iniciar/concluir)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "tasks", filter: `condo_id=eq.${condoId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["tasks"] });
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [condoId, isWorker, qc]);
@@ -145,8 +150,21 @@ function TasksPage() {
       completed_at: status === "concluida" ? new Date().toISOString() : null,
     }).eq("id", t.id);
     if (error) { toast.error(error.message); return; }
-    toast.success(status === "concluida" ? "Tarefa concluída!" : "Atualizado");
+    toast.success(
+      status === "concluida" ? "Tarefa concluída!" : status === "em_andamento" ? "Tarefa iniciada!" : "Atualizado"
+    );
     qc.invalidateQueries({ queryKey: ["tasks"] });
+
+    // Registra no histórico de manutenção — permanente, ninguém pode apagar
+    if (status === "concluida" && user) {
+      await supabase.from("service_logs").insert({
+        condo_id: condoId!,
+        worker_id: user.id,
+        task_id: t.id,
+        title: t.title ?? "Tarefa",
+      });
+    }
+
     void dispatchFn({ data: {
       condoId: condoId!,
       eventType: "task_status_changed",
@@ -440,8 +458,8 @@ function TasksPage() {
                     {t.status === "concluida" && <Check className="h-3.5 w-3.5" />}
                   </button>
 
-                  {/* Conteúdo */}
-                  <div className="flex-1 min-w-0">
+                  {/* Conteúdo — clique abre os detalhes/observações completos */}
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setDetailTask(t)}>
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className={`text-sm font-medium ${t.status === "concluida" ? "line-through text-muted-foreground" : ""}`}>
                         {t.title}
@@ -471,6 +489,12 @@ function TasksPage() {
                           <Bell className="h-2.5 w-2.5" /> Notificado
                         </span>
                       )}
+                      {/* Em execução */}
+                      {t.status === "em_andamento" && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-blue-400/40 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-medium">
+                          <Loader2 className="h-2.5 w-2.5 animate-spin" /> Em execução
+                        </span>
+                      )}
                     </div>
                     {t.description && <p className="text-xs text-muted-foreground mt-1">{t.description}</p>}
                     {t.due_at && (
@@ -486,13 +510,20 @@ function TasksPage() {
 
                   {/* Ações */}
                   {t.status !== "concluida" && (
-                    <div className="flex gap-1 shrink-0">
-                      {t.status !== "em_andamento" && (
+                    <div className="flex gap-2 shrink-0">
+                      {t.status === "em_andamento" ? (
                         <button
-                          onClick={() => updateStatus(t, "em_andamento")}
-                          className="text-xs px-2 py-1 rounded-md border border-border hover:bg-muted transition"
+                          onClick={(e) => { e.stopPropagation(); updateStatus(t, "concluida"); }}
+                          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition"
                         >
-                          Iniciar
+                          <Check className="h-4 w-4" /> Concluir
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); updateStatus(t, "em_andamento"); }}
+                          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition"
+                        >
+                          <Play className="h-4 w-4" /> Iniciar
                         </button>
                       )}
                     </div>
@@ -521,6 +552,85 @@ function TasksPage() {
           }}
         />
       )}
+
+      {/* Dialog de detalhes da tarefa */}
+      {detailTask && (
+        <TaskDetailDialog
+          task={detailTask}
+          onClose={() => setDetailTask(null)}
+          onStart={() => { updateStatus(detailTask, "em_andamento"); setDetailTask(null); }}
+          onComplete={() => { updateStatus(detailTask, "concluida"); setDetailTask(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Dialog de detalhes da tarefa (observações completas) ────────────────────
+
+function TaskDetailDialog({ task, onClose, onStart, onComplete }: {
+  task: Task;
+  onClose: () => void;
+  onStart: () => void;
+  onComplete: () => void;
+}) {
+  const urgStyle = URGENCY_STYLE[task.urgency] ?? URGENCY_STYLE.normal;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-elegant animate-pop" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 p-5 border-b border-border">
+          <div>
+            <h2 className="text-base font-semibold">{task.title}</h2>
+            <div className="flex items-center gap-2 flex-wrap mt-2">
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium ${urgStyle.badge}`}>
+                {task.urgency === "urgente" && <AlertTriangle className="h-2.5 w-2.5" />}
+                {urgStyle.label}
+              </span>
+              <span className={kindClass(task.kind ?? "")}>{kindLabel(task.kind ?? "")}</span>
+              {task.status === "em_andamento" && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-blue-400/40 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-medium">
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" /> Em execução
+                </span>
+              )}
+            </div>
+          </div>
+          <button onClick={onClose} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Observações — o que fazer</p>
+            <p className="text-sm mt-1 whitespace-pre-wrap">{task.description || "Nenhuma observação adicionada."}</p>
+          </div>
+          {task.due_at && (
+            <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              Prazo: {new Date(task.due_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+              {new Date(task.due_at) < new Date() && task.status !== "concluida" && (
+                <span className="text-destructive font-medium ml-1">— Atrasada</span>
+              )}
+            </p>
+          )}
+        </div>
+
+        {task.status !== "concluida" && (
+          <div className="flex justify-end gap-2 p-5 border-t border-border">
+            {task.status === "em_andamento" ? (
+              <button onClick={onComplete}
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition">
+                <Check className="h-4 w-4" /> Concluir
+              </button>
+            ) : (
+              <button onClick={onStart}
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">
+                <Play className="h-4 w-4" /> Iniciar
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

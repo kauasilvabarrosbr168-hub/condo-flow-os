@@ -94,7 +94,14 @@ function ServicesPage() {
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold mb-3">{isWorker ? "Meus check-ins" : "Histórico de serviços"}</h2>
+        <div className="mb-3">
+          <h2 className="text-sm font-semibold">{isWorker ? "Meus check-ins" : "Histórico de manutenção"}</h2>
+          {!isWorker && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Registro permanente de tudo que já foi concluído (tarefas e check-ins). Ninguém — nem síndico, nem colaborador — pode apagar um item daqui.
+            </p>
+          )}
+        </div>
         {!logs ? (
           <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : logs.length === 0 ? (
