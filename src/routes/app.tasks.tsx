@@ -198,10 +198,10 @@ function TasksPage() {
     }
   };
 
-  const handleApprove = async (p: Proposal, dueAt: string | null) => {
+  const handleApprove = async (p: Proposal, dueAt: string | null, assigneeId: string | null) => {
     setReviewing(p.id);
     try {
-      await approveFn({ data: { proposalId: p.id, dueAt } });
+      await approveFn({ data: { proposalId: p.id, dueAt, assigneeId } });
       toast.success("Tarefa aprovada e criada para o colaborador!");
       refetchProposals();
       qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -576,13 +576,14 @@ function TasksPage() {
         />
       )}
 
-      {/* Dialog aprovar proposta da IA — síndico escolhe o prazo real */}
+      {/* Dialog aprovar proposta da IA — síndico escolhe o prazo real e o responsável */}
       {approvingProposal && (
         <ApproveProposalDialog
           proposal={approvingProposal}
+          workers={workers ?? []}
           busy={reviewingId === approvingProposal.id}
           onClose={() => setApprovingProposal(null)}
-          onConfirm={(dueAt) => handleApprove(approvingProposal, dueAt)}
+          onConfirm={(dueAt, assigneeId) => handleApprove(approvingProposal, dueAt, assigneeId)}
         />
       )}
     </div>
@@ -689,38 +690,63 @@ function DayPicker({ value, onChange }: { value: number | null; onChange: (days:
 
 // ─── Dialog aprovar proposta da IA — síndico confirma o prazo real ───────────
 
-function ApproveProposalDialog({ proposal, busy, onClose, onConfirm }: {
+function ApproveProposalDialog({ proposal, workers, busy, onClose, onConfirm }: {
   proposal: Proposal;
+  workers: Worker[];
   busy: boolean;
   onClose: () => void;
-  onConfirm: (dueAt: string | null) => void;
+  onConfirm: (dueAt: string | null, assigneeId: string | null) => void;
 }) {
   const [days, setDays] = useState<number | null>(null);
   const [customDate, setCustomDate] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
 
   const confirm = () => {
-    if (days) onConfirm(new Date(Date.now() + days * 86400_000).toISOString());
-    else if (customDate) onConfirm(new Date(customDate).toISOString());
-    else onConfirm(null);
+    const dueAt = days ? new Date(Date.now() + days * 86400_000).toISOString()
+      : customDate ? new Date(customDate).toISOString()
+      : null;
+    onConfirm(dueAt, assigneeId || null);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card shadow-elegant animate-pop p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div>
-          <h2 className="text-sm font-semibold">Até quando esse serviço deve ser concluído?</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">"{proposal.title}" — escolha o prazo real antes de criar a tarefa para o colaborador.</p>
+          <h2 className="text-sm font-semibold">Aprovar tarefa da IA</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">"{proposal.title}" — escolha o responsável e o prazo real antes de criar a tarefa.</p>
         </div>
 
-        <DayPicker value={days} onChange={(d) => { setDays(d); setCustomDate(""); }} />
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Atribuir a</label>
+          <select
+            value={assigneeId}
+            onChange={(e) => setAssigneeId(e.target.value)}
+            className="w-full h-10 mt-1 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          >
+            <option value="">— Sem atribuição específica —</option>
+            {workers.map((w) => (
+              <option key={w.id} value={w.id}>{w.full_name ?? w.email ?? w.id}</option>
+            ))}
+          </select>
+          {workers.length === 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1">Cadastre um funcionário na equipe para atribuir.</p>
+          )}
+          {workers.length > 0 && !assigneeId && (
+            <p className="text-[11px] text-amber-500 mt-1">Sem atribuição, a tarefa não aparece na aba "Minhas" do colaborador — só em "Todas".</p>
+          )}
+        </div>
 
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Ou escolha uma data/hora específica</label>
+          <label className="text-xs font-medium text-muted-foreground">Até quando deve ser concluído?</label>
+          <div className="mt-1">
+            <DayPicker value={days} onChange={(d) => { setDays(d); setCustomDate(""); }} />
+          </div>
           <input
             type="datetime-local"
             value={customDate}
             onChange={(e) => { setCustomDate(e.target.value); setDays(null); }}
-            className="w-full h-10 mt-1 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+            placeholder="Ou escolha uma data/hora específica"
+            className="w-full h-10 mt-2 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
           />
         </div>
 
