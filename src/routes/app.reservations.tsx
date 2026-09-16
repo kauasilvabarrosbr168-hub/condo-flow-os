@@ -98,6 +98,17 @@ function ReservationsPage() {
     },
   });
 
+  const { data: residentNames } = useQuery({
+    enabled: !!condoId && (reservations?.length ?? 0) > 0,
+    queryKey: ["reservation_residents", condoId, reservations?.map((r) => r.resident_id).join(",")],
+    queryFn: async () => {
+      const ids = Array.from(new Set((reservations ?? []).map((r) => r.resident_id).filter(Boolean)));
+      if (!ids.length) return new Map<string, string>();
+      const { data } = await supabase.from("profiles").select("id,full_name").in("id", ids);
+      return new Map((data ?? []).map((p) => [p.id, p.full_name ?? "Um morador"]));
+    },
+  });
+
   useEffect(() => {
     if (!condoId) return;
     const ch = supabase
@@ -226,7 +237,7 @@ function ReservationsPage() {
                             try {
                               await updateStatusFn({ data: { reservationId: r.id, status: "cancelada" } });
                               toast.success("Reserva cancelada");
-                              void dispatchFn({ data: { condoId: condoId!, eventType: "reservation_cancelled", entityType: "reservation", entityId: r.id, context: { areaName: area?.name ?? "área" } } });
+                              void dispatchFn({ data: { condoId: condoId!, eventType: "reservation_cancelled", entityType: "reservation", entityId: r.id, context: { areaName: area?.name ?? "área", residentName: residentNames?.get(r.resident_id) ?? "Um morador", startsAt: r.starts_at } } });
                             } catch (e: any) { toast.error(e.message ?? "Erro ao cancelar"); }
                           }}
                           className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted"
@@ -250,6 +261,7 @@ function ReservationsPage() {
           cleaningConfig={cleaningConfig ?? null}
           condoId={condoId}
           userId={user!.id}
+          residentName={profile?.full_name ?? "Um morador"}
           onClose={() => setOpen(false)}
           onCreated={() => qc.invalidateQueries({ queryKey: ["reservations", condoId] })}
           dispatchFn={dispatchFn}
@@ -272,6 +284,7 @@ function NewReservationDialog({
   cleaningConfig,
   condoId,
   userId,
+  residentName,
   onClose,
   onCreated,
   dispatchFn,
@@ -282,6 +295,7 @@ function NewReservationDialog({
   cleaningConfig: CleaningConfig | null;
   condoId: string;
   userId: string;
+  residentName: string;
   onClose: () => void;
   onCreated: () => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -341,9 +355,9 @@ function NewReservationDialog({
     setBusy(false);
     toast.success("Reserva confirmada com sucesso!");
     const areaName = areas.find((a) => a.id === areaId)?.name ?? "área";
-    void dispatchFn({ data: { condoId, eventType: "reservation_created", entityType: "reservation", entityId: resId, context: { areaName, cleaningType, guests } } });
+    void dispatchFn({ data: { condoId, eventType: "reservation_created", entityType: "reservation", entityId: resId, context: { areaName, cleaningType, guests, residentName, date, startTime, endTime } } });
     if (cleaningType !== "none") {
-      void dispatchFn({ data: { condoId, eventType: "cleaning_requested", entityType: "reservation", entityId: resId, context: { serviceName: selectedExternal?.name ?? "colaborador interno", areaName } } });
+      void dispatchFn({ data: { condoId, eventType: "cleaning_requested", entityType: "reservation", entityId: resId, context: { serviceName: selectedExternal?.name ?? "colaborador interno", areaName, residentName, date, startTime } } });
     }
     onCreated();
     onClose();

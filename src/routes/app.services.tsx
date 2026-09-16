@@ -119,6 +119,7 @@ function ServicesPage() {
         <CheckInDialog
           condoId={condoId}
           userId={user.id}
+          workerName={profile?.full_name ?? "Colaborador"}
           init={checkin}
           onClose={() => setCheckin(null)}
           onDone={async () => { await load(); setCheckin(null); }}
@@ -129,7 +130,7 @@ function ServicesPage() {
   );
 }
 
-function CheckInDialog({ condoId, userId, init, onClose, onDone, dispatchFn }: { condoId: string; userId: string; init: { taskId?: string; title: string }; onClose: () => void; onDone: () => void | Promise<void>; dispatchFn: (a: any) => Promise<any> }) {
+function CheckInDialog({ condoId, userId, workerName, init, onClose, onDone, dispatchFn }: { condoId: string; userId: string; workerName: string; init: { taskId?: string; title: string }; onClose: () => void; onDone: () => void | Promise<void>; dispatchFn: (a: any) => Promise<any> }) {
   const [notes, setNotes] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -162,7 +163,7 @@ function CheckInDialog({ condoId, userId, init, onClose, onDone, dispatchFn }: {
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Serviço registrado");
-    void dispatchFn({ data: { condoId, eventType: "service_completed", entityType: "service_log", entityId: init.taskId ?? "free", context: { taskTitle: init.title } } });
+    void dispatchFn({ data: { condoId, eventType: "service_completed", entityType: "service_log", entityId: init.taskId ?? "free", context: { taskTitle: init.title, workerName, notes: notes.trim() || null } } });
     await onDone();
   };
 

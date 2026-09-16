@@ -134,7 +134,7 @@ function TasksPage() {
       eventType: "task_status_changed",
       entityType: "task",
       entityId: t.id,
-      context: { title: t.title ?? "tarefa", newStatus: status, wasOverdue: t.due_at ? new Date(t.due_at) < new Date() : false },
+      context: { title: t.title ?? "tarefa", newStatus: status, wasOverdue: t.due_at ? new Date(t.due_at) < new Date() : false, actorName: profile?.full_name ?? "Alguém" },
     } });
   };
 
@@ -450,6 +450,7 @@ function TasksPage() {
           workers={workers ?? []}
           createFn={createTaskFn}
           dispatchFn={dispatchFn}
+          creatorName={profile?.full_name ?? "Alguém"}
           onClose={() => setNewOpen(false)}
           onCreated={() => { qc.invalidateQueries({ queryKey: ["tasks"] }); setNewOpen(false); }}
         />
@@ -460,11 +461,12 @@ function TasksPage() {
 
 // ─── Dialog nova tarefa (síndico) ─────────────────────────────────────────────
 
-function NewTaskDialog({ condoId, workers, createFn, dispatchFn, onClose, onCreated }: {
+function NewTaskDialog({ condoId, workers, createFn, dispatchFn, creatorName, onClose, onCreated }: {
   condoId: string;
   workers: Worker[];
   createFn: (a: any) => Promise<{ id: string }>;
   dispatchFn: (a: any) => Promise<any>;
+  creatorName: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -497,7 +499,7 @@ function NewTaskDialog({ condoId, workers, createFn, dispatchFn, onClose, onCrea
       );
       void dispatchFn({ data: {
         condoId, eventType: "task_created", entityType: "task", entityId: result.id,
-        context: { title: title.trim(), kind, urgency },
+        context: { title: title.trim(), kind, urgency, creatorName, assigneeName: assigneeId ? (workers.find((w) => w.id === assigneeId)?.full_name ?? null) : null },
       } });
       onCreated();
     } catch (e: any) {
