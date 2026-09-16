@@ -50,6 +50,40 @@ Analise e responda APENAS com JSON válido (sem markdown):
   return { severity: 'warning', analysis: rulesSummary, recommendation: '' }
 }
 
+// IA redige o texto do aviso de WhatsApp a partir dos dados reais do evento — nunca inventa informação
+async function writeWhatsAppText(eventType: string, context: Record<string, unknown>, fallback: string): Promise<string> {
+  const apiKey = process.env.LOVABLE_API_KEY
+  if (!apiKey) return fallback
+
+  const prompt = `Você escreve avisos por WhatsApp para o síndico/moradores de um condomínio, a partir de um evento do sistema CondoFlow.
+
+Tipo de evento: ${eventType}
+Dados do evento (use SOMENTE o que está aqui, nunca invente nada que não esteja nos dados): ${JSON.stringify(context)}
+
+Escreva uma mensagem curta (máx. 40 palavras), natural e direta em português do Brasil, contando o que aconteceu com os detalhes relevantes (quem, quando, quantidade, área, etc., conforme disponível nos dados). Pode usar *negrito* do WhatsApp com moderação, mas não use emojis nem títulos. Responda APENAS com o texto da mensagem, sem aspas.`
+
+  try {
+    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1-mini',
+        max_tokens: 150,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
+    if (!res.ok) return fallback
+    const data = await res.json()
+    const text = ((data.choices?.[0]?.message?.content ?? '') as string).trim()
+    return text || fallback
+  } catch {
+    return fallback
+  }
+}
+
 // WhatsApp via Evolution API — credenciais por variável de ambiente, número vem do condo_ai_settings
 async function sendEvolutionWhatsApp(phone: string, message: string): Promise<string> {
   const url      = process.env.EVOLUTION_API_URL
@@ -79,7 +113,7 @@ async function sendEvolutionWhatsApp(phone: string, message: string): Promise<st
   }
 }
 
-function buildWhatsAppMessage(severity: AISeverity, summary: string, recommendation: string, eventType: string): string {
+function buildWhatsAppMessage(severity: AISeverity, body: string, eventType: string): string {
   const emoji =
     severity === 'critical' ? '🚨'
     : severity === 'warning' ? '⚠️'
@@ -96,8 +130,7 @@ function buildWhatsAppMessage(severity: AISeverity, summary: string, recommendat
   }
   const label = eventLabel[eventType] ?? eventType
 
-  let msg = `${emoji} *CondoFlow — ${label}*\n\n${summary}`
-  if (recommendation) msg += `\n\n💡 *Recomendação:* ${recommendation}`
+  let msg = `${emoji} *CondoFlow — ${label}*\n\n${body}`
   msg += '\n\n_Acesse o app para mais detalhes._'
   return msg
 }
@@ -151,7 +184,14 @@ export const dispatchAIEvent = createServerFn({ method: 'POST' })
        isReservationEvent)
 
     if (shouldNotify) {
-      const msg = buildWhatsAppMessage(finalSeverity, finalSummary, finalRecommendation, data.eventType)
+      const fallbackBody = finalRecommendation ? `${finalSummary}\n\n💡 *Recomendação:* ${finalRecommendation}` : finalSummary
+      const body = await writeWhatsAppText(
+        data.eventType,
+        { ...data.context, situacao: finalSummary, recomendacao: finalRecommendation || undefined },
+        fallbackBody,
+      )
+      actionsExecuted.push(`WhatsApp (texto): ${body}`)
+      const msg = buildWhatsAppMessage(finalSeverity, body, data.eventType)
       actionsExecuted.push(await sendEvolutionWhatsApp(phone, msg))
     } else if (!phone) {
       actionsExecuted.push('WhatsApp: não enviado — nenhum número cadastrado em IA Operacional')
