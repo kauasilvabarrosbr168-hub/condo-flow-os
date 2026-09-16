@@ -126,6 +126,7 @@ export const approveAiProposal = createServerFn({ method: "POST" })
     z.object({
       proposalId: z.string().uuid(),
       assigneeId: z.string().uuid().nullable().optional(),
+      dueAt: z.string().nullable().optional(), // definido pelo síndico ao aprovar — sobrepõe o palpite da IA
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -139,9 +140,10 @@ export const approveAiProposal = createServerFn({ method: "POST" })
       .from("user_roles").select("role").eq("user_id", context.userId).eq("condo_id", proposal.condo_id).maybeSingle();
     if (!role || !["sindico", "administradora"].includes(role.role)) throw new Error("forbidden");
 
-    // Descarta prazo que já passou (proposta antiga com data ruim vinda da IA) — não faz
-    // sentido a tarefa nascer atrasada sem o síndico ter escolhido horário nenhum.
-    const dueAtIsPast = proposal.due_at && new Date(proposal.due_at).getTime() <= Date.now();
+    // O síndico escolhe o prazo na hora de aprovar — nunca confia no palpite da IA.
+    // Se por algum motivo não vier, descarta prazo do proposal que já esteja no passado.
+    const proposalDueAtIsPast = proposal.due_at && new Date(proposal.due_at).getTime() <= Date.now();
+    const finalDueAt = data.dueAt !== undefined ? data.dueAt : (proposalDueAtIsPast ? null : proposal.due_at);
 
     // Cria a tarefa real
     const { data: task, error } = await supabaseAdmin.from("tasks").insert({
@@ -150,7 +152,7 @@ export const approveAiProposal = createServerFn({ method: "POST" })
       description:  proposal.description,
       kind:         proposal.kind,
       urgency:      proposal.urgency,
-      due_at:       dueAtIsPast ? null : proposal.due_at,
+      due_at:       finalDueAt,
       assignee_id:  data.assigneeId ?? null,
       status:       "pendente",
       ai_generated: true,

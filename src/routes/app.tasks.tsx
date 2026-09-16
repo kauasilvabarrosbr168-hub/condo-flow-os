@@ -62,6 +62,7 @@ function TasksPage() {
   const [aiBusy, setAiBusy]        = useState(false);
   const [reviewingId, setReviewing] = useState<string | null>(null);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
+  const [approvingProposal, setApprovingProposal] = useState<Proposal | null>(null);
 
   const dispatchFn      = useServerFn(dispatchAIEvent);
   const createTaskFn    = useServerFn(createWorkerTask);
@@ -197,10 +198,10 @@ function TasksPage() {
     }
   };
 
-  const handleApprove = async (p: Proposal) => {
+  const handleApprove = async (p: Proposal, dueAt: string | null) => {
     setReviewing(p.id);
     try {
-      await approveFn({ data: { proposalId: p.id } });
+      await approveFn({ data: { proposalId: p.id, dueAt } });
       toast.success("Tarefa aprovada e criada para o colaborador!");
       refetchProposals();
       qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -208,6 +209,7 @@ function TasksPage() {
       toast.error(e.message ?? "Erro ao aprovar sugestão");
     } finally {
       setReviewing(null);
+      setApprovingProposal(null);
     }
   };
 
@@ -385,7 +387,7 @@ function TasksPage() {
                               {p.due_at && (
                                 <p className="text-[11px] text-muted-foreground mt-1 inline-flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  Prazo: {new Date(p.due_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                  Sugestão de prazo da IA: {new Date(p.due_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} (você confirma o prazo real ao aprovar)
                                 </p>
                               )}
                             </div>
@@ -398,7 +400,7 @@ function TasksPage() {
                           )}
                           <div className="flex items-center gap-2 pt-1">
                             <button
-                              onClick={() => handleApprove(p)}
+                              onClick={() => setApprovingProposal(p)}
                               disabled={isBusy}
                               className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-60 transition"
                             >
@@ -448,15 +450,25 @@ function TasksPage() {
                 {/* Barra lateral de urgência */}
                 <div className={`w-1 shrink-0 ${urgStyle.bar}`} />
                 <div className="flex items-start gap-3 p-4 flex-1 min-w-0">
-                  {/* Checkbox */}
-                  <button
-                    onClick={() => updateStatus(t, t.status === "concluida" ? "pendente" : "concluida")}
-                    className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition ${
-                      t.status === "concluida" ? "bg-success border-success text-success-foreground" : "border-border hover:border-primary"
-                    }`}
-                  >
-                    {t.status === "concluida" && <Check className="h-3.5 w-3.5" />}
-                  </button>
+                  {/* Checkbox — só o colaborador pode marcar; síndico só visualiza o status */}
+                  {isWorker ? (
+                    <button
+                      onClick={() => updateStatus(t, t.status === "concluida" ? "pendente" : "concluida")}
+                      className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition ${
+                        t.status === "concluida" ? "bg-success border-success text-success-foreground" : "border-border hover:border-primary"
+                      }`}
+                    >
+                      {t.status === "concluida" && <Check className="h-3.5 w-3.5" />}
+                    </button>
+                  ) : (
+                    <div
+                      className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${
+                        t.status === "concluida" ? "bg-success border-success text-success-foreground" : "border-border"
+                      }`}
+                    >
+                      {t.status === "concluida" && <Check className="h-3.5 w-3.5" />}
+                    </div>
+                  )}
 
                   {/* Conteúdo — clique abre os detalhes/observações completos */}
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setDetailTask(t)}>
@@ -508,8 +520,8 @@ function TasksPage() {
                     )}
                   </div>
 
-                  {/* Ações */}
-                  {t.status !== "concluida" && (
+                  {/* Ações — só o colaborador inicia/conclui; o síndico só acompanha */}
+                  {t.status !== "concluida" && isWorker && (
                     <div className="flex gap-2 shrink-0">
                       {t.status === "em_andamento" ? (
                         <button
@@ -557,9 +569,20 @@ function TasksPage() {
       {detailTask && (
         <TaskDetailDialog
           task={detailTask}
+          canAct={isWorker}
           onClose={() => setDetailTask(null)}
           onStart={() => { updateStatus(detailTask, "em_andamento"); setDetailTask(null); }}
           onComplete={() => { updateStatus(detailTask, "concluida"); setDetailTask(null); }}
+        />
+      )}
+
+      {/* Dialog aprovar proposta da IA — síndico escolhe o prazo real */}
+      {approvingProposal && (
+        <ApproveProposalDialog
+          proposal={approvingProposal}
+          busy={reviewingId === approvingProposal.id}
+          onClose={() => setApprovingProposal(null)}
+          onConfirm={(dueAt) => handleApprove(approvingProposal, dueAt)}
         />
       )}
     </div>
@@ -568,8 +591,9 @@ function TasksPage() {
 
 // ─── Dialog de detalhes da tarefa (observações completas) ────────────────────
 
-function TaskDetailDialog({ task, onClose, onStart, onComplete }: {
+function TaskDetailDialog({ task, canAct, onClose, onStart, onComplete }: {
   task: Task;
+  canAct: boolean;
   onClose: () => void;
   onStart: () => void;
   onComplete: () => void;
@@ -615,7 +639,7 @@ function TaskDetailDialog({ task, onClose, onStart, onComplete }: {
           )}
         </div>
 
-        {task.status !== "concluida" && (
+        {task.status !== "concluida" && canAct && (
           <div className="flex justify-end gap-2 p-5 border-t border-border">
             {task.status === "em_andamento" ? (
               <button onClick={onComplete}
@@ -630,6 +654,86 @@ function TaskDetailDialog({ task, onClose, onStart, onComplete }: {
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Seletor rápido de prazo: 1 a 5 dias a partir de agora ───────────────────
+
+function daysFromNowToLocalInput(days: number): string {
+  const d = new Date(Date.now() + days * 86400_000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function DayPicker({ value, onChange }: { value: number | null; onChange: (days: number) => void }) {
+  return (
+    <div className="grid grid-cols-5 gap-1.5">
+      {[1, 2, 3, 4, 5].map((d) => (
+        <button
+          key={d}
+          type="button"
+          onClick={() => onChange(d)}
+          className={`h-14 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition ${
+            value === d ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+          }`}
+        >
+          <span className="text-base font-bold">{d}</span>
+          <span className="text-[10px]">{d === 1 ? "dia" : "dias"}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Dialog aprovar proposta da IA — síndico confirma o prazo real ───────────
+
+function ApproveProposalDialog({ proposal, busy, onClose, onConfirm }: {
+  proposal: Proposal;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (dueAt: string | null) => void;
+}) {
+  const [days, setDays] = useState<number | null>(null);
+  const [customDate, setCustomDate] = useState("");
+
+  const confirm = () => {
+    if (days) onConfirm(new Date(Date.now() + days * 86400_000).toISOString());
+    else if (customDate) onConfirm(new Date(customDate).toISOString());
+    else onConfirm(null);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-card shadow-elegant animate-pop p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div>
+          <h2 className="text-sm font-semibold">Até quando esse serviço deve ser concluído?</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">"{proposal.title}" — escolha o prazo real antes de criar a tarefa para o colaborador.</p>
+        </div>
+
+        <DayPicker value={days} onChange={(d) => { setDays(d); setCustomDate(""); }} />
+
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Ou escolha uma data/hora específica</label>
+          <input
+            type="datetime-local"
+            value={customDate}
+            onChange={(e) => { setCustomDate(e.target.value); setDays(null); }}
+            className="w-full h-10 mt-1 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-muted transition">
+            Cancelar
+          </button>
+          <button type="button" onClick={confirm} disabled={busy}
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60 transition">
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />}
+            Aprovar e criar tarefa
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -653,6 +757,7 @@ function NewTaskDialog({ condoId, workers, createFn, dispatchFn, makeRecurringFn
   const [urgency, setUrgency]     = useState("normal");
   const [assigneeId, setAssignee] = useState("");
   const [dueAt, setDueAt]         = useState("");
+  const [dueDays, setDueDays]     = useState<number | null>(null);
   const [busy, setBusy]           = useState(false);
   const [askDaily, setAskDaily]   = useState<{ id: string; title: string } | null>(null);
   const [dailyBusy, setDailyBusy] = useState(false);
@@ -793,22 +898,30 @@ function NewTaskDialog({ condoId, workers, createFn, dispatchFn, makeRecurringFn
               className={inputCls + " mt-1 py-2 resize-none h-auto"} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Tipo</label>
-              <select value={kind} onChange={(e) => setKind(e.target.value)} className={inputCls + " mt-1"}>
-                <option value="manutencao">Manutenção</option>
-                <option value="limpeza">Limpeza</option>
-                <option value="verificacao">Verificação</option>
-                <option value="pre_checklist">Pré-uso</option>
-                <option value="pos_checklist">Pós-uso</option>
-                <option value="incidente">Incidente</option>
-              </select>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+            <select value={kind} onChange={(e) => setKind(e.target.value)} className={inputCls + " mt-1"}>
+              <option value="manutencao">Manutenção</option>
+              <option value="limpeza">Limpeza</option>
+              <option value="verificacao">Verificação</option>
+              <option value="pre_checklist">Pré-uso</option>
+              <option value="pos_checklist">Pós-uso</option>
+              <option value="incidente">Incidente</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Prazo — quantos dias tem para fazer?</label>
+            <div className="mt-1">
+              <DayPicker value={dueDays} onChange={(d) => { setDueDays(d); setDueAt(daysFromNowToLocalInput(d)); }} />
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Prazo</label>
-              <input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className={inputCls + " mt-1"} />
-            </div>
+            <input
+              type="datetime-local"
+              value={dueAt}
+              onChange={(e) => { setDueAt(e.target.value); setDueDays(null); }}
+              placeholder="Ou escolha uma data/hora específica"
+              className={inputCls + " mt-2"}
+            />
           </div>
 
           <div>
