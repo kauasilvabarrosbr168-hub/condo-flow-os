@@ -139,6 +139,10 @@ export const approveAiProposal = createServerFn({ method: "POST" })
       .from("user_roles").select("role").eq("user_id", context.userId).eq("condo_id", proposal.condo_id).maybeSingle();
     if (!role || !["sindico", "administradora"].includes(role.role)) throw new Error("forbidden");
 
+    // Descarta prazo que já passou (proposta antiga com data ruim vinda da IA) — não faz
+    // sentido a tarefa nascer atrasada sem o síndico ter escolhido horário nenhum.
+    const dueAtIsPast = proposal.due_at && new Date(proposal.due_at).getTime() <= Date.now();
+
     // Cria a tarefa real
     const { data: task, error } = await supabaseAdmin.from("tasks").insert({
       condo_id:     proposal.condo_id,
@@ -146,7 +150,7 @@ export const approveAiProposal = createServerFn({ method: "POST" })
       description:  proposal.description,
       kind:         proposal.kind,
       urgency:      proposal.urgency,
-      due_at:       proposal.due_at,
+      due_at:       dueAtIsPast ? null : proposal.due_at,
       assignee_id:  data.assigneeId ?? null,
       status:       "pendente",
       ai_generated: true,

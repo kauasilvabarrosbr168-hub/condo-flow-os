@@ -196,13 +196,22 @@ Responda APENAS com JSON válido (sem markdown):
     const validKinds = ["limpeza", "manutencao", "verificacao", "pre_checklist", "pos_checklist", "incidente"];
     const validUrgencies = ["baixa", "normal", "urgente"];
 
+    // A IA pode "chutar" um prazo que já passou (ou uma data inválida) — nesse caso a
+    // tarefa nasceria atrasada sem o síndico nunca ter escolhido horário nenhum. Descarta.
+    const sanitizeDueAt = (value: unknown): string | null => {
+      if (!value) return null;
+      const d = new Date(value as string);
+      if (Number.isNaN(d.getTime()) || d.getTime() <= Date.now()) return null;
+      return d.toISOString();
+    };
+
     const toInsert = suggestions.map((s) => ({
       condo_id:     data.condoId,
       title:        String(s.title).slice(0, 120),
       description:  s.description ? String(s.description).slice(0, 500) : null,
       kind:         validKinds.includes(s.kind) ? s.kind : "manutencao",
       urgency:      validUrgencies.includes(s.urgency) ? s.urgency : "normal",
-      due_at:       s.due_at ?? null,
+      due_at:       sanitizeDueAt(s.due_at),
       ai_reasoning: s.reasoning ? String(s.reasoning).slice(0, 300) : null,
       status:       "pending",
     }));
