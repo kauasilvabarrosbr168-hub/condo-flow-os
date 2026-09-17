@@ -80,7 +80,7 @@ function Landing() {
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
           <Logo />
-          <nav className="ml-10 hidden md:flex items-center gap-7 text-sm text-muted-foreground">
+          <nav className="ml-10 hidden lg:flex items-center gap-7 text-sm text-muted-foreground">
             <a href="#video"       className="hover:text-foreground transition">Vídeo</a>
             <a href="#features"    className="hover:text-foreground transition">Produto</a>
             <a href="#ia"          className="hover:text-foreground transition">IA</a>
@@ -109,7 +109,7 @@ function Landing() {
             <Badge tone="primary">
               <Brain className="h-3 w-3" /> IA Nativa · Automação ponta a ponta
             </Badge>
-            <h1 className="mt-6 text-balance text-5xl md:text-6xl font-semibold tracking-tight">
+            <h1 className="mt-6 text-balance text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight">
               O condomínio que se administra{" "}
               <span className="bg-gradient-hero bg-clip-text text-transparent">sozinho.</span>
             </h1>
@@ -147,7 +147,7 @@ function Landing() {
                 <span className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
                 <span className="h-2.5 w-2.5 rounded-full bg-warning/70" />
                 <span className="h-2.5 w-2.5 rounded-full bg-success/70" />
-                <span className="ml-3 text-xs text-muted-foreground">condo-flow-os.lovable.app/dashboard</span>
+                <span className="ml-3 min-w-0 flex-1 truncate text-xs text-muted-foreground">condo-flow-os.lovable.app/dashboard</span>
               </div>
               <DashboardPreview />
             </div>
@@ -292,7 +292,7 @@ function VideoSection() {
             <span className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
             <span className="h-2.5 w-2.5 rounded-full bg-warning/70" />
             <span className="h-2.5 w-2.5 rounded-full bg-success/70" />
-            <span className="ml-3 text-xs text-muted-foreground">CondoFlow · Demonstração oficial</span>
+            <span className="ml-3 min-w-0 flex-1 truncate text-xs text-muted-foreground">CondoFlow · Demonstração oficial</span>
           </div>
 
           <video
@@ -735,7 +735,7 @@ function CTASection() {
   return (
     <div
       ref={ref}
-      className="relative overflow-hidden rounded-3xl bg-gradient-hero p-12 lg:p-16 text-center shadow-elegant"
+      className="relative overflow-hidden rounded-3xl bg-gradient-hero p-8 sm:p-10 lg:p-16 text-center shadow-elegant"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? "scale(1)" : "scale(0.97)",
@@ -782,25 +782,25 @@ function CTASection() {
 /* ════════════════════════ DASHBOARD PREVIEW ════════════════════════ */
 function DashboardPreview() {
   return (
-    <div className="grid grid-cols-12 gap-4 p-5 bg-background">
-      <div className="col-span-3 space-y-3">
+    <div className="grid grid-cols-1 gap-4 p-4 sm:p-5 bg-background md:grid-cols-12">
+      <div className="grid grid-cols-3 gap-3 md:col-span-3 md:grid-cols-1 md:space-y-3 md:gap-0">
         {[
           { l: "Reservas hoje", v: "12", tone: "text-primary" },
           { l: "Tarefas pendentes", v: "7", tone: "text-warning" },
           { l: "Ocorrências", v: "3", tone: "text-destructive" },
         ].map((s) => (
-          <div key={s.l} className="rounded-xl border border-border bg-card p-4">
+          <div key={s.l} className="rounded-xl border border-border bg-card p-3 sm:p-4">
             <p className="text-xs text-muted-foreground">{s.l}</p>
             <p className={`mt-1 text-2xl font-semibold ${s.tone}`}>{s.v}</p>
           </div>
         ))}
       </div>
-      <div className="col-span-6 rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center justify-between">
+      <div className="rounded-xl border border-border bg-card p-4 md:col-span-6">
+        <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold">Operação em tempo real</p>
           <Badge tone="success">Tudo sob controle</Badge>
         </div>
-        <div className="mt-4 grid grid-cols-7 gap-2">
+        <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
           {Array.from({ length: 28 }).map((_, i) => {
             const h = 20 + ((i * 13) % 80);
             return <div key={i} className="rounded-md bg-gradient-to-t from-primary/30 to-primary/80" style={{ height: `${h}px` }} />;
@@ -810,7 +810,7 @@ function DashboardPreview() {
           {["S","T","Q","Q","S","S","D"].map((d, i) => <span key={i} className="text-center">{d}</span>)}
         </div>
       </div>
-      <div className="col-span-3 rounded-xl border border-border bg-card p-4">
+      <div className="rounded-xl border border-border bg-card p-4 md:col-span-3">
         <p className="text-sm font-semibold">Atividades recentes</p>
         <ul className="mt-3 space-y-3 text-xs">
           {[
