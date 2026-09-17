@@ -81,19 +81,19 @@ function Landing() {
         <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
           <Logo />
           <nav className="ml-10 hidden lg:flex items-center gap-7 text-sm text-muted-foreground">
-            <a href="#video"       className="hover:text-foreground transition">Vídeo</a>
-            <a href="#features"    className="hover:text-foreground transition">Produto</a>
-            <a href="#ia"          className="hover:text-foreground transition">IA</a>
-            <a href="#how-it-works" className="hover:text-foreground transition">Como funciona</a>
-            <a href="#pricing"     className="hover:text-foreground transition">Preços</a>
+            <a href="#video"       className="rounded-sm transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">Vídeo</a>
+            <a href="#features"    className="rounded-sm transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">Produto</a>
+            <a href="#ia"          className="rounded-sm transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">IA</a>
+            <a href="#how-it-works" className="rounded-sm transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">Como funciona</a>
+            <a href="#pricing"     className="rounded-sm transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">Preços</a>
           </nav>
           <div className="ml-auto flex items-center gap-2">
-            <Link to="/login" className="hidden sm:inline-flex h-9 items-center px-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <Link to="/login" className="hidden sm:inline-flex h-9 items-center px-3 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-lg">
               Entrar
             </Link>
             <Link
               to="/app/dashboard"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-foreground px-3.5 text-sm font-medium text-background hover:opacity-90 transition"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-gradient-hero px-3.5 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               Começar grátis <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -120,13 +120,13 @@ function Landing() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 to="/app/dashboard"
-                className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-hero px-6 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 transition"
+                className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-hero px-6 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 Começar agora <ArrowRight className="h-4 w-4" />
               </Link>
               <a
                 href="#video"
-                className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-6 text-sm font-medium hover:bg-muted transition"
+                className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-6 text-sm font-medium hover:bg-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 <Play className="h-4 w-4 fill-current" /> Ver o vídeo
               </a>
@@ -172,7 +172,7 @@ function Landing() {
       </section>
 
       {/* ── Vídeo ── */}
-      <section id="video" className="mx-auto max-w-7xl px-6 py-24">
+      <section id="video" className="scroll-mt-20 mx-auto max-w-7xl px-6 py-24">
         <VideoSection />
       </section>
 
@@ -180,17 +180,17 @@ function Landing() {
       <ProblemSection />
 
       {/* ── Features ── */}
-      <section id="features" className="mx-auto max-w-7xl px-6 py-24">
+      <section id="features" className="scroll-mt-20 mx-auto max-w-7xl px-6 py-24">
         <FeaturesSection />
       </section>
 
       {/* ── IA ── */}
-      <section id="ia" className="bg-gradient-soft border-y border-border/60">
+      <section id="ia" className="scroll-mt-20 bg-gradient-soft border-y border-border/60">
         <IASection />
       </section>
 
       {/* ── How it works ── */}
-      <section id="how-it-works" className="mx-auto max-w-7xl px-6 py-24">
+      <section id="how-it-works" className="scroll-mt-20 mx-auto max-w-7xl px-6 py-24">
         <HowItWorksSection />
       </section>
 
@@ -200,8 +200,11 @@ function Landing() {
       </section>
 
       {/* ── CTA / Pricing ── */}
-      <section id="pricing" className="mx-auto max-w-7xl px-6 py-24">
-        <CTASection />
+      <section id="pricing" className="scroll-mt-20 mx-auto max-w-7xl px-6 py-24">
+        <PricingSection />
+        <div className="mt-12">
+          <CTASection />
+        </div>
       </section>
 
       <footer className="border-t border-border">
@@ -729,6 +732,95 @@ function TestimonialsSection() {
   );
 }
 
+/* ════════════════════════ PRICING SECTION ════════════════════════ */
+// NOTA: valores ilustrativos/placeholder — o preço final ainda não foi definido.
+// Ajuste os números abaixo antes de publicar em produção.
+function PricingSection() {
+  const { ref, inView } = useInView(0.05);
+
+  const plans = [
+    {
+      icon: Building2,
+      name: "Condomínio único",
+      price: "R$ 249",
+      period: "/mês",
+      note: "até 100 unidades",
+      highlight: true,
+      features: [
+        "Reservas e manutenção automatizadas",
+        "IA nativa incluída",
+        "Notificações multicanal",
+        "Suporte via chat em horário comercial",
+      ],
+    },
+    {
+      icon: Users,
+      name: "Administradora",
+      price: "Sob consulta",
+      period: "",
+      note: "múltiplos condomínios",
+      highlight: false,
+      features: [
+        "Preço por condomínio administrado",
+        "Onboarding dedicado para toda a equipe",
+        "Gestor de conta exclusivo",
+        "Relatórios consolidados entre condomínios",
+      ],
+    },
+  ];
+
+  return (
+    <div ref={ref}>
+      <div className="text-center max-w-2xl mx-auto mb-12">
+        <Badge tone="primary"><Sparkles className="h-3 w-3" /> Planos</Badge>
+        <h2 className="mt-4 text-4xl font-semibold tracking-tight">
+          Um preço simples pro seu condomínio
+        </h2>
+        <p className="mt-3 text-muted-foreground">
+          Valores de referência — o time confirma o plano certo pra você em uma conversa rápida.
+        </p>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2 max-w-3xl mx-auto">
+        {plans.map((p, i) => (
+          <div
+            key={p.name}
+            className={`rounded-2xl border p-6 shadow-card transition-all duration-300 ${
+              p.highlight ? "border-primary/40 bg-primary/5 shadow-elegant" : "border-border bg-card"
+            }`}
+            style={{
+              opacity: inView ? 1 : 0,
+              transform: inView ? "translateY(0)" : "translateY(24px)",
+              transition: `opacity 0.55s ease ${i * 100}ms, transform 0.55s ease ${i * 100}ms, box-shadow 0.3s ease`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${p.highlight ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                <p.icon className="h-5 w-5" />
+              </span>
+              {p.highlight && <Badge tone="primary">Mais comum</Badge>}
+            </div>
+            <p className="mt-4 text-sm font-semibold">{p.name}</p>
+            <p className="mt-1 flex items-baseline gap-1">
+              <span className="text-3xl font-semibold tracking-tight">{p.price}</span>
+              {p.period && <span className="text-sm text-muted-foreground">{p.period}</span>}
+            </p>
+            <p className="text-xs text-muted-foreground">{p.note}</p>
+            <ul className="mt-5 space-y-2.5">
+              {p.features.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ════════════════════════ CTA SECTION ════════════════════════ */
 function CTASection() {
   const { ref, inView } = useInView();
@@ -757,13 +849,13 @@ function CTASection() {
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
             to="/app/dashboard"
-            className="inline-flex h-12 items-center gap-2 rounded-xl bg-card px-7 text-sm font-semibold text-foreground hover:opacity-95 shadow-card"
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-card px-7 text-sm font-semibold text-foreground hover:opacity-95 shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
           >
             Começar agora <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             to="/login"
-            className="inline-flex h-12 items-center gap-2 rounded-xl border border-primary-foreground/30 px-7 text-sm font-medium text-primary-foreground hover:bg-primary-foreground/10"
+            className="inline-flex h-12 items-center gap-2 rounded-xl border border-primary-foreground/30 px-7 text-sm font-medium text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
           >
             Falar com a equipe
           </Link>

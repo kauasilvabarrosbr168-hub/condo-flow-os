@@ -59,11 +59,11 @@ export function Logo({ withText = true, className = "" }: { withText?: boolean; 
 
 export function Badge({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "success" | "warning" | "destructive" | "primary" }) {
   const tones: Record<string, string> = {
-    default:     "bg-slate-500 text-white",
-    success:     "bg-emerald-500 text-white",
-    warning:     "bg-amber-500 text-white",
-    destructive: "bg-red-600 text-white",
-    primary:     "bg-blue-600 text-white",
+    default:     "bg-muted-foreground text-background",
+    success:     "bg-success text-success-foreground",
+    warning:     "bg-warning text-warning-foreground",
+    destructive: "bg-destructive text-destructive-foreground",
+    primary:     "bg-primary text-primary-foreground",
   };
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${tones[tone]}`}>
