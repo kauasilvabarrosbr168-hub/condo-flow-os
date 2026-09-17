@@ -7,7 +7,6 @@ import {
   ShieldCheck,
   Bell,
   ListChecks,
-  Flame,
   MessageSquareWarning,
   Building2,
   CheckCircle2,
@@ -20,6 +19,7 @@ import {
   BarChart3,
   Play,
   ChevronRight,
+  LifeBuoy,
 } from "lucide-react";
 import { Logo, Badge } from "@/components/brand";
 
@@ -382,16 +382,16 @@ function FeaturesSection() {
       detail: "Suporta taxas, limite por apartamento, horários bloqueados e aprovação manual quando necessário.",
     },
     {
-      icon: Flame,
-      title: "Sauna automatizada",
-      desc: "Quando uma reserva de sauna é confirmada, o CondoFlow automaticamente cria a tarefa para o zelador ligar o equipamento no horário certo, envia lembrete ao morador 2h antes e registra tudo em log.",
-      detail: "Funciona para qualquer área: piscina, churrasqueira, salão de festas, academia.",
+      icon: Zap,
+      title: "Automação pós-reserva",
+      desc: "Quando uma reserva é confirmada, o CondoFlow cria automaticamente a tarefa pro zelador preparar a área no horário certo, avisa o morador antes do evento e registra tudo em log.",
+      detail: "Funciona pra qualquer área: sauna, piscina, churrasqueira, salão de festas, academia.",
     },
     {
       icon: Brain,
       title: "IA que gera tarefas",
       desc: "Descreva o que precisa ser feito e a IA do CondoFlow cria um plano de tarefas completo, atribui responsáveis, define prazos e organiza por prioridade — em segundos.",
-      detail: "\"Preparar o condomínio para o verão\" vira 12 tarefas detalhadas com responsáveis e datas.",
+      detail: "\"Reformar a área da piscina\" vira 10 tarefas detalhadas com responsáveis e prazos.",
     },
     {
       icon: ListChecks,
@@ -424,10 +424,10 @@ function FeaturesSection() {
       detail: "Controle de acesso por perfil: síndico, subsíndico, zelador, morador e porteiro.",
     },
     {
-      icon: Zap,
-      title: "Implantação em 7 dias",
-      desc: "Time de onboarding configura o condomínio, importa os moradores, treina os funcionários e acompanha a primeira semana de operação. Você não precisa saber de tecnologia.",
-      detail: "Suporte via chat em horário comercial e base de conhecimento em vídeo.",
+      icon: LifeBuoy,
+      title: "Suporte quando você precisar",
+      desc: "Chat em horário comercial com gente de verdade, base de conhecimento em vídeo, e o time que implantou seu condomínio continua acompanhando depois que o app está no ar.",
+      detail: "Sem depender só de IA — se travar, tem humano do outro lado.",
     },
   ];
 
@@ -661,7 +661,7 @@ function TestimonialsSection() {
     },
     {
       name: "Júlia Castro",
-      role: "Síndica profissional · 4 condomínios · MG",
+      role: "Administradora · 4 condomínios · MG",
       quote: "Administro 4 condomínios e antes era impossível. Hoje o CondoFlow gerencia a operação dos 4 — eu só monitoro o painel uma vez por dia e resolvo as exceções.",
       metric: "4x mais condomínios",
     },
@@ -840,7 +840,7 @@ function CTASection() {
           <Sparkles className="h-3 w-3" /> 30 dias grátis
         </Badge>
         <h2 className="mt-5 text-4xl md:text-5xl font-semibold tracking-tight text-primary-foreground text-balance">
-          Pronto para um condomínio sem caos?
+          Seu condomínio já pode se administrar sozinho.
         </h2>
         <p className="mt-4 text-primary-foreground/80 leading-relaxed">
           Implantação em 7 dias. Treinamento incluído. Suporte humano. Cancele quando quiser.
@@ -857,7 +857,7 @@ function CTASection() {
             to="/login"
             className="inline-flex h-12 items-center gap-2 rounded-xl border border-primary-foreground/30 px-7 text-sm font-medium text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
           >
-            Falar com a equipe
+            Já tenho uma conta
           </Link>
         </div>
         <div className="mt-6 flex flex-wrap justify-center gap-6 text-xs text-primary-foreground/70">
