@@ -208,6 +208,8 @@ The marketing landing page (`src/routes/index.tsx`) carries one additional, scop
 - **Do** keep every corner rounded from the shared radius scale (10–26px) — no sharp corners, no ad-hoc radius values.
 - **Do** treat dark mode as a first-class blue-graphite palette, not an inverted/desaturated copy of light mode.
 - **Do** pair every icon-led card or stat with a tinted (10–20% opacity) icon chip in that item's semantic color.
+- **Do** nudge a forward-pointing icon (`ArrowRight`) a couple pixels toward its direction on button hover (`group-hover:translate-x-0.5`, ~200ms) — feedback tied to what the icon means, not a generic hover flourish.
+- **Do** respect `prefers-reduced-motion`: every transition/animation duration collapses to near-zero and smooth scroll turns off, so state and content changes still land, just without the movement.
 
 ### Don't:
 - **Don't** apply `.glass`/backdrop-blur to content surfaces — it's reserved for the two fixed navigation bars in the whole product.

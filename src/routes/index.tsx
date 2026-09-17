@@ -93,9 +93,9 @@ function Landing() {
             </Link>
             <Link
               to="/app/dashboard"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-gradient-hero px-3.5 text-sm font-medium text-primary-foreground btn-plate hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="group inline-flex h-9 items-center gap-1.5 rounded-lg bg-gradient-hero px-3.5 text-sm font-medium text-primary-foreground btn-plate hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
-              Começar grátis <ArrowRight className="h-3.5 w-3.5" />
+              Começar grátis <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
             </Link>
           </div>
         </div>
@@ -120,9 +120,9 @@ function Landing() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 to="/app/dashboard"
-                className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-hero px-6 text-sm font-medium text-primary-foreground btn-plate hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className="group inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-hero px-6 text-sm font-medium text-primary-foreground btn-plate hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
-                Começar agora <ArrowRight className="h-4 w-4" />
+                Começar agora <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
               <a
                 href="#video"
@@ -849,9 +849,9 @@ function CTASection() {
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
             to="/app/dashboard"
-            className="inline-flex h-12 items-center gap-2 rounded-xl bg-card px-7 text-sm font-semibold text-foreground hover:opacity-95 btn-plate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+            className="group inline-flex h-12 items-center gap-2 rounded-xl bg-card px-7 text-sm font-semibold text-foreground hover:opacity-95 btn-plate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
           >
-            Começar agora <ArrowRight className="h-4 w-4" />
+            Começar agora <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
           </Link>
           <Link
             to="/login"
