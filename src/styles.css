@@ -267,6 +267,11 @@
     background-size: 200% 100%;
     animation: shimmer 1.6s linear infinite;
   }
+  /* Painel do Interfone — indicadores "acendem" em sequência, uma vez, como um
+     painel físico ligando. Não é decorativo: reforça o material do mundo visual. */
+  .dot-power-on {
+    animation: power-on 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
 }
 
 @keyframes fade-in {
@@ -279,6 +284,10 @@
 }
 @keyframes pop {
   from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes power-on {
+  from { opacity: 0; transform: scale(0.4); }
   to { opacity: 1; transform: scale(1); }
 }
 @keyframes shimmer {

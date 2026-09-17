@@ -144,9 +144,9 @@ function Landing() {
             <div className="absolute -inset-x-10 -inset-y-6 bg-gradient-hero opacity-20 blur-3xl rounded-[3rem]" />
             <div className="relative rounded-2xl bg-card panel-plate overflow-hidden">
               <div className="flex items-center gap-1.5 border-b border-border px-4 py-3 bg-muted/40">
-                <span className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
-                <span className="h-2.5 w-2.5 rounded-full bg-warning/70" />
-                <span className="h-2.5 w-2.5 rounded-full bg-success/70" />
+                <span className="h-2.5 w-2.5 rounded-full bg-destructive/60 dot-power-on" style={{ animationDelay: "650ms" }} />
+                <span className="h-2.5 w-2.5 rounded-full bg-warning/70 dot-power-on" style={{ animationDelay: "780ms" }} />
+                <span className="h-2.5 w-2.5 rounded-full bg-success/70 dot-power-on" style={{ animationDelay: "910ms" }} />
                 <span className="ml-3 min-w-0 flex-1 truncate text-xs text-muted-foreground">condo-flow-os.lovable.app/dashboard</span>
               </div>
               <DashboardPreview />
@@ -292,9 +292,9 @@ function VideoSection() {
         <div className="relative rounded-2xl overflow-hidden panel-plate">
           {/* Barra de título estilo browser */}
           <div className="flex items-center gap-1.5 border-b border-border px-4 py-3 bg-muted/60">
-            <span className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
-            <span className="h-2.5 w-2.5 rounded-full bg-warning/70" />
-            <span className="h-2.5 w-2.5 rounded-full bg-success/70" />
+            <span className={`h-2.5 w-2.5 rounded-full bg-destructive/60 ${inView ? "dot-power-on" : "opacity-0"}`} style={{ animationDelay: "350ms" }} />
+            <span className={`h-2.5 w-2.5 rounded-full bg-warning/70 ${inView ? "dot-power-on" : "opacity-0"}`} style={{ animationDelay: "480ms" }} />
+            <span className={`h-2.5 w-2.5 rounded-full bg-success/70 ${inView ? "dot-power-on" : "opacity-0"}`} style={{ animationDelay: "610ms" }} />
             <span className="ml-3 min-w-0 flex-1 truncate text-xs text-muted-foreground">CondoFlow · Demonstração oficial</span>
           </div>
 
@@ -537,7 +537,7 @@ function TypingDemo() {
   const lines = [
     "> Gerar tarefas para preparar o condomínio para o verão",
     "",
-    "✦ Criando 8 tarefas...",
+    "✦ Criando 5 tarefas...",
     "",
     "1. Verificar bomba da piscina — Pedro · 15/nov",
     "2. Limpeza completa da piscina — João · 20/nov",
@@ -545,10 +545,15 @@ function TypingDemo() {
     "4. Manutenção do filtro de areia — Pedro · 22/nov",
     "5. Repor cloro e pH — João · semanal",
   ];
+  const taskCount = lines.filter((l) => /^\d+\./.test(l)).length;
   const [visible, setVisible] = useState(0);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (visible >= lines.length) return;
+    if (visible >= lines.length) {
+      const t = setTimeout(() => setDone(true), 400);
+      return () => clearTimeout(t);
+    }
     const t = setTimeout(() => setVisible((v) => v + 1), visible === 0 ? 600 : 250);
     return () => clearTimeout(t);
   }, [visible, lines.length]);
@@ -565,6 +570,12 @@ function TypingDemo() {
       ))}
       {visible < lines.length && (
         <span className="inline-block w-2 h-4 bg-primary animate-pulse align-middle" />
+      )}
+      {done && (
+        <div className="mt-2 flex items-center gap-1.5 text-success animate-fade-in">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          <span>{taskCount} tarefas prontas</span>
+        </div>
       )}
     </div>
   );

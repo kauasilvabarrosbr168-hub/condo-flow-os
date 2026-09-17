@@ -210,6 +210,7 @@ The marketing landing page (`src/routes/index.tsx`) carries one additional, scop
 - **Do** pair every icon-led card or stat with a tinted (10–20% opacity) icon chip in that item's semantic color.
 - **Do** nudge a forward-pointing icon (`ArrowRight`) a couple pixels toward its direction on button hover (`group-hover:translate-x-0.5`, ~200ms) — feedback tied to what the icon means, not a generic hover flourish.
 - **Do** respect `prefers-reduced-motion`: every transition/animation duration collapses to near-zero and smooth scroll turns off, so state and content changes still land, just without the movement.
+- **Do** treat a status indicator (the 3 browser-chrome dots) as a small panel powering on, not a static decoration: a quick staggered fade+scale (`.dot-power-on`, ~130ms apart) the first time it appears — once, never looping. A completed process (the AI demo) gets a quiet, exact confirmation of what actually happened (a real count, not an invented number), not a celebration.
 
 ### Don't:
 - **Don't** apply `.glass`/backdrop-blur to content surfaces — it's reserved for the two fixed navigation bars in the whole product.
