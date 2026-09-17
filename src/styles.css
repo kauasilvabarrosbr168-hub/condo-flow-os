@@ -97,6 +97,14 @@
   --shadow-card: 0 1px 2px oklch(0 0 0 / 0.04), 0 4px 24px -8px oklch(0.18 0.04 250 / 0.06);
   --shadow-glow: 0 0 60px -10px color-mix(in oklab, oklch(0.55 0.18 258) 40%, transparent);
   --shadow-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 6%, transparent);
+
+  /* Painel do Interfone — landing page only, ver .impeccable/surfaces/src-routes-index-tsx.md */
+  --shadow-plate: inset 0 1px 0 color-mix(in oklab, white 55%, transparent), inset 0 -1px 0 color-mix(in oklab, black 7%, transparent), 0 1px 2px oklch(0 0 0 / 0.04), 0 4px 24px -8px oklch(0.18 0.04 250 / 0.06);
+  --shadow-plate-hover: inset 0 1px 0 color-mix(in oklab, white 65%, transparent), inset 0 -1px 0 color-mix(in oklab, black 9%, transparent), 0 10px 40px -12px color-mix(in oklab, oklch(0.32 0.13 258) 25%, transparent);
+  --shadow-buzzer: inset 0 1px 2px color-mix(in oklab, black 13%, transparent), inset 0 -1px 0 color-mix(in oklab, white 45%, transparent);
+  --shadow-buzzer-lit: inset 0 1px 2px color-mix(in oklab, black 13%, transparent), 0 0 0 3px color-mix(in oklab, oklch(0.32 0.13 258) 18%, transparent), 0 0 18px color-mix(in oklab, oklch(0.55 0.18 258) 55%, transparent);
+  --shadow-btn-plate: inset 0 1px 0 color-mix(in oklab, white 30%, transparent), inset 0 -2px 0 color-mix(in oklab, black 15%, transparent), 0 10px 40px -12px color-mix(in oklab, oklch(0.32 0.13 258) 25%, transparent);
+  --shadow-btn-plate-pressed: inset 0 2px 4px color-mix(in oklab, black 25%, transparent);
 }
 
 .dark {
@@ -148,6 +156,14 @@
   --shadow-elegant: 0 10px 40px -12px oklch(0 0 0 / 0.5);
   --shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 24px -8px oklch(0 0 0 / 0.4);
   --shadow-glow: 0 0 60px -10px color-mix(in oklab, oklch(0.7 0.17 258) 50%, transparent);
+
+  /* Painel do Interfone (dark) */
+  --shadow-plate: inset 0 1px 0 color-mix(in oklab, white 8%, transparent), inset 0 -1px 0 color-mix(in oklab, black 35%, transparent), 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 24px -8px oklch(0 0 0 / 0.4);
+  --shadow-plate-hover: inset 0 1px 0 color-mix(in oklab, white 12%, transparent), inset 0 -1px 0 color-mix(in oklab, black 40%, transparent), 0 10px 40px -12px oklch(0 0 0 / 0.5);
+  --shadow-buzzer: inset 0 1px 3px color-mix(in oklab, black 45%, transparent), inset 0 -1px 0 color-mix(in oklab, white 6%, transparent);
+  --shadow-buzzer-lit: inset 0 1px 3px color-mix(in oklab, black 45%, transparent), 0 0 0 3px color-mix(in oklab, var(--primary) 25%, transparent), 0 0 20px color-mix(in oklab, var(--primary-glow) 65%, transparent);
+  --shadow-btn-plate: inset 0 1px 0 color-mix(in oklab, white 15%, transparent), inset 0 -2px 0 color-mix(in oklab, black 35%, transparent), 0 10px 40px -12px oklch(0 0 0 / 0.5);
+  --shadow-btn-plate-pressed: inset 0 2px 5px color-mix(in oklab, black 50%, transparent);
 }
 
 @layer base {
@@ -181,6 +197,36 @@
   .shadow-elegant { box-shadow: var(--shadow-elegant); }
   .shadow-card { box-shadow: var(--shadow-card); }
   .shadow-glow { box-shadow: var(--shadow-glow); }
+
+  /* Painel do Interfone — cartão em relevo (sem border-border; o bevel é a borda) */
+  .panel-plate {
+    box-shadow: var(--shadow-plate);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .panel-plate-hover:hover,
+  .group:hover .panel-plate-hover {
+    box-shadow: var(--shadow-plate-hover);
+    transform: translateY(-2px);
+  }
+  /* Botão-buzina: recuado em repouso, LED indigo acende no hover/foco */
+  .buzzer-chip {
+    box-shadow: var(--shadow-buzzer);
+    transition: box-shadow 0.3s ease;
+  }
+  .buzzer-chip-lit:hover .buzzer-chip,
+  .group:hover .buzzer-chip,
+  .buzzer-chip:focus-visible {
+    box-shadow: var(--shadow-buzzer-lit);
+  }
+  /* Botão principal: relevo de placa metálica, "aperta" ao clicar */
+  .btn-plate {
+    box-shadow: var(--shadow-btn-plate);
+    transition: box-shadow 0.15s ease, transform 0.1s ease;
+  }
+  .btn-plate:active {
+    box-shadow: var(--shadow-btn-plate-pressed);
+    transform: translateY(1px);
+  }
   .text-balance { text-wrap: balance; }
   .glass {
     background-color: color-mix(in oklab, var(--card) 60%, transparent);

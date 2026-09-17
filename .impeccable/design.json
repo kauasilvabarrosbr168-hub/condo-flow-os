@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-17T17:47:15Z",
+  "title": "Design System: CondoFlow",
+  "extensions": {
+    "colorMeta": {
+      "signal-indigo": { "role": "primary", "displayName": "Signal Indigo", "canonical": "oklch(0.32 0.13 258)", "tonalRamp": ["oklch(0.15 0.06 258)", "oklch(0.22 0.09 258)", "oklch(0.32 0.13 258)", "oklch(0.42 0.15 258)", "oklch(0.55 0.18 258)", "oklch(0.68 0.17 258)", "oklch(0.82 0.10 258)", "oklch(0.95 0.03 258)"] },
+      "indigo-glow": { "role": "primary", "displayName": "Indigo Glow", "canonical": "oklch(0.55 0.18 258)" },
+      "paper": { "role": "neutral", "displayName": "Paper", "canonical": "oklch(0.99 0.003 240)" },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "oklch(0.18 0.04 250)" },
+      "card-white": { "role": "neutral", "displayName": "Card White", "canonical": "oklch(1 0 0)" },
+      "quiet-lavender": { "role": "neutral", "displayName": "Quiet Lavender", "canonical": "oklch(0.965 0.01 250)" },
+      "fog": { "role": "neutral", "displayName": "Fog", "canonical": "oklch(0.965 0.008 250)" },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "oklch(0.93 0.01 250)" },
+      "confirmed-green": { "role": "success", "displayName": "Confirmed Green", "canonical": "oklch(0.65 0.16 155)" },
+      "attention-amber": { "role": "warning", "displayName": "Attention Amber", "canonical": "oklch(0.78 0.16 70)" },
+      "alert-red": { "role": "error", "displayName": "Alert Red", "canonical": "oklch(0.62 0.2 22)" },
+      "blue-graphite": { "role": "neutral", "displayName": "Blue Graphite", "canonical": "oklch(0.165 0.018 256)" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Landing page hero headline only." },
+      "headline": { "displayName": "Headline", "purpose": "Marketing section titles and app page H1s." },
+      "title": { "displayName": "Title", "purpose": "Card, dialog, and feature-block headings." },
+      "body": { "displayName": "Body", "purpose": "Default text size across the entire product." },
+      "label": { "displayName": "Label", "purpose": "Uppercase eyebrows above form fields and card groups." }
+    },
+    "shadows": [
+      { "name": "shadow-card", "value": "0 1px 2px oklch(0 0 0 / 0.04), 0 4px 24px -8px oklch(0.18 0.04 250 / 0.06)", "purpose": "Resting shadow for cards, dialogs, list rows." },
+      { "name": "shadow-elegant", "value": "0 10px 40px -12px color-mix(in oklab, oklch(0.32 0.13 258) 25%, transparent)", "purpose": "Primary CTAs, hover-lifted cards, anything meant to feel premium." },
+      { "name": "shadow-glow", "value": "0 0 60px -10px color-mix(in oklab, oklch(0.55 0.18 258) 40%, transparent)", "purpose": "Ambient background bloom behind hero art; never on interactive elements." }
+    ],
+    "motion": [
+      { "name": "fade-in", "value": "0.5s ease-out", "purpose": "Default entrance for hero text blocks." },
+      { "name": "slide-up", "value": "0.6s cubic-bezier(0.2, 0.8, 0.2, 1)", "purpose": "Entrance for content that rises into view (dashboard mockup, cards)." },
+      { "name": "pop", "value": "0.4s cubic-bezier(0.2, 0.8, 0.2, 1)", "purpose": "Dialog/modal entrance." },
+      { "name": "elegant-lift", "value": "transform 0.3s ease, box-shadow 0.3s ease", "purpose": "Card hover: translateY(-2px) plus shadow-card to shadow-elegant." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main call-to-action. Indigo gradient fill, elegant shadow, used once per view.",
+      "html": "<button class=\"ds-btn-primary\">Começar agora</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 24px; border-radius: 18px; border: none; background: linear-gradient(135deg, oklch(0.32 0.13 258) 0%, oklch(0.55 0.18 258) 100%); color: oklch(0.99 0.005 240); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; box-shadow: 0 10px 40px -12px color-mix(in oklab, oklch(0.32 0.13 258) 25%, transparent); cursor: pointer; transition: opacity 0.2s ease; } .ds-btn-primary:hover { opacity: 0.95; } .ds-btn-primary:focus-visible { outline: 2px solid oklch(0.55 0.18 258); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outline/neutral action, paired next to a primary CTA.",
+      "html": "<button class=\"ds-btn-secondary\">Ver o vídeo</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 24px; border-radius: 18px; border: 1px solid oklch(0.93 0.01 250); background: oklch(1 0 0); color: oklch(0.18 0.04 250); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; } .ds-btn-secondary:hover { background: oklch(0.965 0.008 250); } .ds-btn-secondary:focus-visible { outline: 2px solid oklch(0.55 0.18 258); outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-pill",
+      "description": "Solid-fill rounded pill used for tone (success/warning/destructive/primary/default) tags.",
+      "html": "<span class=\"ds-badge ds-badge-primary\">IA Nativa</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; padding: 2px 10px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: white; } .ds-badge-primary { background: oklch(0.42 0.15 258); } .ds-badge-success { background: oklch(0.65 0.16 155); } .ds-badge-warning { background: oklch(0.78 0.16 70); } .ds-badge-destructive { background: oklch(0.62 0.2 22); }"
+    },
+    {
+      "name": "Feature Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Icon chip + title + description + detail line. The recurring marketing card pattern; lifts on hover.",
+      "html": "<div class=\"ds-card\"><span class=\"ds-icon-chip\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z\"/></svg></span><h3 class=\"ds-card-title\">Reservas inteligentes</h3><p class=\"ds-card-desc\">Calendário de áreas comuns em tempo real, sem o síndico tocar em nada.</p></div>",
+      "css": ".ds-card { border-radius: 22px; border: 1px solid oklch(0.93 0.01 250); background: oklch(1 0 0); padding: 24px; box-shadow: 0 1px 2px oklch(0 0 0 / 0.04), 0 4px 24px -8px oklch(0.18 0.04 250 / 0.06); transition: transform 0.3s ease, box-shadow 0.3s ease; font-family: Inter, ui-sans-serif, system-ui, sans-serif; max-width: 360px; } .ds-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px -12px color-mix(in oklab, oklch(0.32 0.13 258) 25%, transparent); } .ds-icon-chip { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 18px; background: color-mix(in oklab, oklch(0.32 0.13 258) 10%, transparent); color: oklch(0.32 0.13 258); } .ds-card-title { margin-top: 16px; font-size: 16px; font-weight: 600; letter-spacing: -0.02em; color: oklch(0.18 0.04 250); } .ds-card-desc { margin-top: 8px; font-size: 14px; line-height: 1.6; color: oklch(0.5 0.03 255); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard form field with soft indigo focus halo.",
+      "html": "<input class=\"ds-input\" placeholder=\"Ex: Verificar bomba da piscina\" />",
+      "css": ".ds-input { height: 40px; width: 100%; border-radius: 14px; border: 1px solid oklch(0.93 0.01 250); background: oklch(0.99 0.003 240); padding: 0 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; color: oklch(0.18 0.04 250); outline: none; transition: box-shadow 0.15s ease, border-color 0.15s ease; } .ds-input:focus-visible { border-color: oklch(0.55 0.18 258); box-shadow: 0 0 0 3px color-mix(in oklab, oklch(0.55 0.18 258) 40%, transparent); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Operations Room",
+    "overview": "CondoFlow's whole pitch is that automation replaces the WhatsApp group chaos. The interface earns that claim by staying calm where a typical ops dashboard gets loud: a near-white paper canvas in light mode, a deliberately blue-tinted graphite (never pure black) in dark mode, one indigo signal color spent sparingly, and generous rounded geometry that reads as software you can trust to run unattended. Density is moderate because the audience (síndicos, often non-technical) needs to scan calmly, not parse a data-dense console. The one deliberate flourish is the indigo gradient, reserved for the hero headline's accent word, primary CTA buttons, and the ambient glow behind hero visuals. Everywhere else, color recedes and hairline borders plus soft shadows do the work of separating content.",
+    "keyCharacteristics": [
+      "One accent (signal indigo), spent on primary actions and the hero moment only",
+      "Generous, consistent rounding (14px base, scaling 10-26px)",
+      "Soft, colored (not grey) shadows: shadow-card for resting surfaces, shadow-elegant for premium/hover",
+      "A genuinely designed dark mode — blue graphite, not an inverted afterthought",
+      "Status communicated through color + icon pairs rather than layout changes"
+    ],
+    "rules": [
+      { "name": "The One Signal Rule", "body": "Signal Indigo appears on at most one element per view that isn't navigation. If two elements compete for it, one loses.", "section": "colors" },
+      { "name": "The No-Grey-Shadow Rule", "body": "Shadows are never neutral grey; they're color-mix()'d from the foreground or primary color, so elevation carries the same blue undertone as everything else.", "section": "elevation" },
+      { "name": "The Tight-Heading Rule", "body": "Every heading level (h1-h4) carries -0.02em letter-spacing globally — never opt out per-component.", "section": "typography" },
+      { "name": "The Elegant Lift Rule", "body": "Interactive cards go from shadow-card to shadow-elegant plus a -translate-y-0.5 nudge on hover — never a scale transform, never a grey shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do spend Signal Indigo on exactly one focal element per screen; let neutrals carry everything else.",
+      "Do use the indigo-tinted shadows (shadow-card / shadow-elegant), never a flat grey box-shadow.",
+      "Do keep every corner rounded from the shared radius scale (10-26px) — no sharp corners, no ad-hoc radius values.",
+      "Do treat dark mode as a first-class blue-graphite palette, not an inverted/desaturated copy of light mode.",
+      "Do pair every icon-led card or stat with a tinted (10-20% opacity) icon chip in that item's semantic color."
+    ],
+    "donts": [
+      "Don't apply .glass/backdrop-blur to content surfaces — it's reserved for the two fixed navigation bars in the whole product.",
+      "Don't introduce a second typeface; weight, size, and tracking are how this system creates hierarchy.",
+      "Don't use scale-transform hover effects on cards; lift with translate-y + shadow escalation instead.",
+      "Don't render status as plain colored text alone — pair color with an icon and, on list rows, the urgency rail."
+    ]
+  }
+}

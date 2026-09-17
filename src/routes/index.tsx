@@ -93,7 +93,7 @@ function Landing() {
             </Link>
             <Link
               to="/app/dashboard"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-gradient-hero px-3.5 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-gradient-hero px-3.5 text-sm font-medium text-primary-foreground btn-plate hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               Começar grátis <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -120,7 +120,7 @@ function Landing() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 to="/app/dashboard"
-                className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-hero px-6 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-hero px-6 text-sm font-medium text-primary-foreground btn-plate hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 Começar agora <ArrowRight className="h-4 w-4" />
               </Link>
@@ -142,7 +142,7 @@ function Landing() {
           {/* Dashboard mock */}
           <div className="relative mt-16 mx-auto max-w-6xl animate-slide-up">
             <div className="absolute -inset-x-10 -inset-y-6 bg-gradient-hero opacity-20 blur-3xl rounded-[3rem]" />
-            <div className="relative rounded-2xl border border-border bg-card shadow-elegant overflow-hidden">
+            <div className="relative rounded-2xl bg-card panel-plate overflow-hidden">
               <div className="flex items-center gap-1.5 border-b border-border px-4 py-3 bg-muted/40">
                 <span className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
                 <span className="h-2.5 w-2.5 rounded-full bg-warning/70" />
@@ -289,7 +289,7 @@ function VideoSection() {
         {/* Glow atrás do vídeo */}
         <div className="absolute -inset-4 bg-gradient-hero opacity-20 blur-3xl rounded-[3rem]" />
 
-        <div className="relative rounded-2xl overflow-hidden border border-border shadow-elegant">
+        <div className="relative rounded-2xl overflow-hidden panel-plate">
           {/* Barra de título estilo browser */}
           <div className="flex items-center gap-1.5 border-b border-border px-4 py-3 bg-muted/60">
             <span className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
@@ -357,7 +357,7 @@ function ProblemSection() {
                   transition: `opacity 0.6s ease ${200 + i * 100}ms, transform 0.6s ease ${200 + i * 100}ms`,
                 }}
               >
-                <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-destructive/15 text-destructive">
+                <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/15 text-destructive buzzer-chip">
                   <p.icon className="h-5 w-5" />
                 </span>
                 <p className="text-background/80 leading-relaxed text-sm">{p.text}</p>
@@ -447,14 +447,14 @@ function FeaturesSection() {
         {features.map((f, i) => (
           <div
             key={f.title}
-            className="group rounded-2xl border border-border bg-card p-6 shadow-card hover:shadow-elegant transition-all duration-300 hover:-translate-y-0.5"
+            className="group rounded-2xl bg-card p-6 panel-plate panel-plate-hover"
             style={{
               opacity: inView ? 1 : 0,
               transform: inView ? "translateY(0)" : "translateY(28px)",
               transition: `opacity 0.55s ease ${i * 60}ms, transform 0.55s ease ${i * 60}ms, box-shadow 0.3s ease`,
             }}
           >
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary buzzer-chip transition">
               <f.icon className="h-5 w-5" />
             </span>
             <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
@@ -498,7 +498,7 @@ function IASection() {
             O CondoFlow tem IA nativa — não é uma integração de terceiros, é parte do núcleo da plataforma.
             Ela aprende o ritmo do seu condomínio e antecipa o que precisa ser feito.
           </p>
-          <div className="mt-8 rounded-2xl border border-border bg-card p-5 font-mono text-sm">
+          <div className="mt-8 rounded-2xl bg-card panel-plate p-5 font-mono text-sm">
             <div className="flex items-center gap-2 mb-4 text-muted-foreground text-xs">
               <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
               IA CondoFlow · Processando
@@ -511,14 +511,14 @@ function IASection() {
           {iaFeatures.map((f, i) => (
             <li
               key={f.title}
-              className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5"
+              className="flex items-start gap-4 rounded-2xl bg-card panel-plate p-5"
               style={{
                 opacity: inView ? 1 : 0,
                 transform: inView ? "translateX(0)" : "translateX(30px)",
                 transition: `opacity 0.6s ease ${100 + i * 120}ms, transform 0.6s ease ${100 + i * 120}ms`,
               }}
             >
-              <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary buzzer-chip">
                 <Sparkles className="h-4 w-4" />
               </span>
               <div>
@@ -617,7 +617,7 @@ function HowItWorksSection() {
         {steps.map((s, i) => (
           <div
             key={s.number}
-            className="rounded-2xl border border-border bg-card p-7 shadow-card"
+            className="rounded-2xl bg-card panel-plate p-7"
             style={{
               opacity: inView ? 1 : 0,
               transform: inView ? "translateY(0)" : "translateY(28px)",
@@ -700,7 +700,7 @@ function TestimonialsSection() {
         {testimonials.map((t, i) => (
           <div
             key={t.name}
-            className="rounded-2xl border border-border bg-card p-6 shadow-card flex flex-col"
+            className="rounded-2xl bg-card panel-plate panel-plate-hover p-6 flex flex-col"
             style={{
               opacity: inView ? 1 : 0,
               transform: inView ? "translateY(0)" : "translateY(24px)",
@@ -785,8 +785,8 @@ function PricingSection() {
         {plans.map((p, i) => (
           <div
             key={p.name}
-            className={`rounded-2xl border p-6 shadow-card transition-all duration-300 ${
-              p.highlight ? "border-primary/40 bg-primary/5 shadow-elegant" : "border-border bg-card"
+            className={`rounded-2xl p-6 panel-plate panel-plate-hover ${
+              p.highlight ? "bg-primary/5" : "bg-card"
             }`}
             style={{
               opacity: inView ? 1 : 0,
@@ -795,7 +795,7 @@ function PricingSection() {
             }}
           >
             <div className="flex items-center justify-between">
-              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${p.highlight ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full buzzer-chip ${p.highlight ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                 <p.icon className="h-5 w-5" />
               </span>
               {p.highlight && <Badge tone="primary">Mais comum</Badge>}
@@ -849,7 +849,7 @@ function CTASection() {
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
             to="/app/dashboard"
-            className="inline-flex h-12 items-center gap-2 rounded-xl bg-card px-7 text-sm font-semibold text-foreground hover:opacity-95 shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-card px-7 text-sm font-semibold text-foreground hover:opacity-95 btn-plate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
           >
             Começar agora <ArrowRight className="h-4 w-4" />
           </Link>
