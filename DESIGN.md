@@ -131,10 +131,13 @@ The palette is a single indigo signal color over a near-monochrome neutral scale
 - **Headline** (600, 2.25rem / `text-4xl`, -0.02em): marketing section titles ("Tudo que o seu condomínio precisa…") and app page `<h1>`s at the 2xl step.
 - **Title** (600, 1.5rem–1.25rem, -0.02em): card and dialog headings, feature-card titles.
 - **Body** (400, 0.875rem, 1.6 line-height): the default text size across the entire product — descriptions, table cells, form labels' companion copy.
-- **Label** (600, 0.75rem, uppercase, +0.05em tracking): section eyebrows and field labels (`text-xs font-semibold uppercase tracking-wider text-muted-foreground`) — the recurring "quiet caption" pattern above almost every form field and card group.
+- **Label** (600, 0.75rem, uppercase, +0.05em tracking): section eyebrows and field labels (`text-xs font-semibold uppercase tracking-wider text-muted-foreground`) — the recurring "quiet caption" pattern above almost every form field and card group. On the landing page, every section-kicker `Badge` also carries `uppercase tracking-wide` for the same reason — the pill shape alone doesn't read as a label without it.
+- **Data** (600, one step above the Headline it sits near, tabular): live or counted numerals — animated stats, prices, in-app metric mockups. Always paired with `tabular-nums` so digits don't reflow neighboring text while counting up or down.
 
 ### Named Rules
 **The Tight-Heading Rule.** Every heading level (`h1`–`h4`) carries `-0.02em` letter-spacing globally — never opt out per-component.
+
+**The Data-Outranks-Headline Rule.** A number that is the point of its own row (a stat, a price) sits one type step above the section Headline next to it, never the same size — a metric and a title are different roles and must not collide. A decorative background numeral (e.g. a step count) stays at or below Headline size regardless of how faint its color is; low opacity alone doesn't demote it.
 
 ## Layout
 

@@ -57,7 +57,7 @@ export function Logo({ withText = true, className = "" }: { withText?: boolean; 
   );
 }
 
-export function Badge({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "success" | "warning" | "destructive" | "primary" }) {
+export function Badge({ children, tone = "default", className = "" }: { children: ReactNode; tone?: "default" | "success" | "warning" | "destructive" | "primary"; className?: string }) {
   const tones: Record<string, string> = {
     default:     "bg-muted-foreground text-background",
     success:     "bg-success text-success-foreground",
@@ -66,7 +66,7 @@ export function Badge({ children, tone = "default" }: { children: ReactNode; ton
     primary:     "bg-primary text-primary-foreground",
   };
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${tones[tone]}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${tones[tone]} ${className}`}>
       {children}
     </span>
   );

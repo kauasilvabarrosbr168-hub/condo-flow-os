@@ -106,7 +106,7 @@ function Landing() {
         <div className="absolute inset-0 grid-bg opacity-60 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
         <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
           <div className="mx-auto max-w-3xl text-center animate-fade-in">
-            <Badge tone="primary">
+            <Badge tone="primary" className="uppercase tracking-wide">
               <Brain className="h-3 w-3" /> IA Nativa · Automação ponta a ponta
             </Badge>
             <h1 className="mt-6 text-balance text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight">
@@ -244,7 +244,7 @@ function StatsRow() {
             transition: `opacity 0.6s ease ${i * 120}ms, transform 0.6s ease ${i * 120}ms`,
           }}
         >
-          <div className={`text-4xl font-semibold tracking-tight ${s.color}`}>
+          <div className={`text-5xl font-semibold tracking-tight tabular-nums ${s.color}`}>
             {s.prefix}{s.value}{s.suffix}
           </div>
           <div className="mt-1 text-xs text-muted-foreground leading-snug">{s.label}</div>
@@ -268,7 +268,7 @@ function VideoSection() {
   return (
     <div ref={ref}>
       <div className="text-center max-w-2xl mx-auto mb-12">
-        <Badge tone="primary"><Play className="h-3 w-3 fill-current" /> Vídeo demonstração</Badge>
+        <Badge tone="primary" className="uppercase tracking-wide"><Play className="h-3 w-3 fill-current" /> Vídeo demonstração</Badge>
         <h2 className="mt-4 text-4xl font-semibold tracking-tight">
           Veja o CondoFlow em{" "}
           <span className="bg-gradient-hero bg-clip-text text-transparent">60 segundos</span>
@@ -434,7 +434,7 @@ function FeaturesSection() {
   return (
     <>
       <div className="max-w-2xl">
-        <Badge tone="primary">Plataforma completa</Badge>
+        <Badge tone="primary" className="uppercase tracking-wide">Plataforma completa</Badge>
         <h2 className="mt-4 text-4xl font-semibold tracking-tight">
           Tudo que o seu condomínio precisa, em um só lugar
         </h2>
@@ -490,7 +490,7 @@ function IASection() {
             transition: "opacity 0.7s ease, transform 0.7s ease",
           }}
         >
-          <Badge tone="primary"><Brain className="h-3 w-3" /> Inteligência artificial</Badge>
+          <Badge tone="primary" className="uppercase tracking-wide"><Brain className="h-3 w-3" /> Inteligência artificial</Badge>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight">
             A IA trabalha enquanto você descansa.
           </h2>
@@ -604,7 +604,7 @@ function HowItWorksSection() {
   return (
     <>
       <div className="text-center max-w-2xl mx-auto mb-16">
-        <Badge tone="primary">Como funciona</Badge>
+        <Badge tone="primary" className="uppercase tracking-wide">Como funciona</Badge>
         <h2 className="mt-4 text-4xl font-semibold tracking-tight">
           Da planilha ao piloto automático em 4 passos
         </h2>
@@ -624,7 +624,7 @@ function HowItWorksSection() {
               transition: `opacity 0.6s ease ${i * 100}ms, transform 0.6s ease ${i * 100}ms`,
             }}
           >
-            <div className="text-5xl font-semibold text-primary/20 tracking-tight leading-none mb-4">{s.number}</div>
+            <div className="text-4xl font-semibold text-primary/20 tracking-tight leading-none tabular-nums mb-4">{s.number}</div>
             <h3 className="text-lg font-semibold">{s.title}</h3>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
             <ul className="mt-4 space-y-2">
@@ -688,7 +688,7 @@ function TestimonialsSection() {
   return (
     <div className="mx-auto max-w-7xl px-6">
       <div className="text-center max-w-2xl mx-auto mb-12">
-        <Badge tone="primary"><Star className="h-3 w-3 fill-current" /> Depoimentos reais</Badge>
+        <Badge tone="primary" className="uppercase tracking-wide"><Star className="h-3 w-3 fill-current" /> Depoimentos reais</Badge>
         <h2 className="mt-4 text-4xl font-semibold tracking-tight">
           Síndicos que viraram fãs
         </h2>
@@ -772,7 +772,7 @@ function PricingSection() {
   return (
     <div ref={ref}>
       <div className="text-center max-w-2xl mx-auto mb-12">
-        <Badge tone="primary"><Sparkles className="h-3 w-3" /> Planos</Badge>
+        <Badge tone="primary" className="uppercase tracking-wide"><Sparkles className="h-3 w-3" /> Planos</Badge>
         <h2 className="mt-4 text-4xl font-semibold tracking-tight">
           Um preço simples pro seu condomínio
         </h2>
@@ -802,7 +802,7 @@ function PricingSection() {
             </div>
             <p className="mt-4 text-sm font-semibold">{p.name}</p>
             <p className="mt-1 flex items-baseline gap-1">
-              <span className="text-3xl font-semibold tracking-tight">{p.price}</span>
+              <span className="text-3xl font-semibold tracking-tight tabular-nums">{p.price}</span>
               {p.period && <span className="text-sm text-muted-foreground">{p.period}</span>}
             </p>
             <p className="text-xs text-muted-foreground">{p.note}</p>
@@ -836,7 +836,7 @@ function CTASection() {
     >
       <div className="absolute inset-0 grid-bg opacity-20" />
       <div className="relative max-w-2xl mx-auto">
-        <Badge tone="primary">
+        <Badge tone="primary" className="uppercase tracking-wide">
           <Sparkles className="h-3 w-3" /> 30 dias grátis
         </Badge>
         <h2 className="mt-5 text-4xl md:text-5xl font-semibold tracking-tight text-primary-foreground text-balance">
@@ -883,7 +883,7 @@ function DashboardPreview() {
         ].map((s) => (
           <div key={s.l} className="rounded-xl border border-border bg-card p-3 sm:p-4">
             <p className="text-xs text-muted-foreground">{s.l}</p>
-            <p className={`mt-1 text-2xl font-semibold ${s.tone}`}>{s.v}</p>
+            <p className={`mt-1 text-2xl font-semibold tabular-nums ${s.tone}`}>{s.v}</p>
           </div>
         ))}
       </div>
@@ -898,7 +898,7 @@ function DashboardPreview() {
             return <div key={i} className="rounded-md bg-gradient-to-t from-primary/30 to-primary/80" style={{ height: `${h}px` }} />;
           })}
         </div>
-        <div className="mt-4 grid grid-cols-7 text-[10px] text-muted-foreground">
+        <div className="mt-4 grid grid-cols-7 text-xs text-muted-foreground">
           {["S","T","Q","Q","S","S","D"].map((d, i) => <span key={i} className="text-center">{d}</span>)}
         </div>
       </div>
