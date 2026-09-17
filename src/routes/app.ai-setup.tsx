@@ -1,16 +1,14 @@
 // @ts-nocheck
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import {
   Brain, Loader2, Save, CheckCircle2, Sparkles, RefreshCw,
   AlertTriangle, Info, ChevronDown, ChevronUp, Trash2,
-  MessageCircle, Wifi, WifiOff, ExternalLink, ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { saveCondoAiContext, getCondoAiContext } from "@/lib/ai-context.functions";
-import { getWhatsAppConfig, saveWhatsAppConfig, testWhatsAppConnection, type WhatsAppConfig } from "@/lib/whatsapp.functions";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 
@@ -45,9 +43,6 @@ function AiSetupPage() {
 
   const fetchCtx  = useServerFn(getCondoAiContext);
   const saveCtx   = useServerFn(saveCondoAiContext);
-  const fetchWa   = useServerFn(getWhatsAppConfig);
-  const saveWa    = useServerFn(saveWhatsAppConfig);
-  const testWa    = useServerFn(testWhatsAppConnection);
 
   const [context, setContext]       = useState("");
   const [onboardedAt, setOnboarded] = useState<string | null>(null);
@@ -56,41 +51,18 @@ function AiSetupPage() {
   const [saving, setSaving]         = useState(false);
   const [rulesOpen, setRulesOpen]   = useState(false);
 
-  // WhatsApp / Evolution API
-  const [waConfig, setWaConfig]     = useState<WhatsAppConfig | null>(null);
-  const [waUrl, setWaUrl]           = useState("");
-  const [waKey, setWaKey]           = useState("");
-  const [waInstance, setWaInstance] = useState("condoflow");
-  const [waPhone, setWaPhone]       = useState("");
-  const [waWarn, setWaWarn]         = useState(true);
-  const [waCrit, setWaCrit]         = useState(true);
-  const [waInfo, setWaInfo]         = useState(false);
-  const [waSaving, setWaSaving]     = useState(false);
-  const [waTesting, setWaTesting]   = useState(false);
-
   useEffect(() => {
     if (!condoId) return;
     setLoading(true);
-    Promise.all([
-      fetchCtx({ data: { condoId } }),
-      fetchWa({ data: { condoId } }),
-    ])
-      .then(([ctx, wa]) => {
+    fetchCtx({ data: { condoId } })
+      .then((ctx) => {
         setContext(ctx.aiContext ?? "");
         setOnboarded(ctx.onboardedAt ?? null);
         setRules(ctx.serviceRules as ServiceRule[]);
-        setWaConfig(wa);
-        setWaUrl(wa.evolution_api_url ?? "");
-        setWaKey(wa.evolution_api_key ?? "");
-        setWaInstance(wa.evolution_instance ?? "condoflow");
-        setWaPhone(wa.evolution_phone ?? "");
-        setWaWarn(wa.wa_notify_warning ?? true);
-        setWaCrit(wa.wa_notify_critical ?? true);
-        setWaInfo(wa.wa_notify_info ?? false);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [condoId, fetchCtx, fetchWa]);
+  }, [condoId, fetchCtx]);
 
   if (!condoId || !isAdmin) {
     return (
@@ -118,50 +90,6 @@ function AiSetupPage() {
       toast.error(e.message ?? "Erro ao salvar contexto.");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleSaveWa = async () => {
-    if (!condoId) return;
-    setWaSaving(true);
-    try {
-      await saveWa({ data: {
-        condoId,
-        evolution_api_url:  waUrl.trim() || null,
-        evolution_api_key:  waKey.trim() || null,
-        evolution_instance: waInstance.trim() || null,
-        evolution_phone:    waPhone.trim() || null,
-        wa_notify_warning:  waWarn,
-        wa_notify_critical: waCrit,
-        wa_notify_info:     waInfo,
-      }});
-      toast.success("Configuração de WhatsApp salva!");
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao salvar.");
-    } finally {
-      setWaSaving(false);
-    }
-  };
-
-  const handleTestWa = async () => {
-    if (!condoId || !waUrl || !waKey || !waInstance || !waPhone) {
-      toast.error("Preencha todos os campos antes de testar.");
-      return;
-    }
-    setWaTesting(true);
-    try {
-      await testWa({ data: {
-        condoId,
-        evolution_api_url:  waUrl.trim(),
-        evolution_api_key:  waKey.trim(),
-        evolution_instance: waInstance.trim(),
-        evolution_phone:    waPhone.trim(),
-      }});
-      toast.success("✅ Mensagem de teste enviada! Verifique seu WhatsApp.");
-    } catch (e: any) {
-      toast.error(e.message ?? "Falha na conexão. Verifique os dados.");
-    } finally {
-      setWaTesting(false);
     }
   };
 
@@ -279,97 +207,11 @@ function AiSetupPage() {
           : <><RefreshCw className="h-4 w-4" /> Atualizar e regerar regras</>}
       </button>
 
-      {/* ─── WhatsApp do Síndico (Evolution API) ─── */}
-      <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
-        <div className="flex items-start gap-3">
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-            <MessageCircle className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold">WhatsApp do síndico — IA manda alertas direto pra você</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Toda vez que a IA detectar algo importante (reserva problemática, reclamação, tarefa urgente), ela te avisa no WhatsApp. Grátis, usa seu número pessoal.
-            </p>
-          </div>
-          {waConfig?.evolution_api_url && (
-            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">
-              <Wifi className="h-3 w-3" /> Conectado
-            </span>
-          )}
-        </div>
-
-        {/* Instrução de setup */}
-        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4 space-y-2">
-          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-            <Info className="h-3.5 w-3.5" /> Como configurar a Evolution API (grátis)
-          </p>
-          <ol className="text-xs text-amber-700 dark:text-amber-400 space-y-1 list-decimal list-inside">
-            <li>Acesse <a href="https://railway.app" target="_blank" rel="noopener noreferrer" className="underline font-medium">railway.app</a> → New Project → Deploy from template → busque <strong>"Evolution API"</strong></li>
-            <li>Faça o deploy (leva ~2 min). Copie a URL gerada (ex: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">https://xxx.railway.app</code>)</li>
-            <li>Abra a URL + <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">/manager</code>, crie uma instância e escaneie o QR Code com seu WhatsApp</li>
-            <li>Cole a URL, chave da API e nome da instância abaixo</li>
-          </ol>
-        </div>
-
-        {/* Campos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">URL da Evolution API *</label>
-            <input value={waUrl} onChange={(e) => setWaUrl(e.target.value)} placeholder="https://xxx.railway.app"
-              className="mt-1 w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Chave da API (apikey) *</label>
-            <input type="password" value={waKey} onChange={(e) => setWaKey(e.target.value)} placeholder="sua-chave-secreta"
-              className="mt-1 w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Nome da instância *</label>
-            <input value={waInstance} onChange={(e) => setWaInstance(e.target.value)} placeholder="condoflow"
-              className="mt-1 w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40" />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">Seu número do WhatsApp (com DDI) *</label>
-            <input value={waPhone} onChange={(e) => setWaPhone(e.target.value)} placeholder="5511999999999"
-              className="mt-1 w-full h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40" />
-            <p className="text-[11px] text-muted-foreground mt-1">Somente números. Ex: 5511999999999 (55 = Brasil, 11 = DDD, resto = número)</p>
-          </div>
-        </div>
-
-        {/* Quais eventos avisar */}
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2">Me avisar quando a IA detectar:</p>
-          <div className="space-y-2">
-            {[
-              { label: "⚠️ Alertas (reserva problemática, manutenção atrasada, reclamação)", state: waWarn, set: setWaWarn },
-              { label: "🚨 Críticos (incidente grave, acesso não autorizado, emergência)", state: waCrit, set: setWaCrit },
-              { label: "ℹ️ Informativos (resumos, novidades, confirmações)", state: waInfo, set: setWaInfo },
-            ].map(({ label, state, set }) => (
-              <label key={label} className="flex items-center gap-3 cursor-pointer select-none">
-                <div onClick={() => set((v: boolean) => !v)}
-                  className={`relative h-5 w-9 rounded-full transition-colors shrink-0 ${state ? "bg-primary" : "bg-muted-foreground/30"}`}>
-                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${state ? "translate-x-4" : "translate-x-0.5"}`} />
-                </div>
-                <span className="text-sm">{label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Botões */}
-        <div className="flex flex-wrap gap-2 pt-1">
-          <button onClick={handleTestWa} disabled={waTesting || !waUrl || !waKey || !waInstance || !waPhone}
-            className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 text-sm font-medium hover:bg-emerald-500/10 disabled:opacity-50 transition">
-            {waTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
-            Testar conexão
-          </button>
-          <button onClick={handleSaveWa} disabled={waSaving}
-            className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-gradient-hero text-sm font-medium text-primary-foreground hover:opacity-95 disabled:opacity-60 transition">
-            {waSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-            Salvar
-          </button>
-        </div>
-      </div>
+      {/* Aponta para o lugar certo de configurar o WhatsApp */}
+      <p className="text-xs text-muted-foreground">
+        Quer receber avisos da IA no WhatsApp? Configure em{" "}
+        <Link to="/app/ai-monitor" className="text-primary underline font-medium">IA Operacional</Link>.
+      </p>
 
       {/* Regras geradas */}
       {rules.length > 0 && (
