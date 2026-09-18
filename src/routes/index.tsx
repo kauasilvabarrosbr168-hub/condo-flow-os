@@ -21,6 +21,7 @@ import {
   Play,
   ChevronRight,
   LifeBuoy,
+  X,
 } from "lucide-react";
 import { Logo, Badge } from "@/components/brand";
 
@@ -291,7 +292,7 @@ function Landing() {
               </a>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">
-              Grátis nos primeiros 30 dias · Implantação em 7 dias · Cancele quando quiser
+              Implantação em 7 dias · Cancele quando quiser · 30 dias grátis a partir do Profissional
             </p>
           </div>
 
@@ -920,9 +921,10 @@ function TestimonialsSection() {
 }
 
 /* ════════════════════════ PRICING SECTION ════════════════════════ */
-// NOTA: valores e faixas de tamanho ilustrativos/placeholder — preço final e
-// corte exato de unidades por plano ainda não foram definidos.
-// Ajuste os números abaixo antes de publicar em produção.
+// Precificação decidida em 2026-09-17: 4 planos por faixa de unidades,
+// benchmarked contra uCondo (R$139) e Residente Online (R$229/até 100u).
+// IA nativa é o divisor: só a partir do Profissional. Revisar após os
+// primeiros clientes pagantes — preço de lançamento é hipótese, não dogma.
 function PricingSection() {
   const { ref, inView } = useInView(0.05);
 
@@ -930,45 +932,60 @@ function PricingSection() {
     {
       icon: Building2,
       name: "Essencial",
-      price: "R$ 149",
+      price: "R$ 89",
       period: "/mês",
-      note: "para condomínios pequenos",
+      note: "até 20 unidades",
       highlight: false,
       features: [
-        "Reservas e manutenção automatizadas",
-        "Até 3 áreas comuns",
-        "Notificações multicanal",
-        "Suporte via chat em horário comercial",
+        "Reservas de áreas comuns (até 3)",
+        "Chamados de manutenção",
+        "Notificações no WhatsApp",
       ],
+      excluded: ["IA nativa"],
     },
     {
       icon: Star,
       name: "Profissional",
-      price: "R$ 249",
+      price: "R$ 149",
       period: "/mês",
-      note: "para condomínios de porte médio",
+      note: "até 60 unidades",
       highlight: true,
       features: [
-        "Reservas e manutenção automatizadas",
+        "Tudo do Essencial",
+        "IA nativa (tarefas geradas automaticamente)",
         "Áreas comuns ilimitadas",
-        "IA nativa incluída",
-        "Notificações multicanal",
-        "Suporte via chat em horário comercial",
+        "30 dias grátis pra testar",
       ],
+      excluded: [] as string[],
+    },
+    {
+      icon: Zap,
+      name: "Premium",
+      price: "R$ 249",
+      period: "/mês",
+      note: "até 100 unidades",
+      highlight: false,
+      features: [
+        "Tudo do Profissional",
+        "Feito pra condomínios maiores (até 100 unidades)",
+        "30 dias grátis pra testar",
+      ],
+      excluded: [] as string[],
     },
     {
       icon: Users,
       name: "Administradora",
       price: "Sob consulta",
       period: "",
-      note: "múltiplos condomínios",
+      note: "+100 unidades",
       highlight: false,
       features: [
-        "Preço por condomínio administrado",
-        "Onboarding dedicado para toda a equipe",
-        "Gestor de conta exclusivo",
-        "Relatórios consolidados entre condomínios",
+        "Tudo do Profissional e do Premium",
+        "Multi-condomínio num painel só",
+        "Atendimento dedicado",
+        "30 dias grátis pra testar",
       ],
+      excluded: [] as string[],
     },
   ];
 
@@ -984,7 +1001,7 @@ function PricingSection() {
         </p>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-3 max-w-5xl mx-auto">
+      <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
         {plans.map((p, i) => (
           <div
             key={p.name}
@@ -1001,7 +1018,7 @@ function PricingSection() {
               <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full buzzer-chip ${p.highlight ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                 <p.icon className="h-5 w-5" />
               </span>
-              {p.highlight && <Badge tone="primary">Mais comum</Badge>}
+              {p.highlight && <Badge tone="primary">Mais escolhido</Badge>}
             </div>
             <p className="mt-4 text-sm font-semibold">{p.name}</p>
             <p className="mt-1 flex items-baseline gap-1">
@@ -1013,6 +1030,12 @@ function PricingSection() {
               {p.features.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                  {f}
+                </li>
+              ))}
+              {p.excluded.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground/60">
+                  <X className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
                   {f}
                 </li>
               ))}

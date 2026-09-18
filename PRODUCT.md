@@ -44,7 +44,7 @@ Name: **CondoFlow**. Existing logo assets (`logo-dark.png` / `logo-light.png`, l
 
 **Real assets:** a promotional video file exists at `/condoflow-promo.mp4`. The product capabilities described in the landing page copy (reservations, AI task generation, notifications, maintenance history) reflect real, already-built functionality — only the social-proof layer (names/quotes/logos/stats) is placeholder, not the feature claims themselves.
 
-Pricing shown on the landing page today is also explicitly placeholder (confirmed during a prior session) — real pricing has not been decided yet.
+Pricing was decided on 2026-09-17 (not placeholder anymore): 4 tiers by unit-count bracket — Essencial R$89/mês (até 20 unidades, no native AI), Profissional R$149/mês (até 60 unidades, native AI included, highlighted plan), Premium R$249/mês (até 100 unidades, same features as Profissional at a larger bracket), Administradora (sob consulta, +100 unidades / multi-condo). Benchmarked against uCondo (R$139/mês) and Residente Online (R$229/mês até 100 unidades). The 30-day free trial applies from Profissional up — not on Essencial. Treat as the current launch pricing, not a placeholder, but revisit after real paying customers (launch pricing is a hypothesis, not dogma).
 
 ## Product Principles
 
