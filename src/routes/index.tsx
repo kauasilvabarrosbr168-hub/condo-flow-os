@@ -937,11 +937,13 @@ function PricingSection() {
       note: "até 20 unidades",
       highlight: false,
       features: [
-        "Reservas de áreas comuns (até 3)",
-        "Chamados de manutenção",
-        "Notificações no WhatsApp",
+        "Reservas de áreas comuns (até 2)",
+        "Chamados de manutenção com histórico",
+        "Notificações por WhatsApp e e-mail",
+        "Cadastro de moradores e funcionários",
+        "Suporte via chat em horário comercial",
       ],
-      excluded: ["IA nativa"],
+      excluded: ["IA nativa (tarefas automáticas)"],
     },
     {
       icon: Star,
@@ -952,8 +954,9 @@ function PricingSection() {
       highlight: true,
       features: [
         "Tudo do Essencial",
-        "IA nativa (tarefas geradas automaticamente)",
+        "IA nativa: tarefas geradas e atribuídas automaticamente",
         "Áreas comuns ilimitadas",
+        "Relatório mensal automático pra assembleia",
         "30 dias grátis pra testar",
       ],
       excluded: [] as string[],
@@ -968,6 +971,7 @@ function PricingSection() {
       features: [
         "Tudo do Profissional",
         "Feito pra condomínios maiores (até 100 unidades)",
+        "Suporte prioritário",
         "30 dias grátis pra testar",
       ],
       excluded: [] as string[],
@@ -982,7 +986,8 @@ function PricingSection() {
       features: [
         "Tudo do Profissional e do Premium",
         "Multi-condomínio num painel só",
-        "Atendimento dedicado",
+        "Gestor de conta exclusivo",
+        "Onboarding dedicado para toda a equipe",
         "30 dias grátis pra testar",
       ],
       excluded: [] as string[],
@@ -1005,41 +1010,42 @@ function PricingSection() {
         {plans.map((p, i) => (
           <div
             key={p.name}
-            className={`rounded-2xl p-6 panel-plate panel-plate-hover ${
-              p.highlight ? "bg-primary/5" : "bg-card"
-            }`}
             style={{
               opacity: inView ? 1 : 0,
               transform: inView ? "translateY(0)" : "translateY(24px)",
-              transition: `opacity 0.55s ease ${i * 100}ms, transform 0.55s ease ${i * 100}ms, box-shadow 0.3s ease`,
+              transition: `opacity 0.55s ease ${i * 100}ms, transform 0.55s ease ${i * 100}ms`,
             }}
           >
-            <div className="flex items-center justify-between">
-              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full buzzer-chip ${p.highlight ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
-                <p.icon className="h-5 w-5" />
-              </span>
-              {p.highlight && <Badge tone="primary">Mais escolhido</Badge>}
+            <div className={`pricing-card-frame rounded-2xl p-[2px] h-full ${p.highlight ? "pricing-card-frame-highlight" : ""}`}>
+              <div className="rounded-2xl bg-white dark:bg-card p-6 h-full">
+                <div className="flex items-center justify-between">
+                  <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full buzzer-chip ${p.highlight ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                    <p.icon className="h-5 w-5" />
+                  </span>
+                  {p.highlight && <Badge tone="primary">Mais escolhido</Badge>}
+                </div>
+                <p className="mt-4 text-sm font-semibold bg-gradient-hero bg-clip-text text-transparent">{p.name}</p>
+                <p className="mt-1 flex items-baseline gap-1">
+                  <span className="text-3xl font-semibold tracking-tight tabular-nums text-success">{p.price}</span>
+                  {p.period && <span className="text-sm text-muted-foreground">{p.period}</span>}
+                </p>
+                <p className="text-xs text-muted-foreground">{p.note}</p>
+                <ul className="mt-5 space-y-2.5">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                      {f}
+                    </li>
+                  ))}
+                  {p.excluded.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground/60">
+                      <X className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <p className="mt-4 text-sm font-semibold">{p.name}</p>
-            <p className="mt-1 flex items-baseline gap-1">
-              <span className="text-3xl font-semibold tracking-tight tabular-nums">{p.price}</span>
-              {p.period && <span className="text-sm text-muted-foreground">{p.period}</span>}
-            </p>
-            <p className="text-xs text-muted-foreground">{p.note}</p>
-            <ul className="mt-5 space-y-2.5">
-              {p.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
-                  {f}
-                </li>
-              ))}
-              {p.excluded.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground/60">
-                  <X className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
-                  {f}
-                </li>
-              ))}
-            </ul>
           </div>
         ))}
       </div>

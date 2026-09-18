@@ -280,6 +280,21 @@
   .marquee-track:hover {
     animation-play-state: paused;
   }
+  /* Cards de planos — moldura em degradê (o mesmo --gradient-hero do resto
+     do site) pra destacar essa área de conversão do restante calmo da
+     página, a pedido explícito do usuário. */
+  .pricing-card-frame {
+    background-image: var(--gradient-hero);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .pricing-card-frame:hover {
+    box-shadow: var(--shadow-elegant);
+    transform: translateY(-3px);
+  }
+  .pricing-card-frame-highlight {
+    box-shadow: var(--shadow-elegant);
+  }
 }
 
 @keyframes fade-in {
