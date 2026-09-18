@@ -356,6 +356,11 @@ function Landing() {
       {/* ── Problem ── */}
       <ProblemSection />
 
+      {/* ── Para quem é o CondoFlow ── */}
+      <section className="mx-auto max-w-7xl px-6 py-24">
+        <AudienceSection />
+      </section>
+
       {/* ── Features ── */}
       <section id="features" className="scroll-mt-20 mx-auto max-w-7xl px-6 py-24">
         <FeaturesSection />
@@ -547,6 +552,121 @@ function ProblemSection() {
   );
 }
 
+/* ════════════════════════ AUDIENCE SECTION ════════════════════════ */
+function AudienceSection() {
+  const { ref, inView } = useInView(0.05);
+  const [tab, setTab] = useState<"sindico" | "administradora">("sindico");
+
+  const content = {
+    sindico: {
+      label: "Síndico",
+      icon: Users,
+      heading: "Para o síndico que quer ser mais eficiente",
+      desc: "Cuide do condomínio sem virar um segundo emprego. A tecnologia assume o operacional, você só supervisiona.",
+      bullets: [
+        "Emissão rápida de avisos e gestão de chamados",
+        "Reservas de áreas comuns automatizadas",
+        "Agenda de manutenções completa",
+        "Tarefas geradas e atribuídas pela IA",
+      ],
+      cards: [
+        { label: "Chamados abertos", value: "2" },
+        { label: "Próxima reserva", value: "Salão · 19h" },
+      ],
+    },
+    administradora: {
+      label: "Administradora",
+      icon: Building2,
+      heading: "Para a administradora que gerencia várias operações",
+      desc: "Um painel só pra todos os condomínios que você administra, com gestão de conta dedicada.",
+      bullets: [
+        "Multi-condomínio num painel só",
+        "Relatórios consolidados entre condomínios",
+        "Gestor de conta exclusivo",
+        "Onboarding dedicado para toda a equipe",
+      ],
+      cards: [
+        { label: "Condomínios ativos", value: "8" },
+        { label: "Unidades administradas", value: "142" },
+      ],
+    },
+  } as const;
+
+  const c = content[tab];
+
+  return (
+    <div ref={ref}>
+      <div className="text-center max-w-2xl mx-auto mb-10">
+        <Badge tone="primary" className="uppercase tracking-wide">Plataforma completa</Badge>
+        <h2 className="mt-4 text-4xl font-semibold tracking-tight">Para quem é o CondoFlow?</h2>
+      </div>
+
+      <div className="flex justify-center mb-10">
+        <div className="inline-flex rounded-full bg-muted p-1">
+          {(Object.keys(content) as Array<keyof typeof content>).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`rounded-full px-5 py-2 text-sm font-medium transition ${
+                tab === t ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {content[t].label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div
+        className="grid lg:grid-cols-2 gap-12 items-center"
+        style={{
+          opacity: inView ? 1 : 0,
+          transform: inView ? "translateY(0)" : "translateY(24px)",
+          transition: "opacity 0.6s ease, transform 0.6s ease",
+        }}
+      >
+        {/* NOTA: painel abaixo é um placeholder no lugar de uma foto real —
+            trocar o fundo por uma imagem de verdade quando tiver o asset. */}
+        <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-gradient-soft panel-plate">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <c.icon className="h-20 w-20 text-primary/15" />
+          </div>
+          <div className="absolute left-6 top-6 rounded-xl bg-card panel-plate px-4 py-3">
+            <p className="text-xs text-muted-foreground">{c.cards[0].label}</p>
+            <p className="text-lg font-semibold tabular-nums">{c.cards[0].value}</p>
+          </div>
+          <div className="absolute bottom-6 right-6 rounded-xl bg-card panel-plate px-4 py-3">
+            <p className="text-xs text-muted-foreground">{c.cards[1].label}</p>
+            <p className="text-lg font-semibold tabular-nums">{c.cards[1].value}</p>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-2xl font-semibold tracking-tight text-balance">{c.heading}</h3>
+          <p className="mt-3 text-muted-foreground leading-relaxed">{c.desc}</p>
+          <ul className="mt-5 space-y-3">
+            {c.bullets.map((b) => (
+              <li key={b} className="flex items-start gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" /> {b}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-6 flex flex-wrap items-center gap-5">
+            <Link
+              to="/app/dashboard"
+              className="group inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-hero px-6 text-sm font-medium text-primary-foreground btn-plate hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+            >
+              Começar agora <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </Link>
+            <a href="#video" className="text-sm font-medium text-primary hover:underline">Assista uma demonstração</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ════════════════════════ FEATURES SECTION ════════════════════════ */
 function FeaturesSection() {
   const { ref, inView } = useInView(0.05);
@@ -675,12 +795,8 @@ function IASection() {
             O CondoFlow tem IA nativa: não é uma integração de terceiros, é parte do núcleo da plataforma.
             Ela aprende o ritmo do seu condomínio e antecipa o que precisa ser feito.
           </p>
-          <div className="mt-8 rounded-2xl bg-card panel-plate p-5 font-mono text-sm">
-            <div className="flex items-center gap-2 mb-4 text-muted-foreground text-xs">
-              <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-              IA CondoFlow · Processando
-            </div>
-            <TypingDemo />
+          <div className="mt-8">
+            <PhoneAIDemo />
           </div>
         </div>
 
@@ -710,51 +826,81 @@ function IASection() {
   );
 }
 
-function TypingDemo() {
+/* ─── PhoneAIDemo: mockup de celular com chat estilo WhatsApp — mostra a IA
+   recebendo o pedido e gerando as tarefas, como no canal real do produto. ─── */
+function PhoneAIDemo() {
+  return (
+    <div className="mx-auto w-full max-w-[260px]">
+      <div className="relative rounded-[2.25rem] border-[8px] border-foreground bg-foreground shadow-elegant">
+        <span className="absolute left-1/2 top-0 z-10 h-4 w-24 -translate-x-1/2 rounded-b-xl bg-foreground" />
+        <div className="relative aspect-[9/18] overflow-hidden rounded-[1.5rem] bg-background">
+          <div className="flex items-center gap-2 bg-gradient-hero px-3 py-2.5 text-primary-foreground">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20">
+              <Brain className="h-3.5 w-3.5" />
+            </span>
+            <div className="leading-tight">
+              <p className="text-xs font-semibold">CondoFlow IA</p>
+              <p className="text-xs opacity-80">online</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 p-3">
+            <ChatTaskDemo />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChatTaskDemo() {
   const lines = [
-    "> Gerar tarefas para preparar o condomínio para o verão",
-    "",
-    "✦ Criando 5 tarefas...",
-    "",
-    "1. Verificar bomba da piscina · Pedro · 15/nov",
-    "2. Limpeza completa da piscina · João · 20/nov",
-    "3. Checar chuveiros da área externa · Carlos · 18/nov",
-    "4. Manutenção do filtro de areia · Pedro · 22/nov",
-    "5. Repor cloro e pH · João · semanal",
+    "Verificar bomba da piscina · Pedro · 15/nov",
+    "Limpeza completa da piscina · João · 20/nov",
+    "Checar chuveiros da área externa · Carlos · 18/nov",
+    "Manutenção do filtro de areia · Pedro · 22/nov",
+    "Repor cloro e pH · João · semanal",
   ];
-  const taskCount = lines.filter((l) => /^\d+\./.test(l)).length;
+  const [tapped, setTapped] = useState(false);
   const [visible, setVisible] = useState(0);
-  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (visible >= lines.length) {
-      const t = setTimeout(() => setDone(true), 400);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => setVisible((v) => v + 1), visible === 0 ? 600 : 250);
+    const t = setTimeout(() => setTapped(true), 900);
     return () => clearTimeout(t);
-  }, [visible, lines.length]);
+  }, []);
+
+  useEffect(() => {
+    if (!tapped || visible >= lines.length) return;
+    const t = setTimeout(() => setVisible((v) => v + 1), visible === 0 ? 500 : 320);
+    return () => clearTimeout(t);
+  }, [tapped, visible, lines.length]);
 
   return (
-    <div className="space-y-1">
-      {lines.slice(0, visible).map((l, i) => (
-        <div
-          key={i}
-          className={`${l.startsWith(">") ? "text-primary font-semibold" : l.startsWith("✦") ? "text-success" : l === "" ? "h-2" : "text-foreground/80"}`}
-        >
-          {l}
+    <>
+      <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-primary px-3 py-2 text-xs text-primary-foreground">
+        Gerar tarefas para preparar o condomínio para o verão
+      </div>
+      {!tapped ? (
+        <div className="relative mr-auto w-fit">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-3 py-1.5 text-xs font-medium text-primary">
+            <Sparkles className="h-3.5 w-3.5" /> Gerar tarefas
+          </span>
+          <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-primary animate-ping" />
+          <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-primary" />
         </div>
-      ))}
-      {visible < lines.length && (
-        <span className="inline-block w-2 h-4 bg-primary animate-pulse align-middle" />
-      )}
-      {done && (
-        <div className="mt-2 flex items-center gap-1.5 text-success animate-fade-in">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          <span>{taskCount} tarefas prontas</span>
+      ) : (
+        <div className="mr-auto max-w-[92%] rounded-2xl rounded-tl-sm bg-card panel-plate px-3 py-2 text-xs">
+          <p className="font-medium text-success">✦ Criando {lines.length} tarefas...</p>
+          <ul className="mt-1.5 space-y-1">
+            {lines.slice(0, visible).map((l, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-foreground/80">
+                <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
+                {l}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -812,7 +958,7 @@ function HowItWorksSection() {
               transition: `opacity 0.6s ease ${i * 100}ms, transform 0.6s ease ${i * 100}ms`,
             }}
           >
-            <div className="text-4xl font-semibold text-primary/20 tracking-tight leading-none tabular-nums mb-4">{s.number}</div>
+            <div className="text-5xl font-bold bg-gradient-hero bg-clip-text text-transparent tracking-tight leading-none tabular-nums mb-4">{s.number}</div>
             <h3 className="text-lg font-semibold">{s.title}</h3>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
             <ul className="mt-4 space-y-2">
