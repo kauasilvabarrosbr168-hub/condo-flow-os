@@ -1094,8 +1094,6 @@ function PricingSection() {
     {
       icon: Building2,
       name: "Essencial",
-      price: "R$ 89",
-      period: "/mês",
       note: "até 20 unidades",
       highlight: false,
       features: [
@@ -1110,8 +1108,6 @@ function PricingSection() {
     {
       icon: Star,
       name: "Profissional",
-      price: "R$ 149",
-      period: "/mês",
       note: "até 60 unidades",
       highlight: true,
       features: [
@@ -1126,8 +1122,6 @@ function PricingSection() {
     {
       icon: Zap,
       name: "Premium",
-      price: "R$ 249",
-      period: "/mês",
       note: "até 100 unidades",
       highlight: false,
       features: [
@@ -1141,8 +1135,6 @@ function PricingSection() {
     {
       icon: Users,
       name: "Administradora",
-      price: "Sob consulta",
-      period: "",
       note: "+100 unidades",
       highlight: false,
       features: [
@@ -1161,10 +1153,10 @@ function PricingSection() {
       <div className="text-center max-w-2xl mx-auto mb-12">
         <Badge tone="primary" className="uppercase tracking-wide"><Sparkles className="h-3 w-3" /> Planos</Badge>
         <h2 className="mt-4 text-4xl font-semibold tracking-tight">
-          Um preço simples pro seu condomínio
+          Um plano feito pro tamanho do seu condomínio
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Valores de referência: o time confirma o plano certo pra você em uma conversa rápida.
+          Cada condomínio tem uma realidade diferente — fale com a gente e a equipe monta o plano certo pra você.
         </p>
       </div>
 
@@ -1187,10 +1179,7 @@ function PricingSection() {
                   {p.highlight && <Badge tone="primary">Mais escolhido</Badge>}
                 </div>
                 <p className="mt-4 text-sm font-semibold bg-gradient-hero bg-clip-text text-transparent">{p.name}</p>
-                <p className="mt-1 flex items-baseline gap-1">
-                  <span className="text-3xl font-semibold tracking-tight tabular-nums text-success">{p.price}</span>
-                  {p.period && <span className="text-sm text-muted-foreground">{p.period}</span>}
-                </p>
+                <p className="mt-1 text-lg font-semibold text-success">Fale com a gente</p>
                 <p className="text-xs text-muted-foreground">{p.note}</p>
                 <ul className="mt-5 space-y-2.5">
                   {p.features.map((f) => (
@@ -1206,6 +1195,12 @@ function PricingSection() {
                     </li>
                   ))}
                 </ul>
+                <a
+                  href={`mailto:vendas@condoflow.site?subject=${encodeURIComponent(`Quero conhecer o plano ${p.name}`)}`}
+                  className="group mt-6 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-hero px-4 text-sm font-medium text-primary-foreground btn-plate hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                >
+                  Falar com vendas <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </a>
               </div>
             </div>
           </div>
