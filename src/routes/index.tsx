@@ -124,6 +124,106 @@ function useTilt(maxDeg = 3.5) {
   return { ref, style };
 }
 
+/* ─── useScrollProgress: 0→1 conforme a seção passa pela viewport ao rolar —
+   liga o listener só enquanto a seção está por perto e desliga sozinho fora
+   dela; nunca corre em prefers-reduced-motion ─── */
+function useScrollProgress() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [progress, setProgress] = useState(0);
+  const frame = useRef<number | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const update = () => {
+      frame.current = null;
+      const rect = el.getBoundingClientRect();
+      setProgress(Math.min(Math.max(-rect.top / rect.height, 0), 1));
+    };
+    const onScroll = () => {
+      if (frame.current !== null) return;
+      frame.current = requestAnimationFrame(update);
+    };
+
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          window.addEventListener("scroll", onScroll, { passive: true });
+          update();
+        } else {
+          window.removeEventListener("scroll", onScroll);
+        }
+      },
+      { rootMargin: "50% 0px 50% 0px" }
+    );
+    obs.observe(el);
+
+    return () => {
+      obs.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    };
+  }, []);
+
+  return { ref, progress };
+}
+
+/* ─── ProblemReadouts: textura ambiente no fundo do hero — pequenos "registros"
+   de resolução de problemas (ids, tempos, confirmações) em 3 profundidades,
+   deslizando em velocidades diferentes conforme rola (sensação de paralaxe 3D).
+   Puramente decorativo/ilustrativo — não é uma métrica real do produto. ─── */
+function ProblemReadouts() {
+  const { ref, progress } = useScrollProgress();
+
+  const items: { t: string; x: string; y: string; depth: 1 | 2 | 3; tone?: "success" }[] = [
+    { t: "#1042 resolvido", x: "8%",  y: "20%", depth: 1 },
+    { t: "00:02:14",        x: "84%", y: "14%", depth: 2 },
+    { t: "SLA ok",          x: "20%", y: "64%", depth: 2, tone: "success" },
+    { t: "#1043 resolvido", x: "72%", y: "72%", depth: 1 },
+    { t: "concluído",       x: "42%", y: "10%", depth: 3, tone: "success" },
+    { t: "tarefa fechada",  x: "90%", y: "46%", depth: 1 },
+    { t: "#1044 resolvido", x: "6%",  y: "84%", depth: 2 },
+    { t: "0 pendências",    x: "60%", y: "88%", depth: 3 },
+    { t: "ocorrência ✓",    x: "30%", y: "42%", depth: 2, tone: "success" },
+    { t: "#1045 resolvido", x: "86%", y: "82%", depth: 1 },
+    { t: "checklist ok",    x: "52%", y: "56%", depth: 3 },
+  ];
+
+  const depthCfg = {
+    1: { mult: 14, opacity: 0.06, blur: "0.4px", size: "text-xs", scaleTo: 1.02 },
+    2: { mult: 26, opacity: 0.09, blur: "0px",   size: "text-xs",     scaleTo: 1.05 },
+    3: { mult: 42, opacity: 0.13, blur: "0px",   size: "text-sm",     scaleTo: 1.09 },
+  } as const;
+
+  return (
+    <div ref={ref} aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+      {items.map((it, i) => {
+        const cfg = depthCfg[it.depth];
+        const translate = -progress * cfg.mult;
+        const scale = 1 + progress * (cfg.scaleTo - 1);
+        return (
+          <span
+            key={i}
+            className={`absolute font-mono tabular-nums text-muted-foreground ${cfg.size} ${it.depth === 1 ? "hidden sm:block" : ""}`}
+            style={{
+              left: it.x,
+              top: it.y,
+              opacity: cfg.opacity,
+              filter: cfg.blur !== "0px" ? `blur(${cfg.blur})` : undefined,
+              transform: `translateY(${translate}px) scale(${scale})`,
+              color: it.tone === "success" ? "var(--success)" : undefined,
+            }}
+          >
+            {it.t}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function Landing() {
   const tilt = useTilt();
   const [booted, setBooted] = useState(false);
@@ -162,6 +262,7 @@ function Landing() {
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-60 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
+        <ProblemReadouts />
         <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
           <div className="mx-auto max-w-3xl text-center animate-fade-in">
             <Badge tone="primary" className="uppercase tracking-wide">
