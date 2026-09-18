@@ -77,7 +77,16 @@ function ConhecerSistema() {
       </header>
 
       {/* ── Pitch + formulário ── */}
-      <section className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
+      <section className="relative overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-top opacity-[0.14]"
+          style={{
+            backgroundImage: "url(/conhecer-hero-bg.png)",
+            maskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 100%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-7xl px-6 py-16 lg:py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           <div>
             <Badge tone="primary" className="uppercase tracking-wide"><Sparkles className="h-3 w-3" /> Conheça o sistema</Badge>
@@ -106,6 +115,7 @@ function ConhecerSistema() {
           </div>
 
           <LeadForm />
+        </div>
         </div>
       </section>
 
