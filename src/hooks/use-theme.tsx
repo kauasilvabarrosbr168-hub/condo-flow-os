@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router";
 
 type Theme = "light" | "dark" | "system";
+
+// Páginas públicas de marketing: sempre claras, sem alternância de tema.
+// A escolha de claro/escuro só faz sentido depois que a pessoa entra no app.
+const LIGHT_LOCKED_PATHS = new Set(["/"]);
 
 type ThemeCtx = {
   theme: Theme;
@@ -18,6 +23,8 @@ function getSystem(): "light" | "dark" {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const locked = LIGHT_LOCKED_PATHS.has(pathname);
   const [theme, setThemeState] = useState<Theme>("system");
   const [resolved, setResolved] = useState<"light" | "dark">("light");
 
@@ -29,6 +36,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (locked) {
+      setResolved("light");
+      document.documentElement.classList.remove("dark");
+      return;
+    }
     const apply = () => {
       const next = theme === "system" ? getSystem() : theme;
       setResolved(next);
@@ -40,7 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mq.addEventListener("change", apply);
       return () => mq.removeEventListener("change", apply);
     }
-  }, [theme]);
+  }, [theme, locked]);
 
   const setTheme = (t: Theme) => {
     setThemeState(t);

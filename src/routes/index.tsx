@@ -1017,7 +1017,7 @@ function PricingSection() {
             }}
           >
             <div className={`pricing-card-frame rounded-2xl p-[2px] h-full ${p.highlight ? "pricing-card-frame-highlight" : ""}`}>
-              <div className="rounded-2xl bg-white dark:bg-card p-6 h-full">
+              <div className="rounded-2xl bg-white p-6 h-full">
                 <div className="flex items-center justify-between">
                   <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full buzzer-chip ${p.highlight ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                     <p.icon className="h-5 w-5" />
