@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { notifyNewLead } from "@/lib/notify.server";
+import { notifyLeadSheet } from "@/lib/sheets.server";
 
 const LeadSchema = z.object({
   cpfCnpj: z.string().trim().min(3).max(32),
@@ -17,9 +18,14 @@ const LeadSchema = z.object({
 });
 
 // Público — formulário de lead da página "Conhecer Sistema", sem autenticação.
+// Dois canais independentes (planilha + e-mail); um falhar não trava o outro
+// nem a resposta pro visitante.
 export const submitLead = createServerFn({ method: "POST" })
   .inputValidator((input) => LeadSchema.parse(input))
   .handler(async ({ data }) => {
-    await notifyNewLead(data);
+    await Promise.allSettled([
+      notifyLeadSheet(data),
+      notifyNewLead(data),
+    ]);
     return { ok: true };
   });

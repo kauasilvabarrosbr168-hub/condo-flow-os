@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
 } from "@/components/ui/accordion";
-import { submitLead } from "@/lib/lead.functions";
+import { submitLead } from "@/lib/leads.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/conhecer-sistema")({
