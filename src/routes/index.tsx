@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   ArrowRight,
   Sparkles,
@@ -73,7 +74,64 @@ function useCounter(target: number, duration = 1800, active = false) {
   return value;
 }
 
+/* ─── useTilt: inclinação 3D sutil seguindo o cursor — só desktop com mouse,
+   desliga sozinho em touch e em "reduzir movimento" (não é a animação principal,
+   por isso não pode depender só da regra global de transição) ─── */
+function useTilt(maxDeg = 3.5) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [style, setStyle] = useState<CSSProperties>({});
+  const frame = useRef<number | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const canTilt =
+      window.matchMedia("(hover: hover) and (pointer: fine)").matches &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!canTilt) return;
+
+    const handleMove = (e: PointerEvent) => {
+      if (frame.current !== null) return;
+      frame.current = requestAnimationFrame(() => {
+        frame.current = null;
+        const rect = el.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width - 0.5;
+        const py = (e.clientY - rect.top) / rect.height - 0.5;
+        setStyle({
+          transform: `perspective(1200px) rotateX(${(-py * maxDeg).toFixed(2)}deg) rotateY(${(px * maxDeg).toFixed(2)}deg)`,
+          transition: "transform 0.1s ease-out",
+          willChange: "transform",
+        });
+      });
+    };
+    const handleLeave = () => {
+      setStyle({
+        transform: "perspective(1200px) rotateX(0deg) rotateY(0deg)",
+        transition: "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+        willChange: "transform",
+      });
+    };
+
+    el.addEventListener("pointermove", handleMove);
+    el.addEventListener("pointerleave", handleLeave);
+    return () => {
+      el.removeEventListener("pointermove", handleMove);
+      el.removeEventListener("pointerleave", handleLeave);
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    };
+  }, [maxDeg]);
+
+  return { ref, style };
+}
+
 function Landing() {
+  const tilt = useTilt();
+  const [booted, setBooted] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setBooted(true), 950);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* ── Nav ── */}
@@ -140,16 +198,20 @@ function Landing() {
           <StatsRow />
 
           {/* Dashboard mock */}
-          <div className="relative mt-16 mx-auto max-w-6xl animate-slide-up">
+          <div className="relative mt-16 mx-auto max-w-6xl animate-slide-up" style={{ perspective: "1200px" }}>
             <div className="absolute -inset-x-10 -inset-y-6 bg-gradient-hero opacity-20 blur-3xl rounded-[3rem]" />
-            <div className="relative rounded-2xl bg-card panel-plate overflow-hidden">
+            <div
+              ref={tilt.ref}
+              style={tilt.style}
+              className="relative rounded-2xl bg-card panel-plate overflow-hidden"
+            >
               <div className="flex items-center gap-1.5 border-b border-border px-4 py-3 bg-muted/40">
                 <span className="h-2.5 w-2.5 rounded-full bg-destructive/60 dot-power-on" style={{ animationDelay: "650ms" }} />
                 <span className="h-2.5 w-2.5 rounded-full bg-warning/70 dot-power-on" style={{ animationDelay: "780ms" }} />
                 <span className="h-2.5 w-2.5 rounded-full bg-success/70 dot-power-on" style={{ animationDelay: "910ms" }} />
                 <span className="ml-3 min-w-0 flex-1 truncate text-xs text-muted-foreground">condo-flow-os.lovable.app/dashboard</span>
               </div>
-              <DashboardPreview />
+              <DashboardPreview booted={booted} />
             </div>
           </div>
         </div>
@@ -883,7 +945,15 @@ function CTASection() {
 }
 
 /* ════════════════════════ DASHBOARD PREVIEW ════════════════════════ */
-function DashboardPreview() {
+function DashboardPreview({ booted }: { booted: boolean }) {
+  const values = Array.from({ length: 28 }, (_, i) => 20 + ((i * 13) % 80));
+  const vw = 280;
+  const vh = 100;
+  const step = vw / (values.length - 1);
+  const linePoints = values.map((v, i) => `${(i * step).toFixed(1)},${(vh - v).toFixed(1)}`).join(" ");
+  const areaPoints = `0,${vh} ${linePoints} ${vw},${vh}`;
+  const lastY = vh - values[values.length - 1];
+
   return (
     <div className="grid grid-cols-1 gap-4 p-4 sm:p-5 bg-background md:grid-cols-12">
       <div className="grid grid-cols-3 gap-3 md:col-span-3 md:grid-cols-1 md:space-y-3 md:gap-0">
@@ -903,13 +973,44 @@ function DashboardPreview() {
           <p className="text-sm font-semibold">Operação em tempo real</p>
           <Badge tone="success">Tudo sob controle</Badge>
         </div>
-        <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
-          {Array.from({ length: 28 }).map((_, i) => {
-            const h = 20 + ((i * 13) % 80);
-            return <div key={i} className="rounded-md bg-gradient-to-t from-primary/30 to-primary/80" style={{ height: `${h}px` }} />;
-          })}
-        </div>
-        <div className="mt-4 grid grid-cols-7 text-xs text-muted-foreground">
+        <svg viewBox={`0 0 ${vw} ${vh}`} preserveAspectRatio="none" className="mt-4 w-full h-24 sm:h-28" aria-hidden="true">
+          <defs>
+            <linearGradient id="telemetry-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.32" />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {[0.25, 0.5, 0.75].map((f) => (
+            <line key={f} x1="0" x2={vw} y1={vh * f} y2={vh * f} stroke="var(--border)" strokeWidth="0.5" />
+          ))}
+          <polygon
+            points={areaPoints}
+            fill="url(#telemetry-fill)"
+            style={{ opacity: booted ? 1 : 0, transition: "opacity 0.7s ease 0.35s" }}
+          />
+          <polyline
+            points={linePoints}
+            fill="none"
+            stroke="var(--primary)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            pathLength={1000}
+            style={{
+              strokeDasharray: 1000,
+              strokeDashoffset: booted ? 0 : 1000,
+              transition: "stroke-dashoffset 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          />
+          <circle
+            cx={vw}
+            cy={lastY}
+            r="2.6"
+            fill="var(--primary)"
+            style={{ opacity: booted ? 1 : 0, transition: "opacity 0.3s ease 1.15s" }}
+          />
+        </svg>
+        <div className="mt-2 grid grid-cols-7 text-xs text-muted-foreground">
           {["S","T","Q","Q","S","S","D"].map((d, i) => <span key={i} className="text-center">{d}</span>)}
         </div>
       </div>
