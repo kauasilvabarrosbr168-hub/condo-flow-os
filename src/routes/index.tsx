@@ -845,8 +845,9 @@ function IASection() {
 /* ─── PhoneAIDemo: mockup de celular com chat estilo WhatsApp — mostra a IA
    recebendo o pedido e gerando as tarefas, como no canal real do produto. ─── */
 function PhoneAIDemo() {
+  const { ref, inView } = useInView(0.4);
   return (
-    <div className="mx-auto w-full max-w-[260px]">
+    <div ref={ref} className="mx-auto w-full max-w-[260px]">
       <div className="relative rounded-[2.25rem] border-[8px] border-foreground bg-foreground shadow-elegant">
         <span className="absolute left-1/2 top-0 z-10 h-4 w-24 -translate-x-1/2 rounded-b-xl bg-foreground" />
         <div className="relative aspect-[9/18] overflow-hidden rounded-[1.5rem] bg-background">
@@ -860,7 +861,7 @@ function PhoneAIDemo() {
             </div>
           </div>
           <div className="flex flex-col gap-2 p-3">
-            <ChatTaskDemo />
+            <ChatTaskDemo active={inView} />
           </div>
         </div>
       </div>
@@ -868,7 +869,11 @@ function PhoneAIDemo() {
   );
 }
 
-function ChatTaskDemo() {
+/* ─── ChatTaskDemo: só começa a animar quando o celular entra na tela (não
+   no mount da página) e repete em loop, com pausa de leitura entre cada
+   tarefa e no final. Respeita prefers-reduced-motion (mostra tudo estático,
+   sem repetir). ─── */
+function ChatTaskDemo({ active }: { active: boolean }) {
   const lines = [
     "Verificar bomba da piscina · Pedro · 15/nov",
     "Limpeza completa da piscina · João · 20/nov",
@@ -880,15 +885,38 @@ function ChatTaskDemo() {
   const [visible, setVisible] = useState(0);
 
   useEffect(() => {
-    const t = setTimeout(() => setTapped(true), 900);
-    return () => clearTimeout(t);
-  }, []);
+    if (!active) return;
 
-  useEffect(() => {
-    if (!tapped || visible >= lines.length) return;
-    const t = setTimeout(() => setVisible((v) => v + 1), visible === 0 ? 500 : 320);
-    return () => clearTimeout(t);
-  }, [tapped, visible, lines.length]);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setTapped(true);
+      setVisible(lines.length);
+      return;
+    }
+
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const after = (fn: () => void, ms: number) => {
+      timers.push(setTimeout(() => { if (!cancelled) fn(); }, ms));
+    };
+
+    const runCycle = () => {
+      setTapped(false);
+      setVisible(0);
+      after(() => {
+        setTapped(true);
+        for (let i = 1; i <= lines.length; i++) {
+          after(() => setVisible(i), i * 1000);
+        }
+        after(runCycle, lines.length * 1000 + 3500);
+      }, 1000);
+    };
+
+    runCycle();
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, [active, lines.length]);
 
   return (
     <>
