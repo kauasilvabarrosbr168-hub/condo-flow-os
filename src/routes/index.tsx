@@ -920,7 +920,8 @@ function TestimonialsSection() {
 }
 
 /* ════════════════════════ PRICING SECTION ════════════════════════ */
-// NOTA: valores ilustrativos/placeholder — o preço final ainda não foi definido.
+// NOTA: valores e faixas de tamanho ilustrativos/placeholder — preço final e
+// corte exato de unidades por plano ainda não foram definidos.
 // Ajuste os números abaixo antes de publicar em produção.
 function PricingSection() {
   const { ref, inView } = useInView(0.05);
@@ -928,13 +929,28 @@ function PricingSection() {
   const plans = [
     {
       icon: Building2,
-      name: "Condomínio único",
+      name: "Essencial",
+      price: "R$ 149",
+      period: "/mês",
+      note: "para condomínios pequenos",
+      highlight: false,
+      features: [
+        "Reservas e manutenção automatizadas",
+        "Até 3 áreas comuns",
+        "Notificações multicanal",
+        "Suporte via chat em horário comercial",
+      ],
+    },
+    {
+      icon: Star,
+      name: "Profissional",
       price: "R$ 249",
       period: "/mês",
-      note: "até 100 unidades",
+      note: "para condomínios de porte médio",
       highlight: true,
       features: [
         "Reservas e manutenção automatizadas",
+        "Áreas comuns ilimitadas",
         "IA nativa incluída",
         "Notificações multicanal",
         "Suporte via chat em horário comercial",
@@ -968,7 +984,7 @@ function PricingSection() {
         </p>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 max-w-3xl mx-auto">
+      <div className="grid gap-5 sm:grid-cols-3 max-w-5xl mx-auto">
         {plans.map((p, i) => (
           <div
             key={p.name}
