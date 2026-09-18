@@ -67,9 +67,25 @@ export const listLeads = createServerFn({ method: "POST" })
     await assertPlatformAdmin(context.userId);
     const { data, error } = await supabaseAdmin
       .from("leads")
-      .select("id, cpf_cnpj, nome, email, telefone, unidades, funcionarios, contato_preferido, perfil, perfil_outro, interesse, origem, created_at")
+      .select("id, cpf_cnpj, nome, email, telefone, unidades, funcionarios, contato_preferido, perfil, perfil_outro, interesse, origem, status, created_at")
       .order("created_at", { ascending: true })
       .limit(1000);
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+const UpdateStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["pendente", "atendendo", "concluido"]),
+});
+
+// Admin — move um cadastro entre Pendentes / Atendendo / Concluídos.
+export const updateLeadStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => UpdateStatusSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertPlatformAdmin(context.userId);
+    const { error } = await supabaseAdmin.from("leads").update({ status: data.status }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

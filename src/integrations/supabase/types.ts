@@ -650,6 +650,7 @@ export type Database = {
           origem: string
           perfil: string
           perfil_outro: string | null
+          status: string
           telefone: string
           unidades: string
         }
@@ -665,6 +666,7 @@ export type Database = {
           origem: string
           perfil: string
           perfil_outro?: string | null
+          status?: string
           telefone: string
           unidades: string
         }
@@ -680,6 +682,7 @@ export type Database = {
           origem?: string
           perfil?: string
           perfil_outro?: string | null
+          status?: string
           telefone?: string
           unidades?: string
         }
