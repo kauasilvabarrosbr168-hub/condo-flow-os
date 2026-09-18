@@ -560,7 +560,7 @@ function AudienceSection() {
   const content = {
     sindico: {
       label: "Síndico",
-      image: "/persona-sindico.jpg",
+      image: "/persona-sindico.png",
       alt: "Síndico consultando o CondoFlow pelo celular",
       heading: "Para o síndico que quer ser mais eficiente",
       desc: "Cuide do condomínio sem virar um segundo emprego. A tecnologia assume o operacional, você só supervisiona.",
@@ -577,7 +577,7 @@ function AudienceSection() {
     },
     administradora: {
       label: "Administradora",
-      image: "/persona-administradora.jpg",
+      image: "/persona-administradora.png",
       alt: "Equipe de administradora acompanhando os condomínios no CondoFlow",
       heading: "Para a administradora que gerencia várias operações",
       desc: "Um painel só pra todos os condomínios que você administra, com gestão de conta dedicada.",
@@ -594,7 +594,7 @@ function AudienceSection() {
     },
     morador: {
       label: "Morador",
-      image: "/persona-morador.jpg",
+      image: "/persona-morador.png",
       alt: "Moradora resolvendo demandas do condomínio pelo celular",
       heading: "Para o morador que quer mais conforto e praticidade",
       desc: "Com o CondoFlow, todas as demandas são resolvidas pelo celular, sem estresse.",
@@ -645,7 +645,7 @@ function AudienceSection() {
           transition: "opacity 0.6s ease, transform 0.6s ease",
         }}
       >
-        {/* Foto por persona salva em public/persona-*.jpg — ver PRODUCT.md. */}
+        {/* Foto por persona salva em public/persona-*.png. */}
         <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-muted panel-plate">
           <img src={c.image} alt={c.alt} className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute left-6 top-6 rounded-xl bg-card panel-plate px-4 py-3">
