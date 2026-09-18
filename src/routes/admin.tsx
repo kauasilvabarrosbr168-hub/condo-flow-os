@@ -17,6 +17,7 @@ import {
   Search,
   LogOut,
   ShieldCheck,
+  Users2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { usePlatformAdmin } from "@/hooks/use-platform-admin";
@@ -37,6 +38,7 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; group: str
   { to: "/admin/requests", label: "Solicitações", icon: ShieldCheck, group: "Clientes" },
 
 
+  { to: "/admin/cadastros", label: "Área de Cadastros", icon: Users2, group: "Comercial" },
   { to: "/admin/subscriptions", label: "Assinaturas", icon: CreditCard, group: "Comercial" },
   { to: "/admin/plans", label: "Planos", icon: Package, group: "Comercial" },
 

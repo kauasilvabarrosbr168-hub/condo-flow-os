@@ -1,7 +1,19 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { notifyNewLead } from "@/lib/notify.server";
 import { notifyLeadSheet } from "@/lib/sheets.server";
+
+async function assertPlatformAdmin(userId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("platform_admins")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("forbidden");
+}
 
 const LeadSchema = z.object({
   cpfCnpj: z.string().trim().min(3).max(32),
@@ -18,14 +30,46 @@ const LeadSchema = z.object({
 });
 
 // Público — formulário de lead da página "Conhecer Sistema", sem autenticação.
-// Dois canais independentes (planilha + e-mail); um falhar não trava o outro
-// nem a resposta pro visitante.
+// Três canais independentes; um falhar não trava os outros nem a resposta
+// pro visitante.
 export const submitLead = createServerFn({ method: "POST" })
   .inputValidator((input) => LeadSchema.parse(input))
   .handler(async ({ data }) => {
     await Promise.allSettled([
       notifyLeadSheet(data),
       notifyNewLead(data),
+      supabaseAdmin
+        .from("leads")
+        .insert({
+          cpf_cnpj: data.cpfCnpj,
+          nome: data.nome,
+          email: data.email,
+          telefone: data.telefone,
+          unidades: data.unidades,
+          funcionarios: data.funcionarios,
+          contato_preferido: data.contatoPreferido,
+          perfil: data.perfil,
+          perfil_outro: data.perfilOutro ?? null,
+          interesse: data.interesse,
+          origem: data.origem,
+        })
+        .then(({ error }) => {
+          if (error) console.error("[leads] Falha ao gravar no banco:", error.message);
+        }),
     ]);
     return { ok: true };
+  });
+
+// Admin — lista os cadastros do primeiro ao último, pra quem tem acesso à plataforma.
+export const listLeads = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertPlatformAdmin(context.userId);
+    const { data, error } = await supabaseAdmin
+      .from("leads")
+      .select("id, cpf_cnpj, nome, email, telefone, unidades, funcionarios, contato_preferido, perfil, perfil_outro, interesse, origem, created_at")
+      .order("created_at", { ascending: true })
+      .limit(1000);
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });
