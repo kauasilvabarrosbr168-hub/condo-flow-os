@@ -850,7 +850,7 @@ function PhoneAIDemo() {
     <div ref={ref} className="mx-auto w-full max-w-[260px]">
       <div className="relative rounded-[2.25rem] border-[8px] border-foreground bg-foreground shadow-elegant">
         <span className="absolute left-1/2 top-0 z-10 h-4 w-24 -translate-x-1/2 rounded-b-xl bg-foreground" />
-        <div className="relative aspect-[9/18] overflow-hidden rounded-[1.5rem] bg-background">
+        <div className="relative aspect-[9/18] overflow-hidden rounded-[1.75rem] bg-background">
           <div className="flex items-center gap-2 bg-gradient-hero px-3 py-2.5 text-primary-foreground">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20">
               <Brain className="h-3.5 w-3.5" />
