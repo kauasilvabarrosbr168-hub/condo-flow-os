@@ -279,17 +279,17 @@ function Landing() {
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
-                to="/app/dashboard"
+                to="/conhecer-sistema"
                 className="group inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-hero px-6 text-sm font-medium text-primary-foreground btn-plate hover:opacity-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
-                Começar agora <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                Conhecer Sistema <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
-              <a
-                href="#video"
+              <Link
+                to="/login"
                 className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-6 text-sm font-medium hover:bg-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
-                <Play className="h-4 w-4 fill-current" /> Ver o vídeo
-              </a>
+                Login
+              </Link>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">
               Implantação em 7 dias · Cancele quando quiser · 30 dias grátis a partir do Profissional

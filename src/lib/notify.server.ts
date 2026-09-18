@@ -209,6 +209,60 @@ export async function notifyReservationConfirmed(opts: {
   }
 }
 
+export async function notifyNewLead(opts: {
+  cpfCnpj: string;
+  nome: string;
+  email: string;
+  telefone: string;
+  unidades: string;
+  funcionarios: string;
+  contatoPreferido: string;
+  perfil: string;
+  perfilOutro?: string;
+  interesse: string;
+  origem: string;
+}) {
+  const rows: [string, string][] = [
+    ["CPF/CNPJ", opts.cpfCnpj],
+    ["Nome", opts.nome],
+    ["E-mail", opts.email],
+    ["Telefone/WhatsApp", opts.telefone],
+    ["Unidades", opts.unidades],
+    ["Funcionários", opts.funcionarios],
+    ["Contato preferido", opts.contatoPreferido],
+    ["Perfil", opts.perfil === "Outro" && opts.perfilOutro ? `Outro — ${opts.perfilOutro}` : opts.perfil],
+    ["O que interessou", opts.interesse],
+    ["Como conheceu", opts.origem],
+  ];
+
+  const tableRows = rows
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:8px 12px;color:#64748b;font-size:14px;border-bottom:1px solid #e2e8f0">${label}</td><td style="padding:8px 12px;font-weight:600;color:#0f172a;border-bottom:1px solid #e2e8f0">${value}</td></tr>`,
+    )
+    .join("");
+
+  await sendEmail(
+    "vendas@condoflow.site",
+    `🆕 Novo lead pelo site — ${opts.nome}`,
+    `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
+    <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px">
+        <tr><td align="center">
+          <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.06)">
+            <tr><td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:28px 32px">
+              <h1 style="margin:0;font-size:20px;font-weight:700;color:#ffffff">🆕 Novo lead pelo site</h1>
+            </td></tr>
+            <tr><td style="padding:24px 32px">
+              <table style="width:100%;border-collapse:collapse">${tableRows}</table>
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </body></html>`,
+  );
+}
+
 export async function notifyTaskAssigned(opts: {
   toEmail: string;
   toPhone?: string | null;
