@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight, ArrowLeft, Brain, Building2, CalendarCheck, Bell, ListChecks,
   ShieldCheck, Lock, KeyRound, DatabaseBackup, CheckCircle2, X, Sparkles, Loader2,
@@ -15,7 +15,41 @@ import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
 } from "@/components/ui/accordion";
 import { submitLead } from "@/lib/leads.functions";
+import { lookupCnpj } from "@/lib/cnpj.functions";
 import { toast } from "sonner";
+
+/* ─── Validação de CPF/CNPJ pelo dígito verificador oficial (não só tamanho) ─── */
+function isValidCPF(value: string): boolean {
+  const d = value.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += Number(d[i]) * (10 - i);
+  let check1 = (sum * 10) % 11;
+  if (check1 === 10) check1 = 0;
+  if (check1 !== Number(d[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += Number(d[i]) * (11 - i);
+  let check2 = (sum * 10) % 11;
+  if (check2 === 10) check2 = 0;
+  return check2 === Number(d[10]);
+}
+
+function isValidCNPJ(value: string): boolean {
+  const d = value.replace(/\D/g, "");
+  if (d.length !== 14 || /^(\d)\1{13}$/.test(d)) return false;
+  const calcDigit = (base: string) => {
+    const weights = base.length === 12
+      ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+      : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const sum = base.split("").reduce((acc, digit, i) => acc + Number(digit) * weights[i], 0);
+    const rest = sum % 11;
+    return rest < 2 ? 0 : 11 - rest;
+  };
+  const base = d.slice(0, 12);
+  const d1 = calcDigit(base);
+  const d2 = calcDigit(base + d1);
+  return d[12] === String(d1) && d[13] === String(d2);
+}
 
 export const Route = createFileRoute("/conhecer-sistema")({
   head: () => ({
@@ -226,17 +260,59 @@ const emptyLead: LeadData = {
   perfil: "", perfilOutro: "", interesse: "", origem: "",
 };
 
+type DocCheck =
+  | { status: "idle" }
+  | { status: "checking" }
+  | { status: "valid-cpf" }
+  | { status: "valid-cnpj"; nome: string }
+  | { status: "valid-cnpj-unconfirmed" }
+  | { status: "invalid" };
+
 function LeadForm() {
   const submitLeadFn = useServerFn(submitLead);
+  const lookupCnpjFn = useServerFn(lookupCnpj);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [data, setData] = useState<LeadData>(emptyLead);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [docCheck, setDocCheck] = useState<DocCheck>({ status: "idle" });
 
   const set = <K extends keyof LeadData>(key: K, value: LeadData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
 
-  const step1Valid = data.cpfCnpj.trim().length >= 3;
+  useEffect(() => {
+    const digits = data.cpfCnpj.replace(/\D/g, "");
+
+    if (digits.length === 11) {
+      setDocCheck(isValidCPF(digits) ? { status: "valid-cpf" } : { status: "invalid" });
+      return;
+    }
+
+    if (digits.length === 14) {
+      if (!isValidCNPJ(digits)) {
+        setDocCheck({ status: "invalid" });
+        return;
+      }
+      setDocCheck({ status: "checking" });
+      let cancelled = false;
+      const t = setTimeout(async () => {
+        try {
+          const r = await lookupCnpjFn({ data: { cnpj: digits } });
+          if (!cancelled) setDocCheck({ status: "valid-cnpj", nome: r.razaoSocial });
+        } catch {
+          if (!cancelled) setDocCheck({ status: "valid-cnpj-unconfirmed" });
+        }
+      }, 500);
+      return () => { cancelled = true; clearTimeout(t); };
+    }
+
+    setDocCheck({ status: "idle" });
+  }, [data.cpfCnpj, lookupCnpjFn]);
+
+  const step1Valid =
+    docCheck.status === "valid-cpf" ||
+    docCheck.status === "valid-cnpj" ||
+    docCheck.status === "valid-cnpj-unconfirmed";
   const step2Valid =
     data.nome.trim().length > 0 &&
     /\S+@\S+\.\S+/.test(data.email) &&
@@ -296,6 +372,21 @@ function LeadForm() {
             <div className="space-y-1.5">
               <Label htmlFor="cpfCnpj">CPF ou CNPJ</Label>
               <Input id="cpfCnpj" value={data.cpfCnpj} onChange={(e) => set("cpfCnpj", e.target.value)} placeholder="000.000.000-00" />
+              {docCheck.status === "checking" && (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Consultando CNPJ...</p>
+              )}
+              {docCheck.status === "valid-cpf" && (
+                <p className="flex items-center gap-1.5 text-xs text-success"><CheckCircle2 className="h-3 w-3" /> CPF válido</p>
+              )}
+              {docCheck.status === "valid-cnpj" && (
+                <p className="flex items-center gap-1.5 text-xs text-success"><CheckCircle2 className="h-3 w-3" /> {docCheck.nome}</p>
+              )}
+              {docCheck.status === "valid-cnpj-unconfirmed" && (
+                <p className="flex items-center gap-1.5 text-xs text-warning"><CheckCircle2 className="h-3 w-3" /> CNPJ válido (não foi possível confirmar o nome agora)</p>
+              )}
+              {docCheck.status === "invalid" && (
+                <p className="flex items-center gap-1.5 text-xs text-destructive"><X className="h-3 w-3" /> CPF/CNPJ inválido</p>
+              )}
             </div>
           )}
 
