@@ -5,7 +5,7 @@ type Theme = "light" | "dark" | "system";
 
 // Páginas públicas de marketing: sempre claras, sem alternância de tema.
 // A escolha de claro/escuro só faz sentido depois que a pessoa entra no app.
-const LIGHT_LOCKED_PATHS = new Set(["/"]);
+const LIGHT_LOCKED_PATHS = new Set(["/", "/conhecer-sistema"]);
 
 type ThemeCtx = {
   theme: Theme;
