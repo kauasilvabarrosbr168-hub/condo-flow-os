@@ -555,12 +555,13 @@ function ProblemSection() {
 /* ════════════════════════ AUDIENCE SECTION ════════════════════════ */
 function AudienceSection() {
   const { ref, inView } = useInView(0.05);
-  const [tab, setTab] = useState<"sindico" | "administradora">("sindico");
+  const [tab, setTab] = useState<"sindico" | "administradora" | "morador">("sindico");
 
   const content = {
     sindico: {
       label: "Síndico",
-      icon: Users,
+      image: "/persona-sindico.jpg",
+      alt: "Síndico consultando o CondoFlow pelo celular",
       heading: "Para o síndico que quer ser mais eficiente",
       desc: "Cuide do condomínio sem virar um segundo emprego. A tecnologia assume o operacional, você só supervisiona.",
       bullets: [
@@ -576,7 +577,8 @@ function AudienceSection() {
     },
     administradora: {
       label: "Administradora",
-      icon: Building2,
+      image: "/persona-administradora.jpg",
+      alt: "Equipe de administradora acompanhando os condomínios no CondoFlow",
       heading: "Para a administradora que gerencia várias operações",
       desc: "Um painel só pra todos os condomínios que você administra, com gestão de conta dedicada.",
       bullets: [
@@ -588,6 +590,23 @@ function AudienceSection() {
       cards: [
         { label: "Condomínios ativos", value: "8" },
         { label: "Unidades administradas", value: "142" },
+      ],
+    },
+    morador: {
+      label: "Morador",
+      image: "/persona-morador.jpg",
+      alt: "Moradora resolvendo demandas do condomínio pelo celular",
+      heading: "Para o morador que quer mais conforto e praticidade",
+      desc: "Com o CondoFlow, todas as demandas são resolvidas pelo celular, sem estresse.",
+      bullets: [
+        "Abertura de chamados e reclamações",
+        "Reserva rápida de áreas comuns",
+        "Recebimento de avisos e notificações",
+        "Organização de encomendas e entregas",
+      ],
+      cards: [
+        { label: "Encomenda chegou", value: "Hoje · 14h32" },
+        { label: "Reserva confirmada", value: "Salão · sáb" },
       ],
     },
   } as const;
@@ -626,12 +645,9 @@ function AudienceSection() {
           transition: "opacity 0.6s ease, transform 0.6s ease",
         }}
       >
-        {/* NOTA: painel abaixo é um placeholder no lugar de uma foto real —
-            trocar o fundo por uma imagem de verdade quando tiver o asset. */}
-        <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-gradient-soft panel-plate">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <c.icon className="h-20 w-20 text-primary/15" />
-          </div>
+        {/* Foto por persona salva em public/persona-*.jpg — ver PRODUCT.md. */}
+        <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-muted panel-plate">
+          <img src={c.image} alt={c.alt} className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute left-6 top-6 rounded-xl bg-card panel-plate px-4 py-3">
             <p className="text-xs text-muted-foreground">{c.cards[0].label}</p>
             <p className="text-lg font-semibold tabular-nums">{c.cards[0].value}</p>
