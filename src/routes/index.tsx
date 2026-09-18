@@ -27,13 +27,13 @@ import { Logo, Badge } from "@/components/brand";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CondoFlow — Automatize a operação do seu condomínio" },
+      { title: "CondoFlow: automatize a operação do seu condomínio" },
       {
         name: "description",
         content:
           "CondoFlow automatiza reservas, manutenção, comunicação e tarefas do condomínio com IA. Síndicos livres, moradores satisfeitos.",
       },
-      { property: "og:title", content: "CondoFlow — Operação inteligente para condomínios" },
+      { property: "og:title", content: "CondoFlow: operação inteligente para condomínios" },
       { property: "og:description", content: "Reservas, manutenção e comunicação em um só lugar." },
     ],
   }),
@@ -274,7 +274,7 @@ function Landing() {
             </h1>
             <p className="mt-5 text-balance text-lg text-muted-foreground max-w-2xl mx-auto">
               CondoFlow conecta síndico, moradores e funcionários em uma única plataforma inteligente.
-              Reservas automáticas, tarefas geradas por IA, manutenções em dia — sem grupo de WhatsApp, sem planilha, sem caos.
+              Reservas automáticas, tarefas geradas por IA, manutenções em dia. Sem grupo de WhatsApp, sem planilha, sem caos.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
@@ -310,7 +310,7 @@ function Landing() {
                 <span className="h-2.5 w-2.5 rounded-full bg-destructive/60 dot-power-on" style={{ animationDelay: "650ms" }} />
                 <span className="h-2.5 w-2.5 rounded-full bg-warning/70 dot-power-on" style={{ animationDelay: "780ms" }} />
                 <span className="h-2.5 w-2.5 rounded-full bg-success/70 dot-power-on" style={{ animationDelay: "910ms" }} />
-                <span className="ml-3 min-w-0 flex-1 truncate text-xs text-muted-foreground">condo-flow-os.lovable.app/dashboard</span>
+                <span className="ml-3 min-w-0 flex-1 truncate text-xs text-muted-foreground">condoflow.site/dashboard</span>
               </div>
               <DashboardPreview booted={booted} />
             </div>
@@ -319,15 +319,28 @@ function Landing() {
       </section>
 
       {/* ── Logos ── */}
-      <section className="border-y border-border/60 bg-muted/30 py-10">
+      <section className="border-y border-border/60 bg-muted/30 py-10 overflow-hidden">
         <div className="mx-auto max-w-7xl px-6">
           <p className="text-center text-xs uppercase tracking-widest text-muted-foreground">
             Usado por administradoras e síndicos profissionais em todo o Brasil
           </p>
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-6 gap-6 opacity-50">
-            {["Aurora", "Vista Park", "Solar", "Atlântico", "Belvedere", "Skyline"].map((n) => (
-              <div key={n} className="flex items-center justify-center gap-2 text-sm font-medium tracking-tight">
-                <Building2 className="h-4 w-4" /> {n}
+        </div>
+        <div className="mt-6 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
+          <div className="flex marquee-track">
+            {[0, 1].map((copy) => (
+              <div
+                key={copy}
+                aria-hidden={copy === 1}
+                className="flex shrink-0 min-w-[100vw] items-center justify-around gap-10 px-6 opacity-50"
+              >
+                {["Aurora", "Vista Park", "Solar", "Atlântico", "Belvedere", "Skyline"].map((n) => (
+                  <div key={n} className="flex items-center gap-2.5 whitespace-nowrap text-sm font-medium tracking-tight">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
+                      {n[0]}
+                    </span>
+                    {n}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -437,7 +450,7 @@ function VideoSection() {
           <span className="bg-gradient-hero bg-clip-text text-transparent">60 segundos</span>
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Do caos do grupo de WhatsApp à operação inteligente — em um minuto você entende por que síndicos trocam planilha pelo CondoFlow.
+          Do caos do grupo de WhatsApp à operação inteligente: em um minuto você entende por que síndicos trocam planilha pelo CondoFlow.
         </p>
       </div>
 
@@ -484,7 +497,7 @@ function ProblemSection() {
     { icon: MessageSquareWarning, text: "Grupos de WhatsApp com 200 mensagens por dia sobre reservas, reclamações e manutenções" },
     { icon: TrendingDown,         text: "Planilhas desatualizadas que ninguém sabe quem preencheu por último" },
     { icon: Clock,                text: "Sauna vazia porque ninguém lembrou de ligar, e morador frustrado pela segunda vez" },
-    { icon: Users,                text: "Funcionários sem saber o que fazer hoje — e síndico respondendo WhatsApp às 23h" },
+    { icon: Users,                text: "Funcionários sem saber o que fazer hoje, com o síndico respondendo WhatsApp às 23h" },
   ];
 
   return (
@@ -502,11 +515,11 @@ function ProblemSection() {
               O problema
             </span>
             <h2 className="mt-5 text-4xl font-semibold tracking-tight text-balance">
-              Administrar condomínio virou um segundo emprego — e não deveria.
+              Administrar condomínio virou um segundo emprego. E não deveria.
             </h2>
             <p className="mt-4 text-background/70 leading-relaxed">
               Síndicos passam horas por semana respondendo mensagens repetitivas, lembrando funcionários de tarefas básicas e tentando
-              organizar informações espalhadas em grupos, e-mails e cadernos. Isso não é gestão — é apagar incêndio.
+              organizar informações espalhadas em grupos, e-mails e cadernos. Isso não é gestão, é apagar incêndio.
             </p>
           </div>
           <ul className="space-y-5">
@@ -541,7 +554,7 @@ function FeaturesSection() {
     {
       icon: CalendarCheck,
       title: "Reservas inteligentes",
-      desc: "Calendário de áreas comuns em tempo real. Moradores reservam pelo app, o sistema verifica conflitos, aplica as regras do condomínio e envia confirmação automática — sem o síndico tocar em nada.",
+      desc: "Calendário de áreas comuns em tempo real. Moradores reservam pelo app, o sistema verifica conflitos, aplica as regras do condomínio e envia confirmação automática, sem o síndico tocar em nada.",
       detail: "Suporta taxas, limite por apartamento, horários bloqueados e aprovação manual quando necessário.",
     },
     {
@@ -553,7 +566,7 @@ function FeaturesSection() {
     {
       icon: Brain,
       title: "IA que gera tarefas",
-      desc: "Descreva o que precisa ser feito e a IA do CondoFlow cria um plano de tarefas completo, atribui responsáveis, define prazos e organiza por prioridade — em segundos.",
+      desc: "Descreva o que precisa ser feito e a IA do CondoFlow cria um plano de tarefas completo, atribui responsáveis, define prazos e organiza por prioridade em segundos.",
       detail: "\"Reformar a área da piscina\" vira 10 tarefas detalhadas com responsáveis e prazos.",
     },
     {
@@ -565,13 +578,13 @@ function FeaturesSection() {
     {
       icon: MessageSquareWarning,
       title: "Ocorrências e sugestões",
-      desc: "Moradores reportam problemas com foto, localização e descrição. Outros moradores votam na prioridade. O síndico responde e o status é atualizado para todos — sem grupo de reclamação.",
+      desc: "Moradores reportam problemas com foto, localização e descrição. Outros moradores votam na prioridade. O síndico responde e o status é atualizado para todos, sem grupo de reclamação.",
       detail: "Dashboard mostra ocorrências por área, frequência e tempo médio de resolução.",
     },
     {
       icon: Bell,
       title: "Notificações multicanal",
-      desc: "Push no app, e-mail e WhatsApp — cada pessoa recebe no canal que prefere, só sobre o que é relevante para ela. Sem spam, sem silêncio: o certo, na hora certa, para quem importa.",
+      desc: "Push no app, e-mail e WhatsApp: cada pessoa recebe no canal que prefere, só sobre o que é relevante para ela. Sem spam, sem silêncio: o certo, na hora certa, para quem importa.",
       detail: "Configuração granular: morador escolhe o que quer receber. Síndico tem visão de todos.",
     },
     {
@@ -590,7 +603,7 @@ function FeaturesSection() {
       icon: LifeBuoy,
       title: "Suporte quando você precisar",
       desc: "Chat em horário comercial com gente de verdade, base de conhecimento em vídeo, e o time que implantou seu condomínio continua acompanhando depois que o app está no ar.",
-      detail: "Sem depender só de IA — se travar, tem humano do outro lado.",
+      detail: "Sem depender só de IA: se travar, tem humano do outro lado.",
     },
   ];
 
@@ -602,7 +615,7 @@ function FeaturesSection() {
           Tudo que o seu condomínio precisa, em um só lugar
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Da reserva do salão à manutenção do elevador — o CondoFlow conecta moradores, funcionários e síndicos com automação inteligente e IA nativa.
+          Da reserva do salão à manutenção do elevador, o CondoFlow conecta moradores, funcionários e síndicos com automação inteligente e IA nativa.
         </p>
       </div>
 
@@ -640,7 +653,7 @@ function IASection() {
     { title: "Geração de tarefas", desc: "Descreva o que precisa ser feito em linguagem natural. A IA cria tarefas detalhadas, atribui responsáveis e define prazos." },
     { title: "Análise de ocorrências", desc: "A IA lê as ocorrências reportadas, identifica padrões e sugere ações preventivas antes que o problema se repita." },
     { title: "Cronograma preditivo", desc: "Com base no histórico do condomínio, a IA prevê quando manutenções preventivas devem ser agendadas." },
-    { title: "Relatórios automáticos", desc: "Relatório mensal gerado e formatado pela IA para apresentar em assembleia — sem precisar montar planilha." },
+    { title: "Relatórios automáticos", desc: "Relatório mensal gerado e formatado pela IA para apresentar em assembleia, sem precisar montar planilha." },
   ];
 
   return (
@@ -658,7 +671,7 @@ function IASection() {
             A IA trabalha enquanto você descansa.
           </h2>
           <p className="mt-3 text-muted-foreground leading-relaxed">
-            O CondoFlow tem IA nativa — não é uma integração de terceiros, é parte do núcleo da plataforma.
+            O CondoFlow tem IA nativa: não é uma integração de terceiros, é parte do núcleo da plataforma.
             Ela aprende o ritmo do seu condomínio e antecipa o que precisa ser feito.
           </p>
           <div className="mt-8 rounded-2xl bg-card panel-plate p-5 font-mono text-sm">
@@ -702,11 +715,11 @@ function TypingDemo() {
     "",
     "✦ Criando 5 tarefas...",
     "",
-    "1. Verificar bomba da piscina — Pedro · 15/nov",
-    "2. Limpeza completa da piscina — João · 20/nov",
-    "3. Checar chuveiros da área externa — Carlos · 18/nov",
-    "4. Manutenção do filtro de areia — Pedro · 22/nov",
-    "5. Repor cloro e pH — João · semanal",
+    "1. Verificar bomba da piscina · Pedro · 15/nov",
+    "2. Limpeza completa da piscina · João · 20/nov",
+    "3. Checar chuveiros da área externa · Carlos · 18/nov",
+    "4. Manutenção do filtro de areia · Pedro · 22/nov",
+    "5. Repor cloro e pH · João · semanal",
   ];
   const taskCount = lines.filter((l) => /^\d+\./.test(l)).length;
   const [visible, setVisible] = useState(0);
@@ -824,7 +837,7 @@ function TestimonialsSection() {
     {
       name: "Carla Mendes",
       role: "Síndica · Ed. Aurora · SP",
-      quote: "Reduzi 80% das mensagens no WhatsApp do prédio. Em 3 semanas o grupo de moradores parou de pedir informações — porque agora eles encontram tudo no app.",
+      quote: "Reduzi 80% das mensagens no WhatsApp do prédio. Em 3 semanas o grupo de moradores parou de pedir informações, porque agora eles encontram tudo no app.",
       metric: "80% ↓ mensagens",
     },
     {
@@ -836,7 +849,7 @@ function TestimonialsSection() {
     {
       name: "Júlia Castro",
       role: "Administradora · 4 condomínios · MG",
-      quote: "Administro 4 condomínios e antes era impossível. Hoje o CondoFlow gerencia a operação dos 4 — eu só monitoro o painel uma vez por dia e resolvo as exceções.",
+      quote: "Administro 4 condomínios e antes era impossível. Hoje o CondoFlow gerencia a operação dos 4. Eu só monitoro o painel uma vez por dia e resolvo as exceções.",
       metric: "4x mais condomínios",
     },
     {
@@ -951,7 +964,7 @@ function PricingSection() {
           Um preço simples pro seu condomínio
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Valores de referência — o time confirma o plano certo pra você em uma conversa rápida.
+          Valores de referência: o time confirma o plano certo pra você em uma conversa rápida.
         </p>
       </div>
 
@@ -1018,7 +1031,7 @@ function CTASection() {
         </h2>
         <p className="mt-4 text-primary-foreground/80 leading-relaxed">
           Implantação em 7 dias. Treinamento incluído. Suporte humano. Cancele quando quiser.
-          Nosso time configura tudo — você só precisa dizer "vamos".
+          Nosso time configura tudo. Você só precisa dizer "vamos".
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link

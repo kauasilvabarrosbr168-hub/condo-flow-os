@@ -8,7 +8,7 @@
  *   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
  *   TWILIO_WHATSAPP_FROM   (optional, e.g. "whatsapp:+14155238886")
  *   RESEND_API_KEY
- *   RESEND_FROM_EMAIL      (e.g. "CondoFlow <noreply@condoflow.app>")
+ *   RESEND_FROM_EMAIL      (e.g. "CondoFlow <noreply@condoflow.site>")
  */
 
 import twilio from "twilio";
@@ -64,7 +64,7 @@ export async function sendWhatsApp(to: string, body: string): Promise<void> {
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   const resend = getResendClient();
-  const from = process.env.RESEND_FROM_EMAIL ?? "CondoFlow <noreply@condoflow.app>";
+  const from = process.env.RESEND_FROM_EMAIL ?? "CondoFlow <noreply@condoflow.site>";
   if (!resend) {
     console.warn("[notify] Resend not configured — email skipped");
     return;
@@ -245,7 +245,7 @@ export async function notifyTaskAssigned(opts: {
 // ─── Email layout ─────────────────────────────────────────────────────────────
 
 function appUrl() {
-  return process.env.APP_URL ?? "https://condoflow.app";
+  return process.env.APP_URL ?? "https://condoflow.site";
 }
 
 const btnStyle = [

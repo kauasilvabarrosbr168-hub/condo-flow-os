@@ -272,6 +272,14 @@
   .dot-power-on {
     animation: power-on 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+  /* Faixa de logos: rola devagar para a direita, em loop contínuo; pausa no
+     hover para dar tempo de ler um nome específico. */
+  .marquee-track {
+    animation: marquee-right 34s linear infinite;
+  }
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
 }
 
 @keyframes fade-in {
@@ -293,4 +301,8 @@
 @keyframes shimmer {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
+}
+@keyframes marquee-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0%); }
 }

@@ -15,7 +15,7 @@ function SettingsPage() {
         <SectionCard title="Identidade da plataforma" description="Nome, logo e branding visíveis aos clientes">
           <div className="space-y-3 text-sm">
             <Row icon={<Palette className="h-4 w-4" />} label="Nome comercial" value="CondoFlow" />
-            <Row icon={<Settings2 className="h-4 w-4" />} label="Domínio" value="condoflow.app" />
+            <Row icon={<Settings2 className="h-4 w-4" />} label="Domínio" value="condoflow.site" />
           </div>
         </SectionCard>
         <SectionCard title="Notificações operacionais" description="Avisos enviados para o operador">
