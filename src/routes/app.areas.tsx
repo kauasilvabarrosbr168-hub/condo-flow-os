@@ -199,7 +199,7 @@ function NewAreaDialog({ condoId, onClose, onCreated }: { condoId: string; onClo
     if (!selectedType) return;
     setAnalyzing(true);
     try {
-      const config = await configureArea({ data: { areaType: selectedType, userRules } });
+      const config = await configureArea({ data: { areaTypeKey: selectedType.key, userRules } });
       setAiConfig(config);
       toast.success("IA analisou as regras!");
     } catch {
@@ -217,7 +217,7 @@ function NewAreaDialog({ condoId, onClose, onCreated }: { condoId: string; onClo
       // Se não analisou ainda, analisa agora
       let config = aiConfig;
       if (!config) {
-        config = await configureArea({ data: { areaType: selectedType, userRules } });
+        config = await configureArea({ data: { areaTypeKey: selectedType.key, userRules } });
         setAiConfig(config);
       }
 

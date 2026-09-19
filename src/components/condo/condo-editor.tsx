@@ -156,7 +156,7 @@ export function CondoEditor({
     setShowCatalog(false);
     setAiConfiguring(true);
     try {
-      const config = await configureArea({ data: { areaType, userRules: "" } });
+      const config = await configureArea({ data: { areaTypeKey: areaType.key, userRules: "" } });
       setEditingArea({
         name: areaType.name,
         description: areaType.description,

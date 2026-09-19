@@ -1,4 +1,5 @@
-// @ts-nocheck
+// @ts-nocheck — condo_service_rules ainda não existe no banco real (usuário
+// vai aplicar a migração 20260726300000); remover assim que confirmado.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";

@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 import type { WeekSchedule } from "@/components/condo/area-schedule-picker";
-import type { AreaType } from "@/lib/area-catalog";
+import { AREA_CATALOG, type AreaType } from "@/lib/area-catalog";
 
 export type AIAreaConfig = {
   requires_reservation: boolean;
@@ -100,9 +100,17 @@ Com base nas regras do síndico, configure esta área. Responda APENAS com JSON 
   return fallback;
 }
 
+const configureAreaWithAISchema = z.object({
+  areaTypeKey: z.string().min(1),
+  userRules: z.string().max(2000).default(""),
+});
+
 export const configureAreaWithAI = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }: { data: { areaType: AreaType; userRules: string } }) => {
-    const config = await callAI(data.areaType, data.userRules);
+  .inputValidator((d: unknown) => configureAreaWithAISchema.parse(d))
+  .handler(async ({ data }) => {
+    const areaType = AREA_CATALOG.find((a) => a.key === data.areaTypeKey);
+    if (!areaType) throw new Error("Tipo de área desconhecido.");
+    const config = await callAI(areaType, data.userRules);
     return config;
   });
