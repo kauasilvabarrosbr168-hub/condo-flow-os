@@ -442,6 +442,83 @@ export type Database = {
           },
         ]
       }
+      condo_charges: {
+        Row: {
+          amount_cents: number
+          boleto_barcode: string | null
+          boleto_url: string | null
+          condo_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string
+          efi_charge_id: string | null
+          efi_txid: string | null
+          id: string
+          method: Database["public"]["Enums"]["charge_method"]
+          paid_at: string | null
+          pix_copia_e_cola: string | null
+          pix_qrcode: string | null
+          resident_id: string
+          status: Database["public"]["Enums"]["charge_status"]
+          title: string
+          unit_label: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          boleto_barcode?: string | null
+          boleto_url?: string | null
+          condo_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date: string
+          efi_charge_id?: string | null
+          efi_txid?: string | null
+          id?: string
+          method: Database["public"]["Enums"]["charge_method"]
+          paid_at?: string | null
+          pix_copia_e_cola?: string | null
+          pix_qrcode?: string | null
+          resident_id: string
+          status?: Database["public"]["Enums"]["charge_status"]
+          title?: string
+          unit_label?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          boleto_barcode?: string | null
+          boleto_url?: string | null
+          condo_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string
+          efi_charge_id?: string | null
+          efi_txid?: string | null
+          id?: string
+          method?: Database["public"]["Enums"]["charge_method"]
+          paid_at?: string | null
+          pix_copia_e_cola?: string | null
+          pix_qrcode?: string | null
+          resident_id?: string
+          status?: Database["public"]["Enums"]["charge_status"]
+          title?: string
+          unit_label?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "condo_charges_condo_id_fkey"
+            columns: ["condo_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       condo_cleaning_config: {
         Row: {
           condo_id: string
@@ -946,6 +1023,7 @@ export type Database = {
           avatar_url: string | null
           condo_id: string | null
           condominium_id: string | null
+          cpf: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
@@ -960,6 +1038,7 @@ export type Database = {
           avatar_url?: string | null
           condo_id?: string | null
           condominium_id?: string | null
+          cpf?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -974,6 +1053,7 @@ export type Database = {
           avatar_url?: string | null
           condo_id?: string | null
           condominium_id?: string | null
+          cpf?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -1506,6 +1586,8 @@ export type Database = {
     }
     Enums: {
       app_role: "sindico" | "administradora" | "morador" | "funcionario"
+      charge_method: "pix" | "boleto"
+      charge_status: "pendente" | "pago" | "vencido" | "cancelado"
       membership_status:
         | "pending"
         | "sindico_approved"
@@ -1661,6 +1743,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["sindico", "administradora", "morador", "funcionario"],
+      charge_method: ["pix", "boleto"],
+      charge_status: ["pendente", "pago", "vencido", "cancelado"],
       membership_status: [
         "pending",
         "sindico_approved",
