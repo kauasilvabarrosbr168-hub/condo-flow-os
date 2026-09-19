@@ -6,7 +6,7 @@ import { createBoletoCharge, cancelBoletoCharge } from "@/lib/efi/boleto";
 import { createPixCharge } from "@/lib/efi/pix";
 import { isEfiConfigured } from "@/lib/efi/config";
 
-const addressSchema = z.object({
+export const addressSchema = z.object({
   street: z.string().trim().min(1),
   number: z.string().trim().min(1),
   neighborhood: z.string().trim().min(1),
@@ -16,7 +16,7 @@ const addressSchema = z.object({
   complement: z.string().trim().optional(),
 });
 
-const createChargeSchema = z.object({
+export const createChargeSchema = z.object({
   condoId: z.string().uuid(),
   residentId: z.string().uuid(),
   title: z.string().trim().min(1).max(120).default("Taxa condominial"),

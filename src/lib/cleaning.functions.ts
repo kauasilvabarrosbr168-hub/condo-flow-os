@@ -88,14 +88,16 @@ export const saveCleaningConfig = createServerFn({ method: "POST" })
 
 // ─── Pedidos de limpeza interna ───────────────────────────────────────────────
 
+export const createCleaningRequestSchema = z.object({
+  condoId: z.string().uuid(),
+  notes: z.string().max(500).nullable(),
+  scheduledAt: z.string().nullable(),
+});
+
 export const createCleaningRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { condoId: string; notes: string | null; scheduledAt: string | null }) =>
-    z.object({
-      condoId: z.string().uuid(),
-      notes: z.string().max(500).nullable(),
-      scheduledAt: z.string().nullable(),
-    }).parse(d))
+    createCleaningRequestSchema.parse(d))
   .handler(async ({ data, context }) => {
     const [configRes, profileRes] = await Promise.all([
       supabaseAdmin.from("condo_cleaning_config").select("*").eq("condo_id", data.condoId).maybeSingle(),
@@ -117,13 +119,15 @@ export const createCleaningRequest = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateCleaningRequestStatusSchema = z.object({
+  requestId: z.string().uuid(),
+  status: z.enum(["accepted", "done", "cancelled"]),
+});
+
 export const updateCleaningRequestStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { requestId: string; status: "accepted" | "done" | "cancelled" }) =>
-    z.object({
-      requestId: z.string().uuid(),
-      status: z.enum(["accepted", "done", "cancelled"]),
-    }).parse(d))
+    updateCleaningRequestStatusSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { data: req } = await supabaseAdmin
       .from("cleaning_requests")

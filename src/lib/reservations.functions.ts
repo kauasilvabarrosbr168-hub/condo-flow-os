@@ -2,20 +2,20 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
 
+export const createReservationSchema = z.object({
+  condoId:           z.string().uuid(),
+  areaId:            z.string().uuid(),
+  startsAt:          z.string().datetime(),
+  endsAt:            z.string().datetime(),
+  guests:            z.number().int().min(0).max(1000).default(0),
+  notes:             z.string().max(500).optional().nullable(),
+  cleaningServiceId: z.string().uuid().optional().nullable(),
+  cleaningType:      z.enum(["none", "external", "internal"]).default("none"),
+});
+
 export const createReservation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({
-      condoId:           z.string().uuid(),
-      areaId:            z.string().uuid(),
-      startsAt:          z.string().datetime(),
-      endsAt:            z.string().datetime(),
-      guests:            z.number().int().min(0).max(1000).default(0),
-      notes:             z.string().max(500).optional().nullable(),
-      cleaningServiceId: z.string().uuid().optional().nullable(),
-      cleaningType:      z.enum(["none", "external", "internal"]).default("none"),
-    }).parse(d),
-  )
+  .inputValidator((d: unknown) => createReservationSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
