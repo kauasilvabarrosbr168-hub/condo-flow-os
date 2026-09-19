@@ -57,18 +57,18 @@ Com base nas regras do síndico, configure esta área. Responda APENAS com JSON 
   "ai_interpretation": "o que a IA entendeu das regras em 1 frase curta"
 }`;
 
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return fallback;
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         max_tokens: 600,
         messages: [{ role: "user", content: prompt }],
       }),

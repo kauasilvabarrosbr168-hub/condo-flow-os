@@ -71,18 +71,18 @@ async function callAI(prompt: string): Promise<{
   suggestions: { title: string; description: string; kind: string; urgency: string; due_at: string | null }[];
   error: string | null;
 }> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.error("[Tarefas IA] LOVABLE_API_KEY não configurada nas variáveis de ambiente");
-    return { suggestions: [], error: "IA não configurada — variável LOVABLE_API_KEY ausente" };
+    console.error("[Tarefas IA] OPENAI_API_KEY não configurada nas variáveis de ambiente");
+    return { suggestions: [], error: "IA não configurada — variável OPENAI_API_KEY ausente" };
   }
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         max_tokens: 1200,
         messages: [{ role: "user", content: prompt }],
       }),

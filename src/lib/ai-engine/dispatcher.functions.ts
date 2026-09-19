@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS: CondoAISettings = {
 }
 
 async function callAI(event: AIEventInput, rulesSummary: string): Promise<{ severity: AISeverity; analysis: string; recommendation: string }> {
-  const apiKey = process.env.LOVABLE_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return { severity: 'warning', analysis: rulesSummary, recommendation: '' }
 
   const prompt = `Você é o Motor de Inteligência Operacional do CondoFlow — um gerente operacional virtual que analisa eventos de condomínio.
@@ -27,14 +27,14 @@ Analise e responda APENAS com JSON válido (sem markdown):
 {"severity":"warning","analysis":"análise em português (máx 60 palavras)","recommendation":"ação recomendada (máx 30 palavras)"}`
 
   try {
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-4o-mini',
         max_tokens: 250,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -52,7 +52,7 @@ Analise e responda APENAS com JSON válido (sem markdown):
 
 // IA redige o texto do aviso de WhatsApp a partir dos dados reais do evento — nunca inventa informação
 async function writeWhatsAppText(eventType: string, context: Record<string, unknown>, fallback: string): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return fallback
 
   const prompt = `Você escreve avisos por WhatsApp para o síndico/moradores de um condomínio, a partir de um evento do sistema CondoFlow.
@@ -63,14 +63,14 @@ Dados do evento (use SOMENTE o que está aqui, nunca invente nada que não estej
 Escreva uma mensagem em português do Brasil, com gramática e ortografia impecáveis, que seja bem explicativa — conte claramente o que aconteceu, quem fez, quando e outros detalhes relevantes disponíveis nos dados (quantidade, área, observações etc.) — mas sem ficar longa: no máximo 3 frases curtas (~50 palavras). Use 2 a 4 emojis espalhados no texto para dar destaque aos pontos principais (ex.: 📅 para data/horário, 👤 para quem fez, 👥 para quantidade de pessoas, 🧹 para limpeza, ⚠️ para atenção), sempre combinando com o conteúdo da frase — não jogue emojis aleatórios. Pode usar *negrito* do WhatsApp com moderação para destacar o principal. Não use títulos nem hashtags. IMPORTANTE: copie título de tarefa/área/nome de pessoa EXATAMENTE como aparecem nos dados, sem corrigir, alterar ou "melhorar" a grafia deles, mesmo que pareçam ter erro de digitação. Responda APENAS com o texto da mensagem, sem aspas.`
 
   try {
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-4o-mini',
         max_tokens: 200,
         messages: [{ role: 'user', content: prompt }],
       }),
