@@ -1,16 +1,49 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ClipboardCheck, Loader2, Camera, CheckCircle2, X } from "lucide-react";
+import { ClipboardCheck, Loader2, Camera, CheckCircle2, X, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { dispatchAIEvent } from "@/lib/ai-engine/dispatcher.functions";
+import { getCleaningData, createCleaningRequest, updateCleaningRequestStatus } from "@/lib/cleaning.functions";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/brand";
 import { toast } from "sonner";
+
+const formatCents = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const CLEAN_STATUS_LABEL: Record<string, string> = {
+  pending: "Pendente",
+  accepted: "Aceito",
+  done: "Concluído",
+  cancelled: "Cancelado",
+};
+const CLEAN_STATUS_TONE: Record<string, "warning" | "primary" | "success" | "default"> = {
+  pending: "warning",
+  accepted: "primary",
+  done: "success",
+  cancelled: "default",
+};
+
+type CleaningRequest = {
+  id: string;
+  requested_by: string;
+  worker_id: string | null;
+  unit_label: string | null;
+  notes: string | null;
+  status: "pending" | "accepted" | "done" | "cancelled";
+  price_cents: number;
+  scheduled_at: string | null;
+  done_at: string | null;
+  created_at: string;
+  requester: { full_name: string; unit_label: string | null } | null;
+  worker: { full_name: string } | null;
+  is_mine: boolean;
+};
 
 export const Route = createFileRoute("/app/services")({
   head: () => ({ meta: [{ title: "Serviços · CondoFlow" }] }),
@@ -25,10 +58,21 @@ function ServicesPage() {
   const condoId = condo?.id ?? profile?.condo_id ?? null;
   const isWorker = primaryRole === "funcionario";
   const dispatchFn = useServerFn(dispatchAIEvent);
+  const fetchCleaningFn = useServerFn(getCleaningData);
+  const createCleaningFn = useServerFn(createCleaningRequest);
+  const setCleaningStatusFn = useServerFn(updateCleaningRequestStatus);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [logs, setLogs] = useState<Log[] | null>(null);
   const [checkin, setCheckin] = useState<{ taskId?: string; title: string } | null>(null);
   const [freeTitle, setFreeTitle] = useState("");
+
+  const [cleaningEnabled, setCleaningEnabled] = useState(false);
+  const [cleaningPriceCents, setCleaningPriceCents] = useState(0);
+  const [cleaningRequests, setCleaningRequests] = useState<CleaningRequest[] | null>(null);
+  const [cleanNotes, setCleanNotes] = useState("");
+  const [cleanScheduledAt, setCleanScheduledAt] = useState("");
+  const [requestingClean, setRequestingClean] = useState(false);
+  const [cleanBusyId, setCleanBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!condoId) return;
@@ -42,7 +86,54 @@ function ServicesPage() {
     setLogs(l ?? []);
   }, [condoId, isWorker, user]);
 
+  const loadCleaning = useCallback(async () => {
+    if (!condoId) return;
+    try {
+      const r = await fetchCleaningFn({ data: { condoId } });
+      setCleaningEnabled(!!r.config?.internal_enabled);
+      setCleaningPriceCents(r.config?.price_cents ?? 0);
+      setCleaningRequests(r.requests as CleaningRequest[]);
+    } catch {
+      setCleaningRequests([]);
+    }
+  }, [condoId, fetchCleaningFn]);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadCleaning(); }, [loadCleaning]);
+
+  const submitCleaningRequest = async () => {
+    if (!condoId) return;
+    setRequestingClean(true);
+    try {
+      await createCleaningFn({
+        data: {
+          condoId,
+          notes: cleanNotes.trim() || null,
+          scheduledAt: cleanScheduledAt ? new Date(cleanScheduledAt).toISOString() : null,
+        },
+      });
+      toast.success("Limpeza solicitada!");
+      setCleanNotes("");
+      setCleanScheduledAt("");
+      await loadCleaning();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao solicitar limpeza");
+    } finally {
+      setRequestingClean(false);
+    }
+  };
+
+  const changeCleaningStatus = async (requestId: string, status: "accepted" | "done" | "cancelled") => {
+    setCleanBusyId(requestId);
+    try {
+      await setCleaningStatusFn({ data: { requestId, status } });
+      await loadCleaning();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao atualizar pedido");
+    } finally {
+      setCleanBusyId(null);
+    }
+  };
 
   if (!condoId) {
     return <div className="p-8"><EmptyState icon={ClipboardCheck} title="Sem condomínio" description="Vincule-se a um condomínio para ver serviços." /></div>;
@@ -92,6 +183,73 @@ function ServicesPage() {
           </div>
         )}
       </section>
+
+      {cleaningEnabled && (
+        <section>
+          <div className="mb-3">
+            <h2 className="text-sm font-semibold">Limpeza</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isWorker
+                ? "Pedidos de limpeza que moradores fizeram pelo app."
+                : `Peça uma limpeza pra um colaborador do condomínio${cleaningPriceCents > 0 ? ` — ${formatCents(cleaningPriceCents)}` : ""}.`}
+            </p>
+          </div>
+
+          {!isWorker && (
+            <div className="rounded-xl border border-border bg-card p-4 mb-3 space-y-3">
+              <Textarea rows={2} value={cleanNotes} onChange={(e) => setCleanNotes(e.target.value)} placeholder="Alguma observação? (opcional)" />
+              <div className="flex flex-wrap items-center gap-2">
+                <Input type="datetime-local" value={cleanScheduledAt} onChange={(e) => setCleanScheduledAt(e.target.value)} className="w-56" />
+                <Button size="sm" onClick={submitCleaningRequest} disabled={requestingClean}>
+                  {requestingClean ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Solicitar limpeza
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!cleaningRequests ? (
+            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : (() => {
+            const visible = isWorker ? cleaningRequests : cleaningRequests.filter((r) => r.is_mine);
+            if (visible.length === 0) {
+              return <p className="text-sm text-muted-foreground rounded-xl border border-dashed border-border p-6 text-center">{isWorker ? "Nenhum pedido de limpeza ainda." : "Você ainda não pediu nenhuma limpeza."}</p>;
+            }
+            return (
+              <div className="grid gap-2">
+                {visible.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {isWorker && <p className="text-sm font-medium">{r.requester?.full_name ?? "Morador"}{r.unit_label ? ` · ${r.unit_label}` : ""}</p>}
+                        <Badge tone={CLEAN_STATUS_TONE[r.status]}>{CLEAN_STATUS_LABEL[r.status]}</Badge>
+                      </div>
+                      {r.notes && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{r.notes}</p>}
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {r.scheduled_at ? `Agendado para ${new Date(r.scheduled_at).toLocaleString("pt-BR")}` : `Pedido em ${new Date(r.created_at).toLocaleString("pt-BR")}`}
+                      </p>
+                    </div>
+                    {isWorker && r.status === "pending" && (
+                      <Button size="sm" disabled={cleanBusyId === r.id} onClick={() => changeCleaningStatus(r.id, "accepted")}>
+                        {cleanBusyId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aceitar"}
+                      </Button>
+                    )}
+                    {isWorker && r.status === "accepted" && (
+                      <Button size="sm" disabled={cleanBusyId === r.id} onClick={() => changeCleaningStatus(r.id, "done")}>
+                        {cleanBusyId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4" /> Concluir</>}
+                      </Button>
+                    )}
+                    {!isWorker && r.is_mine && r.status === "pending" && (
+                      <Button size="sm" variant="outline" disabled={cleanBusyId === r.id} onClick={() => changeCleaningStatus(r.id, "cancelled")}>
+                        {cleanBusyId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cancelar"}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </section>
+      )}
 
       <section>
         <div className="mb-3">

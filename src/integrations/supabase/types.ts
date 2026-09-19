@@ -222,6 +222,70 @@ export type Database = {
           },
         ]
       }
+      cleaning_requests: {
+        Row: {
+          condo_id: string
+          created_at: string | null
+          done_at: string | null
+          id: string
+          notes: string | null
+          price_cents: number
+          requested_by: string
+          scheduled_at: string | null
+          status: string
+          unit_label: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          condo_id: string
+          created_at?: string | null
+          done_at?: string | null
+          id?: string
+          notes?: string | null
+          price_cents?: number
+          requested_by: string
+          scheduled_at?: string | null
+          status?: string
+          unit_label?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          condo_id?: string
+          created_at?: string | null
+          done_at?: string | null
+          id?: string
+          notes?: string | null
+          price_cents?: number
+          requested_by?: string
+          scheduled_at?: string | null
+          status?: string
+          unit_label?: string | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_requests_condo_id_fkey"
+            columns: ["condo_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cleaning_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cleaning_requests_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cleaning_services: {
         Row: {
           active: boolean
@@ -374,6 +438,45 @@ export type Database = {
             columns: ["condo_id"]
             isOneToOne: true
             referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      condo_cleaning_config: {
+        Row: {
+          condo_id: string
+          internal_enabled: boolean
+          price_cents: number
+          updated_at: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          condo_id: string
+          internal_enabled?: boolean
+          price_cents?: number
+          updated_at?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          condo_id?: string
+          internal_enabled?: boolean
+          price_cents?: number
+          updated_at?: string | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "condo_cleaning_config_condo_id_fkey"
+            columns: ["condo_id"]
+            isOneToOne: true
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "condo_cleaning_config_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

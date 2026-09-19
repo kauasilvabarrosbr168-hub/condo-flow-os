@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
@@ -34,7 +33,7 @@ export const getCleaningData = createServerFn({ method: "GET" })
     const workerIds = (workersRes.data ?? []).map((r) => r.user_id);
     const profileIds = [...new Set([
       ...workerIds,
-      ...(requestsRes.data ?? []).flatMap((r) => [r.requested_by, r.worker_id].filter(Boolean)),
+      ...(requestsRes.data ?? []).flatMap((r) => [r.requested_by, r.worker_id].filter((id): id is string => !!id)),
     ])];
 
     const { data: profiles } = profileIds.length
@@ -125,8 +124,31 @@ export const updateCleaningRequestStatus = createServerFn({ method: "POST" })
       requestId: z.string().uuid(),
       status: z.enum(["accepted", "done", "cancelled"]),
     }).parse(d))
-  .handler(async ({ data }) => {
-    const updates: Record<string, unknown> = { status: data.status };
+  .handler(async ({ data, context }) => {
+    const { data: req } = await supabaseAdmin
+      .from("cleaning_requests")
+      .select("condo_id, requested_by, status")
+      .eq("id", data.requestId)
+      .maybeSingle();
+    if (!req) throw new Error("Pedido não encontrado.");
+
+    const { data: role } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("condo_id", req.condo_id)
+      .maybeSingle();
+    const isStaff = !!role && ["sindico", "administradora", "funcionario"].includes(role.role);
+    const isRequester = req.requested_by === context.userId;
+
+    if (!isStaff) {
+      if (!isRequester) throw new Error("Sem permissão para atualizar este pedido.");
+      if (data.status !== "cancelled" || req.status !== "pending") {
+        throw new Error("Você só pode cancelar seu próprio pedido enquanto ele estiver pendente.");
+      }
+    }
+
+    const updates: { status: string; done_at?: string } = { status: data.status };
     if (data.status === "done") updates.done_at = new Date().toISOString();
     const { error } = await supabaseAdmin.from("cleaning_requests").update(updates).eq("id", data.requestId);
     if (error) throw new Error(error.message);
