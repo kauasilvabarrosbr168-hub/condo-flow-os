@@ -953,6 +953,7 @@ export type Database = {
           area: string | null
           area_id: string | null
           cleaning_service_id: string | null
+          cleaning_type: string
           condo_id: string | null
           condominium_id: string | null
           created_at: string | null
@@ -970,6 +971,7 @@ export type Database = {
           area?: string | null
           area_id?: string | null
           cleaning_service_id?: string | null
+          cleaning_type?: string
           condo_id?: string | null
           condominium_id?: string | null
           created_at?: string | null
@@ -987,6 +989,7 @@ export type Database = {
           area?: string | null
           area_id?: string | null
           cleaning_service_id?: string | null
+          cleaning_type?: string
           condo_id?: string | null
           condominium_id?: string | null
           created_at?: string | null

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase-auth-middleware";
@@ -54,14 +53,16 @@ export const createReservation = createServerFn({ method: "POST" })
     const { data: res, error } = await supabase
       .from("reservations")
       .insert({
-        condo_id:   data.condoId,
-        area_id:    data.areaId,
-        resident_id: userId,
-        starts_at:  data.startsAt,
-        ends_at:    data.endsAt,
-        guests:     data.guests,
-        notes:      data.notes || null,
-        status:     "confirmada",
+        condo_id:            data.condoId,
+        area_id:             data.areaId,
+        resident_id:         userId,
+        starts_at:           data.startsAt,
+        ends_at:             data.endsAt,
+        guests:              data.guests,
+        notes:               data.notes || null,
+        status:              "confirmada",
+        cleaning_service_id: data.cleaningServiceId ?? null,
+        cleaning_type:       data.cleaningType,
       })
       .select("id")
       .single();
@@ -87,6 +88,7 @@ export const updateReservationStatus = createServerFn({ method: "POST" })
       .eq("id", data.reservationId)
       .maybeSingle();
     if (!res) throw new Error("Reserva não encontrada.");
+    if (!res.condo_id) throw new Error("Reserva sem condomínio associado.");
     if (res.status === "cancelada") throw new Error("Reserva já está cancelada.");
 
     const isOwner = res.resident_id === userId;
