@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ConhecerSistemaRouteImport } from './routes/conhecer-sistema'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -48,6 +49,7 @@ import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminInvitationsRouteImport } from './routes/admin.invitations'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCondosRouteImport } from './routes/admin.condos'
+import { Route as AdminCadastrosRouteImport } from './routes/admin.cadastros'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as ApiWebhooksEfiRouteImport } from './routes/api.webhooks.efi'
 import { Route as AdminCondosCondoIdRouteImport } from './routes/admin.condos.$condoId'
@@ -61,6 +63,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConhecerSistemaRoute = ConhecerSistemaRouteImport.update({
+  id: '/conhecer-sistema',
+  path: '/conhecer-sistema',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -248,6 +255,11 @@ const AdminCondosRoute = AdminCondosRouteImport.update({
   path: '/condos',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCadastrosRoute = AdminCadastrosRouteImport.update({
+  id: '/cadastros',
+  path: '/cadastros',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -273,9 +285,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
+  '/conhecer-sistema': typeof ConhecerSistemaRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/cadastros': typeof AdminCadastrosRoute
   '/admin/condos': typeof AdminCondosRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/invitations': typeof AdminInvitationsRoute
@@ -317,9 +331,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/conhecer-sistema': typeof ConhecerSistemaRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/cadastros': typeof AdminCadastrosRoute
   '/admin/condos': typeof AdminCondosRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/invitations': typeof AdminInvitationsRoute
@@ -363,9 +379,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
+  '/conhecer-sistema': typeof ConhecerSistemaRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/cadastros': typeof AdminCadastrosRoute
   '/admin/condos': typeof AdminCondosRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/invitations': typeof AdminInvitationsRoute
@@ -410,9 +428,11 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/app'
+    | '/conhecer-sistema'
     | '/login'
     | '/reset-password'
     | '/admin/analytics'
+    | '/admin/cadastros'
     | '/admin/condos'
     | '/admin/dashboard'
     | '/admin/invitations'
@@ -454,9 +474,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app'
+    | '/conhecer-sistema'
     | '/login'
     | '/reset-password'
     | '/admin/analytics'
+    | '/admin/cadastros'
     | '/admin/condos'
     | '/admin/dashboard'
     | '/admin/invitations'
@@ -499,9 +521,11 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/app'
+    | '/conhecer-sistema'
     | '/login'
     | '/reset-password'
     | '/admin/analytics'
+    | '/admin/cadastros'
     | '/admin/condos'
     | '/admin/dashboard'
     | '/admin/invitations'
@@ -545,6 +569,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
+  ConhecerSistemaRoute: typeof ConhecerSistemaRoute
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiWebhooksEfiRoute: typeof ApiWebhooksEfiRoute
@@ -564,6 +589,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conhecer-sistema': {
+      id: '/conhecer-sistema'
+      path: '/conhecer-sistema'
+      fullPath: '/conhecer-sistema'
+      preLoaderRoute: typeof ConhecerSistemaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -825,6 +857,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCondosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/cadastros': {
+      id: '/admin/cadastros'
+      path: '/cadastros'
+      fullPath: '/admin/cadastros'
+      preLoaderRoute: typeof AdminCadastrosRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/analytics': {
       id: '/admin/analytics'
       path: '/analytics'
@@ -881,6 +920,7 @@ const AdminCondosRouteWithChildren = AdminCondosRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminCadastrosRoute: typeof AdminCadastrosRoute
   AdminCondosRoute: typeof AdminCondosRouteWithChildren
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminInvitationsRoute: typeof AdminInvitationsRoute
@@ -899,6 +939,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminCadastrosRoute: AdminCadastrosRoute,
   AdminCondosRoute: AdminCondosRouteWithChildren,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminInvitationsRoute: AdminInvitationsRoute,
@@ -969,6 +1010,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
+  ConhecerSistemaRoute: ConhecerSistemaRoute,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ApiWebhooksEfiRoute: ApiWebhooksEfiRoute,
